@@ -13,6 +13,7 @@ import {
   floodLayer,
   newBuildingsLayer,
   parcelsLayer,
+  selectedParcelLayer,
   proposedTransitLayer,
   pursuedSites,
   sitesLayer,
@@ -31,6 +32,8 @@ export interface MapHandle {
 }
 
 // Esri's dark gray canvas needs no key (Carto's dark tiles now watermark "API KEY REQUIRED").
+// Source maxzoom: past it MapLibre overzooms the last real tile. The dark canvas serves "Map data not yet
+// available" placeholders (HTTP 200) from z17; World_Imagery has real tiles to z19 downtown.
 export const BASE_STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -38,12 +41,14 @@ export const BASE_STYLE: StyleSpecification = {
       type: 'raster',
       tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'],
       tileSize: 256,
+      maxzoom: 16,
       attribution: 'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors',
     },
     aerial: {
       type: 'raster',
       tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
       tileSize: 256,
+      maxzoom: 19,
       attribution: 'Imagery © Esri',
     },
   },
@@ -235,6 +240,14 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
     [routes, stops, L.proposed_transit, sel.stopId],
   )
   const lParcels = useMemo(() => parcelsLayer(parcels, L.parcels || large, sel.parcelId), [parcels, L.parcels, large, sel.parcelId])
+  // the selected parcel stays outlined even when the parcels layer is off (card links can select any parcel)
+  const lSelParcel = useMemo(() => selectedParcelLayer(parcels, sel.parcelId), [parcels, sel.parcelId])
+  const flyTo = sel.flyTo
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !loaded || !flyTo) return
+    map.flyTo({ center: flyTo, zoom: Math.max(map.getZoom(), 16), duration: 1200 })
+  }, [flyTo, loaded])
   const lBuildings = useMemo(
     () => buildingsLayer(buildingData, storyHeightFt, L.buildings || large, sel.buildingId),
     [buildingData, storyHeightFt, L.buildings, large, sel.buildingId],
@@ -244,9 +257,9 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
 
   useEffect(() => {
     overlayRef.current?.setProps({
-      layers: [...lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, ...lProp, lParcels, lBuildings, ...lSites, lNew],
+      layers: [...lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, ...lProp, lParcels, lSelParcel, lBuildings, ...lSites, lNew],
     })
-  }, [lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, lProp, lParcels, lBuildings, lSites, lNew, large])
+  }, [lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, lProp, lParcels, lSelParcel, lBuildings, lSites, lNew, large])
 
   // maplibre's own CSS sets `.maplibregl-map { position: relative }`, so the map gets a sized inner box.
   return (

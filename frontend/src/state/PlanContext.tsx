@@ -53,7 +53,8 @@ export interface PlanState {
   stream: 'connecting' | 'streaming' | 'ended' | 'failed' | 'static'
   loadError: string | null
   selectedAgent: AgentName
-  selected: { parcelId?: string; buildingId?: string; stopId?: string }
+  /** flyTo: card links (not map clicks) ask the map to fly here; a fresh tuple re-flies even to the same spot. */
+  selected: { parcelId?: string; buildingId?: string; stopId?: string; flyTo?: [number, number] }
   layers: Record<LayerKey, boolean>
   edits: EditEntry[]
   /** Comma-joined ids of the edit list the current scoreboard reflects. */

@@ -118,10 +118,15 @@ export function siteNames(plan: Partial<Plan>): Map<string, string> {
     base.set(s.id, name)
     counts.set(name, (counts.get(name) ?? 0) + 1)
   }
+  // two parcels at one address become "lot 1" / "lot 2" by parcel id order (backend common.site_label agrees)
   const out = new Map<string, string>()
   for (const s of plan.sites ?? []) {
     const name = base.get(s.id)!
-    out.set(s.id, (counts.get(name) ?? 0) > 1 && s.parcel_ids[0] ? `${name} (parcel ${s.parcel_ids[0]})` : name)
+    const same = (plan.sites ?? [])
+      .filter((x) => base.get(x.id) === name)
+      .map((x) => x.parcel_ids[0] ?? x.id)
+      .sort()
+    out.set(s.id, same.length > 1 ? `${name} (lot ${same.indexOf(s.parcel_ids[0] ?? s.id) + 1})` : name)
   }
   return out
 }

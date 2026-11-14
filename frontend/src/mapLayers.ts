@@ -269,6 +269,22 @@ export function parcelsLayer(parcels: Parcel[], visible: boolean, selectedId?: s
   })
 }
 
+/** Outline + light fill for the selected parcel, drawn whether or not the parcels layer is on. */
+export function selectedParcelLayer(parcels: Parcel[], selectedId?: string) {
+  const p = selectedId ? parcels.find((x) => x.id === selectedId) : undefined
+  return new GeoJsonLayer<ParcelDatum>({
+    id: 'selected-parcel',
+    data: p ? [feature<ParcelDatum>(p.geometry, { parcel: p, underused: false })] : [],
+    pickable: false,
+    filled: true,
+    stroked: true,
+    lineWidthUnits: 'pixels',
+    getLineWidth: 3,
+    getLineColor: [56, 189, 248],
+    getFillColor: [56, 189, 248, 60],
+  })
+}
+
 export interface BuildingDatum {
   building: Building
   conversion: ConversionCandidate | undefined

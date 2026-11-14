@@ -39,19 +39,22 @@ def _base_label(ctx: RunContext, site) -> str:
     p = ctx.cache.get("parcels_by_id", {}).get(site.parcel_ids[0]) if site.parcel_ids else None
     if p is not None and p.address.value:
         return p.address.value
+    if p is not None:  # no address on record (Brevard county rolls): name it by land use, never by parcel id
+        return f"an unaddressed {(p.land_use.value or 'candidate').replace('_', ' ')} parcel"
     return f"parcel {site.parcel_ids[0]}" if site.parcel_ids else site.id
 
 
 def site_label(ctx: RunContext, site_id: str) -> str:
     """Building name for a conversion, else the first parcel's address, else the parcel id (never a bare site id).
-    Two sites with the same label (two parcels at one address) get their parcel id appended."""
+    Two sites with the same label (two parcels at one address) become "lot 1" / "lot 2", by parcel id order."""
     sites = ctx.plan_parts.get("sites", [])
     site = next((s for s in sites if s.id == site_id), None)
     if site is None:
         return site_id
     label = _base_label(ctx, site)
-    if site.parcel_ids and any(s.id != site.id and _base_label(ctx, s) == label for s in sites):
-        label += f" (parcel {site.parcel_ids[0]})"
+    same = sorted((s.parcel_ids[0] if s.parcel_ids else s.id) for s in sites if _base_label(ctx, s) == label)
+    if len(same) > 1:
+        label += f" (lot {same.index(site.parcel_ids[0] if site.parcel_ids else site.id) + 1})"
     return label
 
 

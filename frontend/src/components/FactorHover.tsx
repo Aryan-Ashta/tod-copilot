@@ -1,17 +1,56 @@
-import { Fragment, useState, type ReactNode } from 'react'
+import { Fragment, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useApp } from '../state/AppContext'
 import { fmtValue, humanize } from '../format'
+
+const MARGIN = 8
+const WIDTH = 384
+
+/** Fixed-position style that keeps the popover inside the viewport: below the trigger, or above when it would
+ *  run off the bottom; clamped horizontally; scrolls inside when taller than the viewport. */
+function placement(trigger: DOMRect, height: number | null): CSSProperties {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const width = Math.min(WIDTH, vw - 2 * MARGIN)
+  const left = Math.min(Math.max(trigger.left, MARGIN), vw - width - MARGIN)
+  const h = Math.min(height ?? 0, vh - 2 * MARGIN)
+  const below = trigger.bottom + 4
+  const top = below + h <= vh - MARGIN ? below : Math.max(MARGIN, trigger.top - 4 - h)
+  return { position: 'fixed', left, top, width, maxHeight: vh - 2 * MARGIN, overflowY: 'auto',
+           visibility: height === null ? 'hidden' : 'visible' }
+}
 
 /** Hover a score or target to see the factors behind it: value, unit, source link and "unverified" mark. */
 export default function FactorHover({ keys, children }: { keys: string[]; children: ReactNode }) {
   const { factors, factorsError } = useApp()
-  const [open, setOpen] = useState(false)
+  const [rect, setRect] = useState<DOMRect | null>(null)
+  const [height, setHeight] = useState<number | null>(null)
+  const pop = useRef<HTMLSpanElement>(null)
+  const closeTimer = useRef<number | undefined>(undefined)
+  useLayoutEffect(() => {
+    if (rect && pop.current) setHeight(pop.current.scrollHeight)
+  }, [rect])
   if (!keys.length) return <>{children}</>
+  // the popover is portalled to <body> so no ancestor can clip or widen; React events still bubble to this span
+  const show = (e: MouseEvent<HTMLSpanElement>) => {
+    window.clearTimeout(closeTimer.current)
+    if (!rect) setRect(e.currentTarget.getBoundingClientRect())
+  }
+  const hide = () => {
+    closeTimer.current = window.setTimeout(() => {
+      setRect(null)
+      setHeight(null)
+    }, 120)
+  }
   return (
-    <span className="relative inline-block" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+    <span className="relative inline-block" onMouseEnter={show} onMouseLeave={hide}>
       <span className="cursor-help underline decoration-neutral-600 decoration-dotted underline-offset-2">{children}</span>
-      {open && (
-        <span className="absolute top-full left-0 z-50 mt-1 block w-96 max-w-[80vw] rounded-md border border-neutral-700 bg-neutral-900 p-2 text-left text-xs shadow-xl">
+      {rect && createPortal(
+        <span
+          ref={pop}
+          style={placement(rect, height)}
+          className="z-[200] block rounded-md border border-neutral-700 bg-neutral-900 p-2 text-left text-xs shadow-xl"
+        >
           <span className="mb-1 block text-[10px] tracking-wide text-neutral-400 uppercase">Factors behind this number</span>
           {keys.map((k) => {
             const f = factors[k]
@@ -44,7 +83,8 @@ export default function FactorHover({ keys, children }: { keys: string[]; childr
               </span>
             )
           })}
-        </span>
+        </span>,
+        document.body,
       )}
     </span>
   )
