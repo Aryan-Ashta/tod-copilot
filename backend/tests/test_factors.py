@@ -16,10 +16,3 @@ def test_resolve_all_locales():
         f = resolve(lid)
         assert isinstance(f["cap_rate"], float)
         assert not isinstance(f["conversion_cost_usd_per_sqft"], dict)
-
-
-def test_custom_area_uses_national_values():
-    raw = yaml.safe_load(FACTORS_PATH.read_text())
-    f = resolve("area-test")
-    assert f["construction_cost_usd_per_unit"] == raw["construction_cost_usd_per_unit"]["value"]["national"]
-    assert f["transit_budget_usd"] == raw["transit_budget_usd"]["value"]["national"]

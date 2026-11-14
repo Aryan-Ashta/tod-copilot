@@ -66,7 +66,7 @@ When there is no Matterport scan, estimate floor depth from the footprint: for a
 
 - **Provenance on everything.** Each `Sourced` value records source, confidence, `retrieved_at`, and URL when available.
 - **Missing is a value.** Agents must handle `confidence="missing"` and say what's missing.
-- **Locale-scoped.** Providers only fetch within `locale.bbox`; custom areas get their own data directory (`cache/areas/<id>/`).
+- **Locale-scoped.** Providers only fetch within `locale.bbox`. Drawn areas in Harris County or Los Angeles County get their own data directory (`cache/areas/<id>/`) and reuse their metro locale's sources (`Locale.sources_from`); supported county and city outlines are in `fixtures/metros/` (`record_fixtures.py --metros`).
 - **Cache by request** in `cache/`. With `DEMO_OFFLINE=1`, a cache miss raises instead of calling out.
 - **Record fixtures early** with `scripts/record_fixtures.py --locale <id>`.
 - **Coordinates:** GeoJSON in WGS84; distance and area math in the locale's UTM zone.

@@ -223,14 +223,16 @@ class Edit(BaseModel):          # from meeting mode or the slider
 | Method | Path | Body / result |
 | --- | --- | --- |
 | GET | `/api/locales` | The three `Locale`s |
-| POST | `/api/plan` | `{locale_id?, boundary?, area_name?, prompt, options?}` → `{plan_id}`; starts the run. No boundary: whole recorded locale. Boundary inside a recorded bbox: sub-area plan (parcels, buildings and demand clipped). Elsewhere in the US: custom area recorded live into `cache/areas/<id>/` first (409 when `DEMO_OFFLINE=1`). 422 for invalid, too large (`custom_area_max_km2`) or edge-crossing boundaries. `options` default to `parse_prompt(prompt)` |
+| POST | `/api/plan` | `{locale_id?, boundary?, area_name?, prompt, options?}` → `{plan_id}`; starts the run. No boundary: whole recorded locale. Boundary inside a recorded bbox: sub-area plan on recorded data (parcels, buildings and demand clipped). Elsewhere in Harris County or Los Angeles County: recorded live into `cache/areas/<id>/` first (409 when `DEMO_OFFLINE=1`); legal rules follow the city the area mostly lies in. 422 for invalid, too large (`area_max_km2`) or unsupported boundaries. `options` default to `parse_prompt(prompt)` |
 | GET | `/api/plan/{id}/stream` | SSE events; `?replay=1` replays a recorded run |
 | GET | `/api/plan/{id}` | Full `Plan` |
 | POST | `/api/plan/{id}/rescore` | `{edits: Edit[]}` → `{plan, deltas}` in under 1 s |
 | GET | `/api/buildings/{id}` | Building with conversion detail and sources |
 | GET | `/api/corpus/{doc_id}#{section}` | Source text for a citation |
 | GET | `/api/factors` | All factors with `verified` flags |
-| GET | `/api/geocode?q=` | Up to 6 `{label, lonlat, bbox, recorded_locale_id}`: recorded locales by alias first, then Nominatim (US, cached) |
+| GET | `/api/geocode?q=` | Up to 6 `{label, lonlat, bbox, recorded_locale_id, metro}`: recorded locales by alias first, then Nominatim hits inside Harris or Los Angeles County (cached) |
+| POST | `/api/area_check` | `{boundary}` → `{kind, locale_id, label, jurisdiction, area_km2, error}`: what a drawn boundary would run as (offline-safe) |
+| GET | `/api/metros` | Supported county and city outlines (GeoJSON, Census TIGERweb) |
 | GET | `/api/stock_prompts` | `StockPrompt[]` from `backend/agents/stock_prompts.yaml` |
 | POST | `/api/parse_prompt` | `{prompt}` → `PlanOptions` (regex rules in `backend/agents/plan_options.py`, never the LLM) |
 

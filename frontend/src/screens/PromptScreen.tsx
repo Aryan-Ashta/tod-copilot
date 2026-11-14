@@ -1,49 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createPlan, geocode, getLocales, parsePrompt, stockPrompts } from '../api'
+import { areaCheck, createPlan, geocode, getLocales, parsePrompt, stockPrompts } from '../api'
 import Disclaimer from '../components/Disclaimer'
 import AreaPicker, { type PolygonGeometry } from '../components/AreaPicker'
-import { useApp } from '../state/AppContext'
-import { areaKm2, relationToBBox, type BBox } from '../geo'
-import { DEFAULT_PLAN_OPTIONS, type GeocodeResult, type Locale, type PlanOptions, type StockPrompt } from '../types'
+import type { BBox } from '../geo'
+import {
+  DEFAULT_PLAN_OPTIONS,
+  type AreaCheck,
+  type GeocodeResult,
+  type Locale,
+  type PlanOptions,
+  type StockPrompt,
+} from '../types'
 
 const REPLAY_HINT = 'Replays exist only for whole recorded areas with default options; this runs live'
 
-type AreaStatus =
-  | { kind: 'none' }
-  | { kind: 'whole'; locale: Locale }
-  | { kind: 'subarea'; locale: Locale; km2: number }
-  | { kind: 'custom'; km2: number }
-  | { kind: 'crosses'; locale: Locale }
-  | { kind: 'too_large'; km2: number }
-
-/** Client mirror of the server's resolve_area rules; the server's 422 is authoritative. */
-function areaStatus(
-  locales: Locale[],
-  selected: string | null,
-  boundary: PolygonGeometry | null,
-  maxKm2: number | null,
-): AreaStatus {
-  if (!boundary) {
-    const l = locales.find((x) => x.id === selected)
-    return l ? { kind: 'whole', locale: l } : { kind: 'none' }
-  }
-  const km2 = areaKm2(boundary)
-  // Factor not loaded yet: skip the size check here; the server enforces it.
-  if (maxKm2 !== null && km2 > maxKm2) return { kind: 'too_large', km2 }
-  for (const l of locales) {
-    const rel = relationToBBox(boundary, l.bbox)
-    if (rel === 'within') return { kind: 'subarea', locale: l, km2 }
-    if (rel === 'crosses') return { kind: 'crosses', locale: l }
-  }
-  return { kind: 'custom', km2 }
+/** Recorded locale whose stock prompts also apply to a drawn metro area, by the city named in the area_check label. */
+function metroLocaleId(label: string | null): string | null {
+  if (!label) return null
+  if (label.includes('Houston')) return 'houston_downtown'
+  if (label.includes('Los Angeles')) return 'la_wilshire_koreatown'
+  return null
 }
 
 const SELECT = 'rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100'
 
 export default function PromptScreen() {
   const navigate = useNavigate()
-  const { factorNumber } = useApp()
   const [locales, setLocales] = useState<Locale[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
@@ -89,17 +72,36 @@ export default function PromptScreen() {
     return () => clearTimeout(t)
   }, [prompt, optionsTouched])
 
-  const maxKm2 = factorNumber('custom_area_max_km2')
-  const status = useMemo(() => areaStatus(locales ?? [], selected, boundary, maxKm2), [locales, selected, boundary, maxKm2])
-  const areaLocaleId = status.kind === 'whole' || status.kind === 'subarea' ? status.locale.id : null
+  // Server decides what a drawn boundary runs as (sub-area, metro, or rejected).
+  const [check, setCheck] = useState<AreaCheck | null>(null)
+  const checkSeq = useRef(0)
+  useEffect(() => {
+    const seq = ++checkSeq.current
+    setCheck(null)
+    if (!boundary) return
+    const t = setTimeout(() => {
+      areaCheck(boundary)
+        .then((c) => {
+          if (seq === checkSeq.current) setCheck(c)
+        })
+        .catch((e: Error) => {
+          if (seq === checkSeq.current) setError(e.message)
+        })
+    }, 200)
+    return () => clearTimeout(t)
+  }, [boundary])
+
+  const wholeLocale = !boundary ? (locales?.find((x) => x.id === selected) ?? null) : null
+  const areaLocaleId = wholeLocale ? wholeLocale.id : check?.kind === 'subarea' ? check.locale_id : null
   const defaultOptions =
     options.focus === 'all' && options.transit_budget === 'default' && options.affordable === 'default'
-  const replayAllowed = status.kind === 'whole' && defaultOptions
+  const replayAllowed = wholeLocale !== null && defaultOptions
   const replayOn = replay && replayAllowed
-  const areaOk = status.kind === 'whole' || status.kind === 'subarea' || status.kind === 'custom'
+  const areaOk = wholeLocale !== null || (check !== null && check.kind !== null && !check.error)
   const canSubmit = areaOk && !submitting && (replayOn || prompt.trim().length > 0)
 
-  const visibleStock = stock.filter((p) => p.locale_id === null || p.locale_id === areaLocaleId)
+  const chipLocaleId = areaLocaleId ?? (check?.kind === 'metro' ? metroLocaleId(check.label) : null)
+  const visibleStock = stock.filter((p) => p.locale_id === null || p.locale_id === chipLocaleId)
 
   const onBoundary = (b: PolygonGeometry | null) => {
     setBoundary(b)
@@ -194,7 +196,7 @@ export default function PromptScreen() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search a US city or neighborhood"
+            placeholder="Search Houston or Los Angeles"
             className="flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder:text-neutral-600 focus:border-sky-600 focus:outline-none"
           />
           <button
@@ -206,7 +208,9 @@ export default function PromptScreen() {
           </button>
           {results && (
             <ul className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl">
-              {results.length === 0 && <li className="px-3 py-2 text-sm text-neutral-500">No matches</li>}
+              {results.length === 0 && (
+                <li className="px-3 py-2 text-sm text-neutral-500">No matches in Harris County or Los Angeles County</li>
+              )}
               {results.map((r, i) => (
                 <li key={`${r.label}-${i}`}>
                   <button
@@ -215,7 +219,11 @@ export default function PromptScreen() {
                     className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-neutral-800"
                   >
                     <span>{r.label}</span>
-                    {r.recorded_locale_id && <span className="rounded bg-sky-900 px-1.5 text-[11px] text-sky-200">recorded</span>}
+                    {r.recorded_locale_id ? (
+                      <span className="rounded bg-sky-900 px-1.5 text-[11px] text-sky-200">recorded</span>
+                    ) : (
+                      r.metro && <span className="rounded border border-neutral-700 px-1.5 text-[11px] text-neutral-400">{r.metro}</span>
+                    )}
                   </button>
                 </li>
               ))}
@@ -233,26 +241,18 @@ export default function PromptScreen() {
         />
 
         <p className="mt-2 mb-6 text-sm">
-          {status.kind === 'none' && <span className="text-neutral-500">Pick a recorded area or draw a boundary</span>}
-          {status.kind === 'whole' && <span className="text-neutral-300">Whole recorded area: {status.locale.name}</span>}
-          {status.kind === 'subarea' && (
+          {!boundary && !wholeLocale && <span className="text-neutral-500">Pick a recorded area or draw a boundary</span>}
+          {wholeLocale && <span className="text-neutral-300">Whole recorded area: {wholeLocale.name}</span>}
+          {boundary && !check && <span className="text-neutral-500">Checking the drawn area…</span>}
+          {check?.error && <span className="text-rose-400">{check.error}</span>}
+          {check && !check.error && check.kind === 'subarea' && (
             <span className="text-sky-300">
-              Inside {status.locale.name} · recorded data · {status.km2.toFixed(1)} km²
+              {check.label} · recorded data · {check.area_km2?.toFixed(1)} km²
             </span>
           )}
-          {status.kind === 'custom' && (
+          {check && !check.error && check.kind === 'metro' && (
             <span className="text-amber-300">
-              Custom area · experimental · public data only · recorded live (a few minutes) · {status.km2.toFixed(1)} km²
-            </span>
-          )}
-          {status.kind === 'crosses' && (
-            <span className="text-rose-400">
-              Boundary crosses the edge of {status.locale.name}: draw it fully inside or fully outside
-            </span>
-          )}
-          {status.kind === 'too_large' && (
-            <span className="text-rose-400">
-              Area is {status.km2.toFixed(1)} km²; draw at most {maxKm2} km²
+              {check.label} · recorded live from county, CoStar and imagery sources (a few minutes) · {check.area_km2?.toFixed(1)} km²
             </span>
           )}
         </p>

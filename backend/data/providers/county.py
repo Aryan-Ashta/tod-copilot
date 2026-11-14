@@ -12,6 +12,7 @@ from shapely.geometry import shape
 from shapely.strtree import STRtree
 
 from backend.data.geo import area_acres
+from backend.data.locales import get_locale, source_locale
 from backend.data.providers._base import features, first_url, fx, meta, prov, retrieved, sourced
 from backend.data.resolver import Capability
 from backend.schemas import Locale, Sourced
@@ -27,7 +28,7 @@ def land_use_maps() -> dict:
 
 
 def map_land_use(locale_id: str, props: dict) -> str:
-    m = land_use_maps()[locale_id]
+    m = land_use_maps()[source_locale(locale_id)]   # a drawn metro area uses its metro's county code map
     if m.get("vacant_code_suffix") and (props.get("raw_code") or "").endswith(m["vacant_code_suffix"]):
         return "vacant"
     raw = re.sub(r"\s+", " ", str(props.get(m["field"]) or "").strip())
@@ -52,8 +53,10 @@ def _p(locale_id: str, confidence: str, note: str | None = None):
 
 @lru_cache(maxsize=None)
 def _parcels(locale_id: str, epsg: int, cap: str) -> list[dict]:
-    lu = land_use_maps()[locale_id]
+    src = source_locale(locale_id)
+    lu = land_use_maps()[src]
     zoning_note = meta(locale_id, "county").get("zoning")
+    jurisdiction = get_locale(locale_id).jurisdiction
     out = []
     for f in features(fx(locale_id, "county", "parcels.geojson")):
         pr = f["properties"]
@@ -65,8 +68,10 @@ def _parcels(locale_id: str, epsg: int, cap: str) -> list[dict]:
             row["land_use"] = Sourced(value=map_land_use(locale_id, pr), prov=_p(
                 locale_id, "medium", f"county use code {pr.get(lu['field'])!s} mapped via land_use_maps.yaml"))
             row["address"] = sourced(pr.get("address"), med)
-            if locale_id == "houston_downtown":
+            if src == "houston_downtown" and jurisdiction == "houston":
                 row["zoning_code"] = sourced(None, med, "Houston has no zoning")
+            elif src == "houston_downtown":
+                row["zoning_code"] = sourced(None, med, "no zoning layer recorded outside the City of Houston")
             else:
                 row["zoning_code"] = sourced(pr.get("zoning_code"), _p(locale_id, "medium", zoning_note),
                                              "no zoning polygon covers this parcel")
@@ -74,16 +79,16 @@ def _parcels(locale_id: str, epsg: int, cap: str) -> list[dict]:
         else:
             row["owner"] = sourced(pr.get("owner"), med, "owner name not published in this county layer")
             row["last_sale_usd"] = sourced(pr.get("last_sale_usd"), med,
-                                           "Texas is a non-disclosure state" if locale_id == "houston_downtown"
+                                           "Texas is a non-disclosure state" if src == "houston_downtown"
                                            else "sale price not in the public parcel layer")
             year_note = {"houston_downtown": "HCAD new_owner_date (ownership transfer)",
-                         "la_wilshire_koreatown": "Prop 13 land base year (last change in ownership)"}.get(locale_id)
+                         "la_wilshire_koreatown": "Prop 13 land base year (last change in ownership)"}.get(src)
             row["last_sale_year"] = sourced(pr.get("last_sale_year"), _p(locale_id, "medium", year_note),
                                             "sale year not in the public parcel layer")
             row["assessed_value_usd"] = sourced(pr.get("assessed_value_usd"), _p(
                 locale_id, "medium", {"houston_downtown": "HCAD total market value",
                                       "la_wilshire_koreatown": "Assessor roll land + improvement (Prop 13 limited)",
-                                      "brevard_cocoa": "Property Appraiser land + building value"}[locale_id]))
+                                      "brevard_cocoa": "Property Appraiser land + building value"}[src]))
             row["lease_expiry_year"] = Sourced(value=None, prov=_p(locale_id, "missing",
                                                                    "lease data has no public source"))
         out.append(row)
@@ -98,7 +103,7 @@ def _building_attrs(locale_id: str) -> list[dict]:
         return []
     bgeoms = [shape(f["geometry"]) for f in bfeats]
     tree = STRtree([g.representative_point() for g in bgeoms])
-    typed = land_use_maps()[locale_id].get("building_type_reliable", True)
+    typed = land_use_maps()[source_locale(locale_id)].get("building_type_reliable", True)
     out = []
     for f in features(fx(locale_id, "county", "parcels.geojson")):
         pr = f["properties"]

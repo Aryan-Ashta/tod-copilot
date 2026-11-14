@@ -52,7 +52,8 @@ export interface Locale {
   /** GeoJSON Polygon/MultiPolygon (WGS84) for drawn areas. */
   boundary?: Geometry | null
   aliases?: string[]
-  experimental?: boolean
+  /** Recorded locale id whose sources a drawn metro area reuses. */
+  sources_from: string | null
 }
 
 export interface Parcel {
@@ -326,6 +327,30 @@ export interface GeocodeResult {
   lonlat: LonLat
   bbox: [number, number, number, number]
   recorded_locale_id: string | null
+  /** County the result lies in, e.g. "Harris County". */
+  metro: string | null
+}
+
+export interface AreaCheck {
+  kind: 'subarea' | 'metro' | null
+  locale_id: string | null
+  label: string | null
+  jurisdiction: string | null
+  area_km2: number | null
+  error: string | null
+}
+
+export interface MetroProperties {
+  kind: 'county' | 'place'
+  geoid: string
+  name: string
+  sources_from: string
+  jurisdiction: string
+}
+
+export interface MetroOutlines {
+  type: 'FeatureCollection'
+  features: { type: 'Feature'; properties: MetroProperties; geometry: Geometry }[]
 }
 
 export type TileKind = 'homes' | 'park' | 'stop' | 'convert_residential' | 'convert_hotel'

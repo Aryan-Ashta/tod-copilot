@@ -1,4 +1,5 @@
 import type {
+  AreaCheck,
   AgentEvent,
   BuildingDetail,
   CorpusDoc,
@@ -8,6 +9,7 @@ import type {
   Locale,
   PlanOptions,
   StockPrompt,
+  MetroOutlines,
   Plan,
   RescoreResponse,
   SimulatedCount,
@@ -55,6 +57,10 @@ export interface CreatePlanRequest {
 export const createPlan = (req: CreatePlanRequest) => post<{ plan_id: string }>('/api/plan', req)
 
 export const geocode = (q: string) => request<GeocodeResult[]>(`/api/geocode?q=${enc(q)}`)
+
+export const areaCheck = (boundary: unknown) => post<AreaCheck>('/api/area_check', { boundary })
+
+export const metros = () => request<MetroOutlines>('/api/metros')
 
 export const stockPrompts = () => request<StockPrompt[]>('/api/stock_prompts')
 

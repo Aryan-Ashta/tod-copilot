@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Map as MlMap, Marker, NavigationControl, type GeoJSONSource } from 'maplibre-gl'
 import { TerraDraw, TerraDrawPolygonMode, TerraDrawRectangleMode } from 'terra-draw'
 import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
+import { metros } from '../api'
 import { BASE_STYLE } from './MapView'
 import type { Locale } from '../types'
 import type { BBox } from '../geo'
@@ -77,6 +78,34 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     map.on('error', () => {})
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left')
     map.on('load', () => {
+      // Supported counties (thin grey) and their principal cities (dashed, brighter), under the recorded boxes.
+      map.addSource('metros', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addLayer({
+        id: 'metros-fill',
+        type: 'fill',
+        source: 'metros',
+        filter: ['==', ['get', 'kind'], 'county'],
+        paint: { 'fill-color': '#a3a3a3', 'fill-opacity': 0.04 },
+      })
+      map.addLayer({
+        id: 'metros-county',
+        type: 'line',
+        source: 'metros',
+        filter: ['==', ['get', 'kind'], 'county'],
+        paint: { 'line-color': '#a3a3a3', 'line-width': 1 },
+      })
+      map.addLayer({
+        id: 'metros-city',
+        type: 'line',
+        source: 'metros',
+        filter: ['==', ['get', 'kind'], 'place'],
+        paint: { 'line-color': '#e5e5e5', 'line-width': 1.2, 'line-dasharray': [3, 2] },
+      })
+      metros()
+        .then((fc) => (map.getSource('metros') as GeoJSONSource | undefined)?.setData(fc as GeoJSON.FeatureCollection))
+        .catch(() => {
+          // outlines are a guide only; area_check still validates drawings
+        })
       map.addSource('locales', { type: 'geojson', data: localeOutlines([], null) })
       map.addLayer({ id: 'locales-fill', type: 'fill', source: 'locales', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.06 } })
       map.addLayer({

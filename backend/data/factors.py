@@ -22,7 +22,7 @@ def load_factors() -> dict[str, Factor]:
 
 
 def _is_per_locale(value: Any) -> bool:
-    return isinstance(value, dict) and set(value) == set(LOCALE_IDS) | {"national"}
+    return isinstance(value, dict) and set(value) == set(LOCALE_IDS)
 
 
 def _has_null(value: Any) -> bool:
@@ -36,9 +36,10 @@ def _has_null(value: Any) -> bool:
 
 
 def resolve(locale_id: str) -> dict[str, Any]:
-    """Flatten per-locale mappings to this locale's value (`national` for custom areas); raise FactorMissing on
-    any null."""
-    pick = locale_id if locale_id in LOCALE_IDS else "national"
+    """Flatten per-locale mappings to this locale's value (a drawn metro area uses its source locale's); raise
+    FactorMissing on any null."""
+    from backend.data.locales import source_locale
+    pick = source_locale(locale_id)
     out: dict[str, Any] = {}
     for key, fac in load_factors().items():
         v = fac.value[pick] if _is_per_locale(fac.value) else fac.value

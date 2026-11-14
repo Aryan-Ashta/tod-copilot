@@ -42,31 +42,28 @@ conversion_cost_usd_per_sqft:
     houston_downtown: 360
     la_wilshire_koreatown: 434
     brevard_cocoa: 238
-    national: 420
   unit: USD/sqft
   source_url: https://centercityphila.org/uploads/attachments/cm5vpxmcw24izdtqdzc8e3hkk-bid-class-downtown-houston-office-conversion-study-optimized-11302023.pdf
   verified: false
-  note: "Houston: AECOM Downtown Houston Office Conversion Study (Nov 2023), comparable conversions: 'Average conversion cost was in the ballpark of $360 per square foot' (2022 $, excludes acquisition; local hard costs alone 'approximately $200-250 PSF'). LA: HR&A Advisors for LA City Planning, Exhibit F.4 'Feasibility of Community Benefit Requirements on Adaptive Reuse Projects' (Sept 2022) https://cityclerk.lacity.org/onlinedocs/2022/22-0617_misc_05_09-29-2022.pdf, market-rate prototype 533 S Fremont Ave (Financial District 1960s-80s office, 9 stories, 82,500 SF GBA, no seismic retrofit): 'Total Development Costs per GBA' $434 (residual-land-value model, so excludes building acquisition; per gross building area; with seismic retrofit $540/GBA). Brevard: HR&A Advisors Adaptive Reuse Feasibility Study, Orlando case (Empire Building, 28-44 W. Central Blvd) https://www.buildflorida2030.com/pdf/adaptive/Orlando_Case.pdf: Hard Costs $8.6M + Soft Costs $2.1M + Financing Costs $0.7M (Land $7.5M excluded) over 47,800 rentable sf -> 11,400,000 / 47,800 = 238.49 -> 238 (Central Florida; program includes a 21,250 sf new freestanding addition, so not a pure conversion - gap; no Brevard-specific figure found). national: 420 from https://www.hraadvisors.com/wp-content/uploads/2025/06/Financial-Analysis-Deliverable-Policy.pdf (HR&A for HUD/Brookings office-to-residential study, Turner Construction estimates), median of the 18 'Conversion Per SF' building figures across six metros (per GSF, excludes acquisition); Brookings: 'the lowest cost of a recent conversion that we encountered was $145 per square foot, which is less than half of the median cost estimate in our sample of 18 buildings' (six metros, not a true national average - gap)."
+  note: "Houston: AECOM Downtown Houston Office Conversion Study (Nov 2023), comparable conversions: 'Average conversion cost was in the ballpark of $360 per square foot' (2022 $, excludes acquisition; local hard costs alone 'approximately $200-250 PSF'). LA: HR&A Advisors for LA City Planning, Exhibit F.4 'Feasibility of Community Benefit Requirements on Adaptive Reuse Projects' (Sept 2022) https://cityclerk.lacity.org/onlinedocs/2022/22-0617_misc_05_09-29-2022.pdf, market-rate prototype 533 S Fremont Ave (Financial District 1960s-80s office, 9 stories, 82,500 SF GBA, no seismic retrofit): 'Total Development Costs per GBA' $434 (residual-land-value model, so excludes building acquisition; per gross building area; with seismic retrofit $540/GBA). Brevard: HR&A Advisors Adaptive Reuse Feasibility Study, Orlando case (Empire Building, 28-44 W. Central Blvd) https://www.buildflorida2030.com/pdf/adaptive/Orlando_Case.pdf: Hard Costs $8.6M + Soft Costs $2.1M + Financing Costs $0.7M (Land $7.5M excluded) over 47,800 rentable sf -> 11,400,000 / 47,800 = 238.49 -> 238 (Central Florida; program includes a 21,250 sf new freestanding addition, so not a pure conversion - gap; no Brevard-specific figure found)."
 hotel_conversion_cost_usd_per_sqft:
   value:
     houston_downtown: 360
     la_wilshire_koreatown: 450
     brevard_cocoa: 250
-    national: 450
   unit: USD/sqft
   source_url: https://www.cbre.com/insights/briefs/more-office-conversions-underway-to-revitalize-downtowns
   verified: false
-  note: "Nearest-study fallback: no hotel-specific per-city figure found. CBRE (Apr 2024): 'Conversion costs generally range between $250 and $650 per square foot'; this range is cited for office-to-hotel by Hotel Dive / Delta Quattro (2026). Houston = AECOM comparable-conversion average $360/sf (comps include office-to-hotel projects); LA = CBRE midpoint 450; Brevard = CBRE low end 250. national: 450 from https://www.cbre.com/insights/briefs/more-office-conversions-underway-to-revitalize-downtowns, 'Conversion costs generally range between $250 and $650 per square foot' -> midpoint (no national hotel-specific figure - gap)."
+  note: "Nearest-study fallback: no hotel-specific per-city figure found. CBRE (Apr 2024): 'Conversion costs generally range between $250 and $650 per square foot'; this range is cited for office-to-hotel by Hotel Dive / Delta Quattro (2026). Houston = AECOM comparable-conversion average $360/sf (comps include office-to-hotel projects); LA = CBRE midpoint 450; Brevard = CBRE low end 250."
 construction_cost_usd_per_unit:
   value:
     houston_downtown: 327500
     la_wilshire_koreatown: 313950
     brevard_cocoa: 190517
-    national: 166325
   unit: USD/unit
   source_url: https://nmrk.imgix.net/uploads/fields/pdf-market-reports/4Q25-Houston-Multifamily-Market-Report.pdf
   verified: false
-  note: "Excludes land (land enters the pro forma separately as land_cost). Houston: Newmark Houston Multifamily Market Report 4Q25, Replacement Cost Tracker, 'Mid-Rise Concrete Podium' Per Unit: 'Hard Costs $240K - $295K', 'Soft Costs 15% - 20% $45K - $75K' (Land $50K-$70K, all-in $350K-$400K) -> midpoint hard 267,500 + midpoint soft 60,000 = 327,500 (product type matches newbuild_assumed_stories 7). LA: RAND RR-A3743-1, The High Cost of Producing Multifamily Housing in California (2025) https://www.rand.org/content/dam/rand/pubs/research_reports/RRA3700/RRA3743-1/RAND_RRA3743-1.pdf, Table 3.3, Los Angeles Metro market rate: Hard Costs $259 and Soft Costs $86 per NRSF (Land $61 excluded) -> 345 x 910 sf (avg_unit_sqft_residential) = 313,950. Multi-project regression estimate in 2019 dollars, not escalated, so it understates 2026 cost - gap; Terner Center Making It Pencil 2023 LA prototype is '$71.2 million ($594,000 per unit)' but includes land and does not publish the land amount. Brevard: U.S. Census Bureau Building Permits Survey, County annual 2025 https://www2.census.gov/econ/bps/County/co2025a.txt, Brevard County (12009) 5+ unit buildings: 23 buildings, 1,230 units, valuation $234,335,714 -> 234,335,714 / 1,230 = 190,517 per unit (multi-project, excludes land; permit valuation covers construction only and typically omits soft costs, so it understates total cost - gap). national: 166325 from https://www2.census.gov/econ/bps/State/st2025a.txt, US row 5+ unit buildings: 463,972 units, valuation 77,170,364 (thousand USD) -> 77,170,364,000 / 463,972 = 166,325 (Census: 'The valuation is the estimated value of the residential structure as shown on the building permit'; structure only, no soft costs and a national mix incl. garden-style wood frame, so it understates a mid-rise - gap; no national soft-cost share found)."
+  note: "Excludes land (land enters the pro forma separately as land_cost). Houston: Newmark Houston Multifamily Market Report 4Q25, Replacement Cost Tracker, 'Mid-Rise Concrete Podium' Per Unit: 'Hard Costs $240K - $295K', 'Soft Costs 15% - 20% $45K - $75K' (Land $50K-$70K, all-in $350K-$400K) -> midpoint hard 267,500 + midpoint soft 60,000 = 327,500 (product type matches newbuild_assumed_stories 7). LA: RAND RR-A3743-1, The High Cost of Producing Multifamily Housing in California (2025) https://www.rand.org/content/dam/rand/pubs/research_reports/RRA3700/RRA3743-1/RAND_RRA3743-1.pdf, Table 3.3, Los Angeles Metro market rate: Hard Costs $259 and Soft Costs $86 per NRSF (Land $61 excluded) -> 345 x 910 sf (avg_unit_sqft_residential) = 313,950. Multi-project regression estimate in 2019 dollars, not escalated, so it understates 2026 cost - gap; Terner Center Making It Pencil 2023 LA prototype is '$71.2 million ($594,000 per unit)' but includes land and does not publish the land amount. Brevard: U.S. Census Bureau Building Permits Survey, County annual 2025 https://www2.census.gov/econ/bps/County/co2025a.txt, Brevard County (12009) 5+ unit buildings: 23 buildings, 1,230 units, valuation $234,335,714 -> 234,335,714 / 1,230 = 190,517 per unit (multi-project, excludes land; permit valuation covers construction only and typically omits soft costs, so it understates total cost - gap)."
 avg_unit_sqft_residential:
   value: 910
   unit: sqft/unit
@@ -78,31 +75,28 @@ rent_usd_per_unit_month:
     houston_downtown: 2288
     la_wilshire_koreatown: 2218
     brevard_cocoa: 1757
-    national: 1777
   unit: USD/unit/month
   source_url: https://www.rentcafe.com/average-rent-market-trends/us/tx/houston/downtown-houston
   verified: false
-  note: "RentCafe (Yardi Matrix) average apartment rent. Houston: 'The average rent for an apartment in Downtown Houston is $2,288' (Oct 30, 2026). LA: https://www.rentcafe.com/average-rent-market-trends/us/ca/los-angeles/koreatown 'The average rent for an apartment in Koreatown is $2,218' (Sep 30, 2026). Brevard: https://www.rentcafe.com/average-rent-market-trends/us/fl/cocoa 'The average rent for an apartment in Cocoa is $1,757' (Oct 30, 2026). national: 1777 from https://www.yardimatrix.com/wp-content/uploads/sites/102/2026/11/Sample-Matrix-Multifamily-National-Report-%E2%80%93-October-2026.pdf, 'U.S. multifamily advertised rents rose $1 to $1,777 in October' (140 markets)."
+  note: "RentCafe (Yardi Matrix) average apartment rent. Houston: 'The average rent for an apartment in Downtown Houston is $2,288' (Oct 30, 2026). LA: https://www.rentcafe.com/average-rent-market-trends/us/ca/los-angeles/koreatown 'The average rent for an apartment in Koreatown is $2,218' (Sep 30, 2026). Brevard: https://www.rentcafe.com/average-rent-market-trends/us/fl/cocoa 'The average rent for an apartment in Cocoa is $1,757' (Oct 30, 2026)."
 retail_rent_usd_sqft_yr:
   value:
     houston_downtown: 28.16
     la_wilshire_koreatown: 36.6
     brevard_cocoa: 18.58
-    national: 25.82
   unit: USD/sqft/yr
   source_url: https://partnersrealestate.com/wp-content/uploads/2026/10/Q3-2026-Houston-Retail-Quarterly-Market-Report_FINAL.pdf
   verified: false
-  note: "Houston: Partners Real Estate, Houston Retail Q3 2026, submarket table 'CBD 1,748,092 10.7% 8.1% ... $28.16' (Total Avg Asking Rent NNN $/PSF; market total $22.12). LA: NAI Capital, Retail Market Outlook Los Angeles County Q3 2026 https://www2.naicapital.com/wp-content/uploads/sites/2/LA_Retail_Market_Outlook_Q3_2026.pdf, 'Mid-Wilshire 7,572,433 0 7.7% 6.6% ... $3.05' (rents 'triple net, monthly on a direct basis', buildings 5,000+ SF) -> 3.05 x 12 = 36.60. Brevard: Matthews Brevard County Retail Q1 2026 http://www.matthews.com/insights/brevard-county-retailq1-2026 'Asking rents averaged $18.58 per square foot' (county-wide; no Cocoa submarket figure published - gap). national: 25.82 from https://assets.cushmanwakefield.com/-/media/cw/marketbeat-pdfs/2026/q3/us-reports/national/q32026usretailmarketbeat.pdf, 'national asking rents reaching $25.82 per square foot (psf)' (shopping centers, no malls; report does not state NNN vs gross - gap)."
+  note: "Houston: Partners Real Estate, Houston Retail Q3 2026, submarket table 'CBD 1,748,092 10.7% 8.1% ... $28.16' (Total Avg Asking Rent NNN $/PSF; market total $22.12). LA: NAI Capital, Retail Market Outlook Los Angeles County Q3 2026 https://www2.naicapital.com/wp-content/uploads/sites/2/LA_Retail_Market_Outlook_Q3_2026.pdf, 'Mid-Wilshire 7,572,433 0 7.7% 6.6% ... $3.05' (rents 'triple net, monthly on a direct basis', buildings 5,000+ SF) -> 3.05 x 12 = 36.60. Brevard: Matthews Brevard County Retail Q1 2026 http://www.matthews.com/insights/brevard-county-retailq1-2026 'Asking rents averaged $18.58 per square foot' (county-wide; no Cocoa submarket figure published - gap)."
 hotel_value_usd_per_key:
   value:
     houston_downtown: 207000
     la_wilshire_koreatown: 177000
     brevard_cocoa: 187500
-    national: 211000
   unit: USD/key
   source_url: https://therealdeal.com/la/2026/01/03/see-las-2025-top-hotel-deals
   verified: false
-  note: "LA: The Real Deal (Jan 3, 2026), The Line, 3515 Wilshire Boulevard, Koreatown (inside the locale): 'The distressed deal came out to $177,000 a room' ($68M, 384 keys, foreclosure purchase by the lender - single distressed transaction; Atlas Hospitality Group 2025 year-end LA County median 'increased 16% to $185k' https://wpdash.medianewsgroup.com/wp-content/uploads/2026/04/Atlas-Hospitality-Group-California-Hotel-Sales-Survey-2025-Year-End.pdf). Brevard: CRE Direct https://crenews.com/2025/08/29/88-room-hampton-inn-in-melbourne-fla-sells-for-16-5mln '88-Room Hampton Inn in Melbourne, Fla., Sells for $16.5Mln' -> 16,500,000 / 88 = 187,500 (single transaction - gap). Houston: nearest-study fallback, no public downtown Houston per-key sale or HVS HVI per-room value found (HVI market pages publish only value-change bands); LW Hospitality Advisors Q3 2025 Major U.S. Hotel Sales Survey (https://www.hospitalitynet.org/opinion/4130596.html) national 'average sale price per room of roughly $207,000'. national: 211000 from https://lwhospitalityadvisors.com/wp-content/uploads/2026/05/hotel-online.com-2025-Major-US-Hotel-Sales-Survey-Lodging-Sector-Overview.pdf, full-year 2025: 'an average sale price per room of $211,000' (deals over $10 million only - gap)."
+  note: "LA: The Real Deal (Jan 3, 2026), The Line, 3515 Wilshire Boulevard, Koreatown (inside the locale): 'The distressed deal came out to $177,000 a room' ($68M, 384 keys, foreclosure purchase by the lender - single distressed transaction; Atlas Hospitality Group 2025 year-end LA County median 'increased 16% to $185k' https://wpdash.medianewsgroup.com/wp-content/uploads/2026/04/Atlas-Hospitality-Group-California-Hotel-Sales-Survey-2025-Year-End.pdf). Brevard: CRE Direct https://crenews.com/2025/08/29/88-room-hampton-inn-in-melbourne-fla-sells-for-16-5mln '88-Room Hampton Inn in Melbourne, Fla., Sells for $16.5Mln' -> 16,500,000 / 88 = 187,500 (single transaction - gap). Houston: nearest-study fallback, no public downtown Houston per-key sale or HVS HVI per-room value found (HVI market pages publish only value-change bands); LW Hospitality Advisors Q3 2025 Major U.S. Hotel Sales Survey (https://www.hospitalitynet.org/opinion/4130596.html) national 'average sale price per room of roughly $207,000'."
 hotel_key_sqft:
   value: 775
   unit: sqft/key (gross)
@@ -150,11 +144,10 @@ per_unit_credit_equity_usd:
     houston_downtown: 91668
     la_wilshire_koreatown: 200533
     brevard_cocoa: 133256
-    national: 120986
   unit: USD per affordable unit
   source_url: https://lihtcsanitycheck.com/benchmarks/
   verified: false
-  note: "4% (bond) deals. LA: LIHTC Sanity Check, California LIHTC cost benchmarks 2026 (every 2026 CTCAC 4% application, Rounds 1-2, matched to CDLAC awards), 'Federal tax credit equity per unit' awarded median $200,533 (per total unit; CA 4% deals are mostly 100% affordable). Houston/Texas: TDHCA Board report on the 2025 Non-competitive 4% HTC Program (Jan 15, 2026) https://assets.noviams.com/novi-file-uploads/taahp/TDHCA_Board_Meetings/Item_31_Non-competitive_4_Percent_Program_Forecast.pdf: approved applications 'represent total issuances of more than $69M in 4% Housing Tax Credits, and 6,050 total units'; closed 'represent 4,185 units and over $45 million' -> 114,000,000 / 10,235 = $11,138 annual credit per unit x 10 years x $0.823 = 91,668 (per total unit; the 'more than'/'over' totals make this a lower bound). Brevard/Florida: Florida Housing Finance Corporation 2025 Annual Report https://www.floridahousing.org/docs/default-source/data-docs-and-reports/annual-reports/2025-annual-report.pdf '$167,954,503 in non-competitive (4%) Housing Credits was allocated' with '10,373 units will be set aside as affordable' -> 16,192 annual credit per affordable unit x 10 years x $0.823 = 133,256. Credit price for TX and FL: CohnReznick Housing Tax Credit Monitor median 'is $0.823 per dollar of housing tax credit' (Jun-Jul 2026, via https://lihtc.loans/market/equity-pricing/), national, not state-specific - gap. national: 120986 from the HUD National LIHTC Database https://www.huduser.gov/lihtc/lihtcpub.zip (30%-present-value credit projects placed in service 2022-2024, n=981): median ALLOCAMT / N_UNITSR = 14,754.4 per year x 10 years x $0.82 (Novogradac https://www.novoco.com/resource-centers/affordable-housing-tax-credits 'NATIONAL 4% ... Sept. 2026 ... 4% Equity Price per Credit $0.82') = 120,986 (window-sensitive: 2020-24 gives 105,365, 2023-24 gives 134,013)."
+  note: "4% (bond) deals. LA: LIHTC Sanity Check, California LIHTC cost benchmarks 2026 (every 2026 CTCAC 4% application, Rounds 1-2, matched to CDLAC awards), 'Federal tax credit equity per unit' awarded median $200,533 (per total unit; CA 4% deals are mostly 100% affordable). Houston/Texas: TDHCA Board report on the 2025 Non-competitive 4% HTC Program (Jan 15, 2026) https://assets.noviams.com/novi-file-uploads/taahp/TDHCA_Board_Meetings/Item_31_Non-competitive_4_Percent_Program_Forecast.pdf: approved applications 'represent total issuances of more than $69M in 4% Housing Tax Credits, and 6,050 total units'; closed 'represent 4,185 units and over $45 million' -> 114,000,000 / 10,235 = $11,138 annual credit per unit x 10 years x $0.823 = 91,668 (per total unit; the 'more than'/'over' totals make this a lower bound). Brevard/Florida: Florida Housing Finance Corporation 2025 Annual Report https://www.floridahousing.org/docs/default-source/data-docs-and-reports/annual-reports/2025-annual-report.pdf '$167,954,503 in non-competitive (4%) Housing Credits was allocated' with '10,373 units will be set aside as affordable' -> 16,192 annual credit per affordable unit x 10 years x $0.823 = 133,256. Credit price for TX and FL: CohnReznick Housing Tax Credit Monitor median 'is $0.823 per dollar of housing tax credit' (Jun-Jul 2026, via https://lihtc.loans/market/equity-pricing/), national, not state-specific - gap."
 houston_downtown_per_unit_incentive_usd:
   value: 15000
   unit: USD/unit
@@ -184,41 +177,37 @@ vmt_reduction_per_household_near_transit:
     houston_downtown: 1884
     la_wilshire_koreatown: 1884
     brevard_cocoa: 869
-    national: 869
   unit: miles/household/year
   source_url: https://ww2.arb.ca.gov/sites/default/files/2025-09/Residential%20Transit%20Access%20-%202025%20Policy%20Brief.pdf
   verified: false
-  note: "CARB policy brief 'Impacts of Residential Transit Access (Distance to Transit)' (Volker, UC Davis, Apr 2025), review of the empirical literature: 'Two separate meta-analyses ... estimated an elasticity of VMT with respect to transit proximity of -0.05' (Ewing & Cervero 2010; Stevens 2017), and 'the maximum total effect of rail transit proximity is more than double that of bus stop proximity (13% versus 6% reduction in VMT)' (Bailey et al. 2008: -4.3% per mile within 3 mi of rail; -1.5% per 1/4 mi within 1 mi of a bus stop). Baseline: FHWA Summary of Travel Trends, 2022 NHTS https://www.fhwa.dot.gov/policyinformation/2022Summary_of_Travel_Trends_Report.pdf, Table 3-4 average annual VMT per household (all purposes) 2022 = 14,489. Houston and LA (sites limited to rail station areas): 0.13 x 14,489 = 1,884. Brevard (no operating rail; planned Brightline is intercity): bus maximum 0.06 x 14,489 = 869. Controlled cross-sectional estimates, not causal; NHTS survey VMT runs below external VMT totals, so the baseline is conservative. national: 869, the bus-only 6% figure above, chosen as the conservative value for custom areas whose transit is unknown."
+  note: "CARB policy brief 'Impacts of Residential Transit Access (Distance to Transit)' (Volker, UC Davis, Apr 2025), review of the empirical literature: 'Two separate meta-analyses ... estimated an elasticity of VMT with respect to transit proximity of -0.05' (Ewing & Cervero 2010; Stevens 2017), and 'the maximum total effect of rail transit proximity is more than double that of bus stop proximity (13% versus 6% reduction in VMT)' (Bailey et al. 2008: -4.3% per mile within 3 mi of rail; -1.5% per 1/4 mi within 1 mi of a bus stop). Baseline: FHWA Summary of Travel Trends, 2022 NHTS https://www.fhwa.dot.gov/policyinformation/2022Summary_of_Travel_Trends_Report.pdf, Table 3-4 average annual VMT per household (all purposes) 2022 = 14,489. Houston and LA (sites limited to rail station areas): 0.13 x 14,489 = 1,884. Brevard (no operating rail; planned Brightline is intercity): bus maximum 0.06 x 14,489 = 869. Controlled cross-sectional estimates, not causal; NHTS survey VMT runs below external VMT totals, so the baseline is conservative."
 bus_operating_cost_usd_per_revenue_hour:
   value:
     houston_downtown: 195.15
     la_wilshire_koreatown: 246.35
     brevard_cocoa: 109.17
-    national: 211.53
   unit: USD/revenue hour
   source_url: https://data.transportation.gov/resource/ekg5-frzt.json?mode=MB&type_of_service=DO&report_year=2025
   verified: false
-  note: "FTA NTD 2022-2025 Annual Data - Metrics, report year 2025, mode MB (bus), directly operated, cost_per_hour: METRO Harris County (ntd_id 60008) 195.1456; LA Metro (90154) 246.3541; Space Coast Area Transit / Brevard BOCC (40063) 109.1695. national: 211.53 from the same dataset (849 agencies): sum total_operating_expenses 27,490,273,351 / sum vehicle_revenue_hours 129,958,139 (service-hour weighted; the median agency is 109.74)."
+  note: "FTA NTD 2022-2025 Annual Data - Metrics, report year 2025, mode MB (bus), directly operated, cost_per_hour: METRO Harris County (ntd_id 60008) 195.1456; LA Metro (90154) 246.3541; Space Coast Area Transit / Brevard BOCC (40063) 109.1695."
 bus_avg_speed_kmh:
   value:
     houston_downtown: 20.17
     la_wilshire_koreatown: 16.21
     brevard_cocoa: 30.70
-    national: 18.81
   unit: km/h
   source_url: https://data.transportation.gov/resource/ekg5-frzt.json?mode=MB&type_of_service=DO&report_year=2025
   verified: false
-  note: "FTA NTD report year 2025, MB directly operated: vehicle_revenue_miles / vehicle_revenue_hours x 1.609344. METRO (60008) 12.53 mph -> 20.17; LA Metro (90154) 10.07 mph -> 16.21; Brevard (40063) 19.07 mph -> 30.70. Made per-locale because the agencies differ by ~2x. national: 18.81 from the same dataset (849 agencies): sum vehicle_revenue_miles 1,518,843,785 / sum vehicle_revenue_hours 129,958,139 = 11.687 mph x 1.609344."
+  note: "FTA NTD report year 2025, MB directly operated: vehicle_revenue_miles / vehicle_revenue_hours x 1.609344. METRO (60008) 12.53 mph -> 20.17; LA Metro (90154) 10.07 mph -> 16.21; Brevard (40063) 19.07 mph -> 30.70. Made per-locale because the agencies differ by ~2x."
 on_demand_cost_usd_per_zone_year:
   value:
     houston_downtown: 1093333
     la_wilshire_koreatown: 3875000
     brevard_cocoa: 257437
-    national: 410895
   unit: USD/zone/year
   source_url: http://www.golynx.com/core/fileparse.php/97315/urlt/10-23-2025-Board-Report-Pkg.pdf
   verified: false
-  note: "Brevard: LYNX (Central Florida) Board Action Item 7.B, Oct 23, 2025, NeighborLink on-demand contract to Beefree LLC dba Freebee: 'The cost submitted by Beefree, LLC was $8,495,410 for the initial three (3) year term'; 'The service has grown to 11 routes' (NeighborLink zones) -> 8,495,410 / 3 / 11 = 257,437 per zone-year (neighboring Central Florida agency; no Space Coast Area Transit microtransit cost found). Houston: Houston Chronicle (Dec 19, 2025) https://www.houstonchronicle.com/news/houston-texas/transportation/article/metro-evolve-funding-scrapped-21251191.php: the proposed '$4.1 million' would 'extend the service through September 2026' (from Evolve's Dec 31, 2025 contract end, i.e. 9 months) for Community Connector zones in 'the Third Ward, Second Ward, downtown, the Heights and near Northside' (5 zones) -> 4,100,000 / 0.75 / 5 = 1,093,333 per zone-year (proposed, not executed; METRO instead moved the service to MV Transportation for $2.3M). LA: LA Metro Board Report 2023-0464 (Metro Micro) https://metro.legistar.com/ViewReport.ashx?GID=557&GUID=LATEST&ID=9542&M=R&N=TextL5&Title=Board%20Report 'The annual cost of the MicroTransit program is $31 million' across 'a total of eight Micro Zones' -> 31,000,000 / 8 = 3,875,000. national: 410895 from NCDOT On-Demand Microtransit 2025 Annual Report https://www.ncdot.gov/divisions/integrated-mobility/public-transit-services/on-demand-microtransit/Documents/ncdot-on-demand-microtransit-annual-report-2025.pdf: median of the 10 reported 'Total cost' figures 616,342.5 / 'Average number of service area zones ... 1.5' (nearest study: statewide survey, no national per-zone figure exists - gap)."
+  note: "Brevard: LYNX (Central Florida) Board Action Item 7.B, Oct 23, 2025, NeighborLink on-demand contract to Beefree LLC dba Freebee: 'The cost submitted by Beefree, LLC was $8,495,410 for the initial three (3) year term'; 'The service has grown to 11 routes' (NeighborLink zones) -> 8,495,410 / 3 / 11 = 257,437 per zone-year (neighboring Central Florida agency; no Space Coast Area Transit microtransit cost found). Houston: Houston Chronicle (Dec 19, 2025) https://www.houstonchronicle.com/news/houston-texas/transportation/article/metro-evolve-funding-scrapped-21251191.php: the proposed '$4.1 million' would 'extend the service through September 2026' (from Evolve's Dec 31, 2025 contract end, i.e. 9 months) for Community Connector zones in 'the Third Ward, Second Ward, downtown, the Heights and near Northside' (5 zones) -> 4,100,000 / 0.75 / 5 = 1,093,333 per zone-year (proposed, not executed; METRO instead moved the service to MV Transportation for $2.3M). LA: LA Metro Board Report 2023-0464 (Metro Micro) https://metro.legistar.com/ViewReport.ashx?GID=557&GUID=LATEST&ID=9542&M=R&N=TextL5&Title=Board%20Report 'The annual cost of the MicroTransit program is $31 million' across 'a total of eight Micro Zones' -> 31,000,000 / 8 = 3,875,000."
 walk_speed_m_per_s:
   value: 1.067
   unit: m/s
@@ -254,11 +243,10 @@ solar_kwh_per_kw_year:
     houston_downtown: 1421.4
     la_wilshire_koreatown: 1678.3
     brevard_cocoa: 1543.1
-    national: 1349.3
   unit: kWh/kW/yr
   source_url: https://developer.nlr.gov/api/pvwatts/v8.json
   verified: false
-  note: "NREL PVWatts v8.5.0 ac_annual (NSRDB PSM V3 tmy-2020), system_capacity=1, module_type=0, losses=14, array_type=1, tilt=20, azimuth=180, queried 2026-11-14 with DEMO_KEY at bbox/station centers: Houston (29.7505,-95.3690) 1421.42; LA (34.0620,-118.3000) 1678.35; Cocoa station (28.3954,-80.7531) 1543.08. developer.nrel.gov no longer resolves; developer.nlr.gov serves the same API. national: 1349.3, same query at the Census 2020 mean center of US population (37.415725, -92.346525; https://www.census.gov/geographies/reference-files/time-series/geo/centers-population.html) -> ac_annual 1349.28."
+  note: "NREL PVWatts v8.5.0 ac_annual (NSRDB PSM V3 tmy-2020), system_capacity=1, module_type=0, losses=14, array_type=1, tilt=20, azimuth=180, queried 2026-11-14 with DEMO_KEY at bbox/station centers: Houston (29.7505,-95.3690) 1421.42; LA (34.0620,-118.3000) 1678.35; Cocoa station (28.3954,-80.7531) 1543.08. developer.nrel.gov no longer resolves; developer.nlr.gov serves the same API."
 reuse_vacancy_threshold_pct:
   value: 25
   unit: pct
@@ -452,11 +440,10 @@ transit_budget_usd:
     houston_downtown: 10000000
     la_wilshire_koreatown: 10000000
     brevard_cocoa: 3000000
-    national: 5000000
   unit: USD/year
   source_url: team choice
   verified: false
-  note: "team design choice, labeled; national: 5,000,000 for custom areas (team choice)"
+  note: team design choice, labeled
 frequent_bus_headway_min:
   value: 15
   unit: min
@@ -597,10 +584,10 @@ affordable_share_high:
   verified: false
   note: "team design choice, labeled: affordable share used when the prompt asks to maximize affordable homes;
     reference: Florida Live Local Act requires 40% affordable units"
-custom_area_max_km2:
-  value: 12
+area_max_km2:
+  value: 25
   unit: km2
   source_url: team choice
   verified: false
-  note: "team design choice, labeled: largest drawn boundary accepted, so a live custom-area recording (OSM,
-    GTFS, Census, FEMA) finishes in a few minutes"
+  note: "team design choice, labeled: largest drawn boundary accepted. Measured 2026-11-14: ~26 km² areas (Houston
+    Montrose-Museum, West LA) recorded live in ~4 min and planned in 6-10 s; rescore 2-4 ms"

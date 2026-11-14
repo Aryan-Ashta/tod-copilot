@@ -2,6 +2,7 @@
 into cache/areas/<id>/."""
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 
 import yaml
 
@@ -22,6 +23,12 @@ def get_locale(locale_id: str) -> Locale:
         raise KeyError(f"unknown area {locale_id}")
     raw = yaml.safe_load(p.read_text())
     return Locale(**{k: v for k, v in raw.items() if k in Locale.model_fields})
+
+
+def source_locale(locale_id: str) -> Optional[str]:
+    """The recorded locale whose county sources (parcels, land-use map, utilities) this area reuses: itself when
+    recorded; for a custom area inside Harris or LA County, the Houston or LA locale; otherwise None."""
+    return locale_id if locale_id in LOCALE_IDS else get_locale(locale_id).sources_from
 
 
 def load_locales() -> list[Locale]:

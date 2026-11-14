@@ -28,8 +28,8 @@ function PlanView({ replay }: { replay: boolean }) {
             <span className="ml-2 rounded border border-neutral-700 px-1.5 text-[11px] text-neutral-400">
               {locale.data_tier === 'costar_full' ? 'CoStar full' : 'Public only'}
             </span>
-            {locale.experimental && (
-              <span className="ml-2 rounded bg-amber-900 px-1.5 text-[11px] text-amber-200">experimental</span>
+            {locale.sources_from && locale.id.startsWith('area-') && (
+              <span className="ml-2 rounded border border-neutral-700 px-1.5 text-[11px] text-neutral-400">recorded live</span>
             )}
           </span>
         )}

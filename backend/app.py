@@ -16,7 +16,7 @@ from backend import settings, store
 from backend.agents.coordinator import run_plan
 from backend.agents.plan_options import apply_options, parse_prompt, stock_prompts
 from backend.corpus.loader import load_index, load_sections
-from backend.data.areas import AreaError, create_custom_area, resolve_area
+from backend.data.areas import AreaError, AreaResolution, metro_county, metro_outlines, record_area, resolve_area
 from backend.data.factors import load_factors, resolve
 from backend.data.http_cache import OfflineCacheMiss, cached_get
 from backend.data.locales import LOCALE_IDS, load_locales
@@ -37,6 +37,10 @@ class PlanRequest(BaseModel):
     area_name: Optional[str] = None
     prompt: str
     options: Optional[PlanOptions] = None
+
+
+class AreaCheckRequest(BaseModel):
+    boundary: dict
 
 
 class PromptRequest(BaseModel):
@@ -61,17 +65,21 @@ def locales() -> list[Locale]:
     return load_locales()
 
 
+def _area(locale_id: Optional[str], boundary: Optional[dict]) -> AreaResolution:
+    return resolve_area(locale_id, boundary, resolve(LOCALE_IDS[0])["area_max_km2"])
+
+
 @app.post("/api/plan")
 async def start_plan(req: PlanRequest) -> dict:
     try:
-        area = resolve_area(req.locale_id, req.boundary, resolve(LOCALE_IDS[0])["custom_area_max_km2"])
+        area = _area(req.locale_id, req.boundary)
     except AreaError as e:
         raise HTTPException(422, str(e))
-    if area.kind == "custom" and settings.OFFLINE:
-        raise HTTPException(409, "custom areas need the network to record public data; with DEMO_OFFLINE=1 only "
-                                 "recorded areas work")
+    if area.kind == "metro" and settings.OFFLINE:
+        raise HTTPException(409, "areas outside the recorded boxes are recorded live and need the network; with "
+                                 "DEMO_OFFLINE=1 draw inside a recorded box")
     hex8 = uuid4().hex[:8]
-    plan_id = f"area-{hex8}-plan" if area.kind == "custom" else f"{area.locale_id}-{hex8}"
+    plan_id = f"area-{hex8}-plan" if area.kind == "metro" else f"{area.locale_id}-{hex8}"
     options = req.options or parse_prompt(req.prompt)
     run = store.Run()
     store.runs[plan_id] = run
@@ -90,12 +98,11 @@ async def start_plan(req: PlanRequest) -> dict:
     async def go() -> None:
         try:
             locale_id, boundary = area.locale_id, area.boundary
-            if area.kind == "custom":
+            if area.kind == "metro":
                 def step(text: str) -> None:
                     emit(AgentEvent(agent="coordinator", status="running", step=text))
-                locale_id = await asyncio.to_thread(create_custom_area, req.area_name or "Drawn area", area.boundary,
-                                                    step)
-                boundary = None   # the custom locale already carries its boundary
+                locale_id = await asyncio.to_thread(record_area, req.area_name or "Drawn area", area, step)
+                boundary = None   # the recorded area's locale already carries its boundary
             plan = await asyncio.to_thread(run_plan, locale_id, req.prompt, plan_id, emit, boundary=boundary,
                                            area_name=req.area_name, options=options)
             store.put_plan(plan)
@@ -106,24 +113,47 @@ async def start_plan(req: PlanRequest) -> dict:
     return {"plan_id": plan_id}
 
 
+@app.post("/api/area_check")
+def area_check(req: AreaCheckRequest) -> dict:
+    """What a drawn boundary would run as: {kind, locale_id, label, jurisdiction, area_km2, error}. Offline-safe."""
+    try:
+        a = _area(None, req.boundary)
+    except AreaError as e:
+        return {"kind": None, "error": str(e)}
+    return {"kind": a.kind, "locale_id": a.locale_id, "label": a.label, "jurisdiction": a.jurisdiction,
+            "area_km2": a.area_km2, "error": None}
+
+
+@app.get("/api/metros")
+def metros() -> dict:
+    """Supported county and city outlines (GeoJSON FeatureCollection, Census TIGERweb)."""
+    return metro_outlines()
+
+
 @app.get("/api/geocode")
 def geocode(q: str) -> list[dict]:
-    """Recorded locales whose aliases match first, then Nominatim (US only, cached); offline: recorded only."""
+    """Recorded locales whose aliases match first, then Nominatim hits inside a supported county (cached);
+    offline: recorded only."""
     ql = " ".join(q.lower().replace(",", " ").split())
     out = []
     for loc in load_locales():   # whole words only: "la" must not match "dallas"
         if ql and any(re.search(rf"\b{re.escape(a)}\b", ql) or re.search(rf"\b{re.escape(ql)}\b", a)
                       for a in loc.aliases):
             c = box(*loc.bbox).centroid
-            out.append({"label": loc.name, "lonlat": [c.x, c.y], "bbox": list(loc.bbox), "recorded_locale_id": loc.id})
+            out.append({"label": loc.name, "lonlat": [c.x, c.y], "bbox": list(loc.bbox), "recorded_locale_id": loc.id,
+                        "metro": None})
     try:
-        hits = cached_get(NOMINATIM, {"q": q, "format": "json", "limit": 5, "countrycodes": "us"})
+        hits = cached_get(NOMINATIM, {"q": q, "format": "json", "limit": 10, "countrycodes": "us"})
     except (OfflineCacheMiss, httpx.HTTPError):
         hits = []
     for h in hits:
+        lon, lat = float(h["lon"]), float(h["lat"])
+        county = metro_county(lon, lat)
+        if county is None:   # outside Harris County and Los Angeles County: not supported
+            continue
         s, n, w, e = (float(v) for v in h["boundingbox"])
-        out.append({"label": h["display_name"], "lonlat": [float(h["lon"]), float(h["lat"])], "bbox": [w, s, e, n],
-                    "recorded_locale_id": None})
+        out.append({"label": h["display_name"], "lonlat": [lon, lat], "bbox": [w, s, e, n], "recorded_locale_id": None,
+                    "metro": county})
     return out[:6]
 
 

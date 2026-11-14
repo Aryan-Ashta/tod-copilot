@@ -46,7 +46,7 @@ class Locale(BaseModel):
     transit_agency: str         # Addition
     boundary: Optional[dict] = None   # Addition: drawn GeoJSON Polygon/MultiPolygon (WGS84)
     aliases: list[str] = []           # Addition: city-search names
-    experimental: bool = False        # Addition: custom area recorded live
+    sources_from: Optional[str] = None   # Addition: recorded locale whose county sources a custom area reuses
 
 
 class Parcel(BaseModel):

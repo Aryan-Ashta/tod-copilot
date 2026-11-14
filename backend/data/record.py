@@ -31,7 +31,7 @@ from shapely.strtree import STRtree
 from backend import settings
 from backend.data.geo import lonlat_to_utm, to_utm
 from backend.data.http_cache import cached_get, cached_post, evict
-from backend.data.locales import LOCALE_IDS, locale_dir
+from backend.data.locales import LOCALE_IDS, locale_dir, source_locale
 
 ROOT = settings.ROOT
 
@@ -68,15 +68,15 @@ GTFS = {
                               "https://gitlab.com/LACMTA/gtfs_bus/-/raw/master/gtfs_bus.zip"],
     "brevard_cocoa": ["https://files.mobilitydatabase.org/ntd-40063/latest.zip"],
 }
-MOBILITY_CATALOG = "https://files.mobilitydatabase.org/feeds_v2.csv"
-STATE_FIPS_TO_ABBR = {
-    "01": "al", "02": "ak", "04": "az", "05": "ar", "06": "ca", "08": "co", "09": "ct", "10": "de", "11": "dc",
-    "12": "fl", "13": "ga", "15": "hi", "16": "id", "17": "il", "18": "in", "19": "ia", "20": "ks", "21": "ky",
-    "22": "la", "23": "me", "24": "md", "25": "ma", "26": "mi", "27": "mn", "28": "ms", "29": "mo", "30": "mt",
-    "31": "ne", "32": "nv", "33": "nh", "34": "nj", "35": "nm", "36": "ny", "37": "nc", "38": "nd", "39": "oh",
-    "40": "ok", "41": "or", "42": "pa", "44": "ri", "45": "sc", "46": "sd", "47": "tn", "48": "tx", "49": "ut",
-    "50": "vt", "51": "va", "53": "wa", "54": "wv", "55": "wi", "56": "wy", "72": "pr",
-}
+STATE = {"houston_downtown": "tx", "la_wilshire_koreatown": "ca", "brevard_cocoa": "fl"}
+TIGER_COUNTIES = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1"
+TIGER_PLACES = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/4"
+# Supported metros: (kind, layer, GEOID, source locale, jurisdiction inside it). A drawn area in the county reuses
+# the source locale's county sources; inside the city it also gets that city's legal corpus.
+METROS = [("county", TIGER_COUNTIES, "48201", "houston_downtown", None),
+          ("county", TIGER_COUNTIES, "06037", "la_wilshire_koreatown", None),
+          ("place", TIGER_PLACES, "4835000", "houston_downtown", "houston"),
+          ("place", TIGER_PLACES, "0644000", "la_wilshire_koreatown", "los_angeles")]
 
 # Cocoa Brightline station: Space Coast TPO / press place it behind the Walmart at 2700 Clearlake Rd,
 # between that site and the FEC railroad corridor.
@@ -115,22 +115,24 @@ def save_locale_yaml(lid: str, data: dict, header: str = "") -> None:
     p.write_text(header + yaml.safe_dump(data, sort_keys=False, allow_unicode=True))
 
 
-def mobility_feeds(bbox) -> list[tuple[str, str]]:
-    """(provider, latest URL) of every active US GTFS feed in the Mobility Database whose bounding box meets bbox."""
-    w, s, e, n = bbox
-    out = []
-    for row in csv.DictReader(io.StringIO(cached_get(MOBILITY_CATALOG, fmt="text", timeout=120))):
-        if (row.get("data_type") != "gtfs" or row.get("status") != "active"
-                or row.get("location.country_code") != "US" or not row.get("urls.latest")):
-            continue
-        try:
-            mn_lat, mx_lat = float(row["location.bounding_box.minimum_latitude"]), float(row["location.bounding_box.maximum_latitude"])
-            mn_lon, mx_lon = float(row["location.bounding_box.minimum_longitude"]), float(row["location.bounding_box.maximum_longitude"])
-        except (KeyError, TypeError, ValueError):
-            continue
-        if mn_lon <= e and mx_lon >= w and mn_lat <= n and mx_lat >= s:
-            out.append((row.get("provider") or "", row["urls.latest"]))
-    return sorted(out)
+def record_metros() -> None:
+    """Census TIGERweb outlines of the supported counties and cities -> backend/fixtures/metros/outlines.geojson.
+
+    Public data, simplified to ~50 m (maxAllowableOffset), so area checks work offline."""
+    feats = []
+    for kind, url, geoid, src, jur in METROS:
+        d = cached_get(f"{url}/query", {"where": f"GEOID='{geoid}'", "outFields": "GEOID,NAME", "returnGeometry": "true",
+                                         "outSR": 4326, "maxAllowableOffset": 0.0005, "f": "geojson"})
+        f = d["features"][0]
+        feats.append({"type": "Feature", "properties": {"kind": kind, "geoid": geoid, "name": f["properties"]["NAME"],
+                                                        "sources_from": src, "jurisdiction": jur},
+                      "geometry": f["geometry"]})
+        print(f"metros: {f['properties']['NAME']}")
+    d = settings.FIXTURES_DIR / "metros"
+    d.mkdir(parents=True, exist_ok=True)
+    write_geojson(d / "outlines.geojson", feats)
+    write_meta(d, "census_tigerweb", [TIGER_COUNTIES, TIGER_PLACES], note="Census TIGERweb current counties and "
+               "incorporated places, maxAllowableOffset 0.0005 deg")
 
 
 def arcgis_query(url: str, bbox, where: str = "1=1", out_fields: str = "*", geometry: bool = True,
@@ -312,20 +314,18 @@ def norm_brevard(p: dict) -> dict:
 
 
 def record_county(lid: str) -> None:
-    if lid not in LOCALE_IDS:
-        print("county: no parcel source for custom areas; skipped")
-        return
-    bbox = shrink_bbox_if_needed(lid)
-    url, where = parcel_source(lid)
+    src = source_locale(lid)   # a metro area reads its metro's county parcel layer within its own bbox
+    bbox = shrink_bbox_if_needed(lid) if lid in LOCALE_IDS else list(load_locale_yaml(lid)["bbox"])
+    url, where = parcel_source(src)
     raw = arcgis_query(url, bbox, where)
-    norm = {"houston_downtown": norm_houston, "la_wilshire_koreatown": norm_la, "brevard_cocoa": norm_brevard}[lid]
+    norm = {"houston_downtown": norm_houston, "la_wilshire_koreatown": norm_la, "brevard_cocoa": norm_brevard}[src]
     urls = [url]
     zoning, zoning_note = None, None
-    if lid == "la_wilshire_koreatown":
+    if src == "la_wilshire_koreatown":   # City of LA layer; parcels in other cities get no zoning polygon
         zoning, n = zoning_lookup(LA_ZONING, "ZONE_CMPLT", bbox)
         urls.append(LA_ZONING)
         zoning_note = f"City of LA Generalized Zoning layer, field ZONE_CMPLT ({n} polygons)"
-    elif lid == "brevard_cocoa":
+    elif src == "brevard_cocoa":
         city, n_city = zoning_lookup(COCOA_ZONING, "Zoning", bbox)
         county, n_county = zoning_lookup(BREVARD_ZONING, "ZONING", bbox)
         # City of Cocoa governs inside the city. County district names overlap Cocoa's (RU-1-7, RU-2-15), so
@@ -351,7 +351,7 @@ def record_county(lid: str) -> None:
     d = fixture_dir(lid, "county")
     write_geojson(d / "parcels.geojson", feats)
     write_meta(d, "county_parcels", urls, where=where, zoning=zoning_note,
-               houston_zoning="Houston has no zoning" if lid == "houston_downtown" else None)
+               houston_zoning="Houston has no zoning" if src == "houston_downtown" else None)
     print(f"county: {len(feats)} parcels")
 
 
@@ -573,20 +573,9 @@ def record_gtfs(lid: str) -> None:
     keep_box = expand_bbox(b, 1000)
     routes_out, stops_out, rail_stations = [], {}, {}
     recorded = lid in LOCALE_IDS
-    feeds = [("", u) for u in GTFS[lid]] if recorded else mobility_feeds(b)
-    if not feeds:
-        print("gtfs: no feed in the Mobility Database covers this area")
-        return
-    used = []
-    for provider, url in feeds:
-        try:
-            z = zipfile.ZipFile(io.BytesIO(cached_get(url, fmt="bytes", timeout=300)))
-        except Exception as e:
-            if recorded:
-                raise
-            print(f"gtfs: {provider or url} unreadable ({type(e).__name__}); skipped")
-            continue
-        used.append((provider, url))
+    feeds = GTFS[source_locale(lid)]   # a metro area reuses its metro's agency feeds
+    for url in feeds:
+        z = zipfile.ZipFile(io.BytesIO(cached_get(url, fmt="bytes", timeout=300)))
         stops, routes, trips = _read(z, "stops.txt"), _read(z, "routes.txt"), _read(z, "trips.txt")
         st = _read(z, "stop_times.txt", usecols=["trip_id", "stop_id", "departure_time", "stop_sequence"])
         shapes = _read(z, "shapes.txt")
@@ -666,53 +655,66 @@ def record_gtfs(lid: str) -> None:
     d = fixture_dir(lid, "gtfs")
     write_geojson(d / "routes.geojson", routes_out)
     write_geojson(d / "stops.geojson", list(stops_out.values()))
-    write_meta(d, "gtfs", [u for _, u in used])
+    write_meta(d, "gtfs", feeds)
     if lid != "brevard_cocoa":
         data = load_locale_yaml(lid)
         data["stations"] = [{"name": n, "lonlat": [round(sum(p[0] for p in pts) / len(pts), 6),
                                                    round(sum(p[1] for p in pts) / len(pts), 6)],
                              "mode": pts[0][2], "source_url": pts[0][3]} for n, pts in sorted(rail_stations.items())]
-        if not recorded:
+        if not recorded and not data["stations"]:   # no rail in the area: frequent bus stops stand in for stations
             route_feed = {r["properties"]["route_id"]: r["properties"]["feed_url"] for r in routes_out}
-            if not data["stations"]:   # no rail: frequent bus stops stand in for stations
-                from backend.data.factors import resolve
-                max_hw = resolve(lid)["readiness_frequent_headway_max_min"]
-                data["stations"] = [
-                    {"name": s["properties"]["name"], "lonlat": [round(c, 6) for c in s["geometry"]["coordinates"]],
-                     "mode": "frequent_bus", "source_url": route_feed[s["properties"]["route_ids"][0]],
-                     "note": f"frequent bus stop: peak headway {s['properties']['peak_headway_min']} min "
-                             f"(factor readiness_frequent_headway_max_min)"}
-                    for s in sorted(stops_out.values(), key=lambda s: s["properties"]["name"])
-                    if s["properties"]["peak_headway_min"] is not None
-                    and s["properties"]["peak_headway_min"] <= max_hw and in_bbox(*s["geometry"]["coordinates"], b)]
-            served = set(route_feed.values())
-            data["transit_agency"] = ", ".join(sorted({p for p, u in used if u in served and p})) or "unknown"
+            from backend.data.factors import resolve
+            max_hw = resolve(lid)["readiness_frequent_headway_max_min"]
+            # one station per stop name: the two directions of a street stop share a name (as rail stations do)
+            freq: dict[str, list] = {}
+            for s in stops_out.values():
+                hw = s["properties"]["peak_headway_min"]
+                if hw is not None and hw <= max_hw and in_bbox(*s["geometry"]["coordinates"], b):
+                    freq.setdefault(s["properties"]["name"], []).append(s)
+            data["stations"] = [
+                {"name": n, "lonlat": [round(sum(s["geometry"]["coordinates"][0] for s in ss) / len(ss), 6),
+                                       round(sum(s["geometry"]["coordinates"][1] for s in ss) / len(ss), 6)],
+                 "mode": "frequent_bus", "source_url": route_feed[ss[0]["properties"]["route_ids"][0]],
+                 "note": f"frequent bus stop: peak headway {min(s['properties']['peak_headway_min'] for s in ss)} "
+                         f"min (factor readiness_frequent_headway_max_min)"}
+                for n, ss in sorted(freq.items())]
         save_locale_yaml(lid, data)
         print(f"stations: {[s['name'] for s in data['stations']]}")
     print(f"gtfs: {len(routes_out)} routes, {len(stops_out)} stops")
 
 
 # ---------------------------------------------------------------- demand
-def record_demand(lid: str) -> None:
-    data = load_locale_yaml(lid)
-    b = expand_bbox(tuple(data["bbox"]), 400)
-    blocks = arcgis_query(f"{TIGER}/2", b, out_fields="GEOID,INTPTLAT,INTPTLON,HU100", geometry=False)
-    if not blocks:
-        raise RuntimeError("no 2020 Census blocks in this area")
-    geoid0 = blocks[0]["properties"]["GEOID"]
-    st_abbr = STATE_FIPS_TO_ABBR[geoid0[:2]]
-    if lid not in LOCALE_IDS:
-        data["county_fips"] = geoid0[:5]
-        save_locale_yaml(lid, data)
-    # This hosted layer caps pages at 50 and rejects paged geojson queries; one f=json centroid query suffices.
+def _acs_tracts(b, depth: int = 0) -> list[dict]:
+    """ACS tract centroids in bbox b. This hosted layer caps results at 50 and rejects paged geojson queries, so a
+    truncated answer is split into quadrants (tracts on a split line come back twice; the caller dedupes)."""
     tq = {"where": "1=1", "geometry": ",".join(f"{v:.6f}" for v in b), "geometryType": "esriGeometryEnvelope",
           "inSR": 4326, "outSR": 4326, "outFields": "GEOID,B08201_002E", "returnGeometry": "false",
           "returnCentroid": "true", "f": "json"}
     tr = cached_get(f"{ACS_VEHICLES}/query", tq)
-    if "error" in tr or tr.get("exceededTransferLimit"):
+    if "error" in tr:
         evict(f"{ACS_VEHICLES}/query", tq)
-        raise RuntimeError(f"ACS tract query failed or truncated: {tr.get('error')}")
-    tracts = tr["features"]
+        raise RuntimeError(f"ACS query failed: {tr['error']}")
+    if not tr.get("exceededTransferLimit"):
+        return tr["features"]
+    if depth >= 4:
+        raise RuntimeError("ACS query still truncated after 4 splits")
+    mx, my = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+    return [t for q in ((b[0], b[1], mx, my), (mx, b[1], b[2], my), (b[0], my, mx, b[3]), (mx, my, b[2], b[3]))
+            for t in _acs_tracts(q, depth + 1)]
+
+
+def record_demand(lid: str) -> None:
+    data = load_locale_yaml(lid)
+    b = expand_bbox(tuple(data["bbox"]), 400)
+    st_abbr = STATE[source_locale(lid)]
+    blocks = arcgis_query(f"{TIGER}/2", b, out_fields="GEOID,INTPTLAT,INTPTLON,HU100", geometry=False)
+    # Zero-car households are optional: a failed ACS query leaves them missing but keeps homes and jobs.
+    acs_note = None
+    try:
+        tracts = list({t["attributes"]["GEOID"]: t for t in _acs_tracts(b)}.values())   # dedupe split overlaps
+    except Exception as e:
+        tracts, acs_note = [], f"ACS zero-vehicle query failed ({type(e).__name__}: {str(e)[:120]}); zero_car missing"
+        print(f"demand: {acs_note}")
     lodes_url = None
     for year in (2024, 2023, 2022):
         url = f"https://lehd.ces.census.gov/data/lodes/LODES8/{st_abbr}/wac/{st_abbr}_wac_S000_JT00_{year}.csv.gz"
@@ -745,7 +747,8 @@ def record_demand(lid: str) -> None:
     write_meta(d, "census_lodes_acs", [lodes_url, f"{TIGER}/2", ACS_VEHICLES],
                note=("LODES8 WAC C000 jobs per 2020 block; 2020 Census HU100 housing units per block (TIGERweb); "
                      "ACS 2019-2023 B08201_002E zero-vehicle households per tract (Esri Living Atlas), placed at the "
-                     "tract's interior point. The Census Data API now requires a key, so ACS block groups were not used."))
+                     "tract's interior point. The Census Data API now requires a key, so ACS block groups were not used."
+                     + (f" {acs_note}." if acs_note else "")))
     print(f"demand: {len(points)} points, jobs={sum(p['jobs'] for p in points)}, homes={sum(p['homes'] for p in points)}")
 
 
@@ -848,8 +851,13 @@ def write_notes(lid: str) -> None:
 
 
 def record_utilities(lid: str) -> None:
-    b = tuple(load_locale_yaml(lid)["bbox"])
-    layers = UTILITY_LAYERS[lid]
+    data = load_locale_yaml(lid)
+    b = tuple(data["bbox"])
+    # The utility layers are the city's own; a metro area outside that city has no public utility source here.
+    if lid not in LOCALE_IDS and data.get("jurisdiction") not in ("houston", "los_angeles"):
+        print("utilities: no public layer outside the City of Houston / City of LA; skipped")
+        return
+    layers = UTILITY_LAYERS[source_locale(lid)]
     d = fixture_dir(lid, "utilities")
     for kind, url, label, where in layers:
         feats = arcgis_query(url, b, where=where, out_fields="OBJECTID")
@@ -1221,7 +1229,7 @@ def record_vexcel(lid: str) -> None:
         print("vexcel: needs county parcels; skipped")
         return
     min_pct = resolve(lid)["vexcel_surface_parking_hardscape_min_pct"]
-    lu_map = yaml.safe_load((ROOT / "backend" / "data" / "land_use_maps.yaml").read_text())[lid]
+    lu_map = yaml.safe_load((ROOT / "backend" / "data" / "land_use_maps.yaml").read_text())[source_locale(lid)]
     link = Linker(lid)
     targets = []
     for f in link.pfc:
