@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Map as MlMap, Marker, NavigationControl, type GeoJSONSource } from 'maplibre-gl'
-import { TerraDraw, TerraDrawFreehandMode, TerraDrawPolygonMode, TerraDrawRectangleMode } from 'terra-draw'
+import { TerraDraw, TerraDrawFreehandLineStringMode, TerraDrawPolygonMode, TerraDrawRectangleMode } from 'terra-draw'
 import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
 import { metros } from '../api'
 import { BASE_STYLE } from './MapView'
@@ -128,8 +128,12 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       const draw = new TerraDraw({
         adapter: new TerraDrawMapLibreGLAdapter({ map }),
         modes: [
-          // Freehand and rectangle draw while the button is held and finish on release (Zillow's draw tool).
-          new TerraDrawFreehandMode({ drawInteraction: 'click-drag', styles: DRAW_STYLE }),
+          // Freehand is traced as an open line (no closing edge back to the start, as on Zillow) and becomes a
+          // polygon on release; rectangle also draws while the button is held.
+          new TerraDrawFreehandLineStringMode({
+            drawInteraction: 'click-drag',
+            styles: { lineStringColor: '#1C2230', lineStringWidth: 2, closingPointOpacity: 0, closingPointOutlineOpacity: 0 },
+          }),
           new TerraDrawPolygonMode({ styles: DRAW_STYLE }),
           new TerraDrawRectangleMode({ drawInteraction: 'click-drag', styles: DRAW_STYLE }),
         ],
@@ -140,7 +144,19 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
         const others = snapshot.filter((f) => f.id !== id).map((f) => f.id as string)
         if (others.length) draw.removeFeatures(others)
         const done = snapshot.find((f) => f.id === id)
-        if (done?.geometry.type === 'Polygon') onBoundaryRef.current(done.geometry as PolygonGeometry)
+        let ring: PolygonGeometry | null = done?.geometry.type === 'Polygon' ? (done.geometry as PolygonGeometry) : null
+        if (done?.geometry.type === 'LineString') {
+          // Close the traced line into a polygon shown with the polygon mode's style; a tap or a scribble of
+          // fewer than three points is dropped.
+          draw.removeFeatures([id])
+          const pts = done.geometry.coordinates as [number, number][]
+          if (pts.length >= 3) {
+            const polygon: PolygonGeometry = { type: 'Polygon', coordinates: [[...pts, pts[0]]] }
+            const [added] = draw.addFeatures([{ type: 'Feature', geometry: polygon, properties: { mode: 'polygon' } }])
+            if (added?.valid) ring = polygon
+          }
+        }
+        if (ring) onBoundaryRef.current(ring)
         // Back to static so map panning works again; the drawn feature stays.
         draw.setMode('static')
         setMode(null)
@@ -222,7 +238,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
   }, [boundary, ready])
 
   const startMode = (m: DrawMode) => {
-    drawRef.current?.setMode(m)
+    drawRef.current?.setMode(m === 'freehand' ? 'freehand-linestring' : m)
     setMode(m)
   }
   const clear = () => {
