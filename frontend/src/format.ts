@@ -25,7 +25,8 @@ export function fmtDelta(v: number, digits = 0): string {
 
 export function fmtValue(v: unknown): string {
   if (v === null || v === undefined) return '—'
-  if (typeof v === 'number') return fmtNum(v, 2)
+  // factor values are shown as written in factors.yaml (0.05125 must not read as 0.05)
+  if (typeof v === 'number') return v.toLocaleString('en-US', { maximumFractionDigits: 6 })
   if (typeof v === 'boolean') return v ? 'yes' : 'no'
   if (typeof v === 'string') return v
   return JSON.stringify(v)

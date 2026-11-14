@@ -64,3 +64,12 @@ Their `source_url` is "team choice". "Verified" for these can only mean the team
 - mismatch: `cap_rate` (correct per its own note: 0.05125)
 - source unreachable: `rent_usd_per_unit_month` (RentCafe 403), `reuse_min_ceiling_height_ft`, `reuse_min_window_wall_pct` (ICC 403)
 - note wording to fix without a value change: `reuse_floor_sqft_range_residential` (84% claim), LA `construction_cost_usd_per_unit` (rounded ratio)
+
+## Sign-off (2026-11-14)
+
+- `verified: true`: the 24 sourced keys that match or derive correctly, the 17 team design choices (confirmed as
+  choices by the team), and `cap_rate` after the correction below.
+- `cap_rate`: value changed 0.0525 → 0.05125 (approved); demo plans re-precomputed.
+- Notes reworded, values unchanged: `reuse_floor_sqft_range_residential`, LA `construction_cost_usd_per_unit`.
+- Still `verified: false`: `rent_usd_per_unit_month` (RentCafe 403), `reuse_min_ceiling_height_ft`,
+  `reuse_min_window_wall_pct` (ICC 403).
