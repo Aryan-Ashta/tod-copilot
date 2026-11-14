@@ -114,7 +114,10 @@ export default function ZoningCard() {
       if (e.covered) covered++
       if (e.recommended_path) byPath.set(e.recommended_path, (byPath.get(e.recommended_path) ?? 0) + 1)
     }
-    return { covered, byPath: [...byPath.entries()] }
+    const agentVerified = (envelopes ?? []).some((e) =>
+      e.paths.some((p) => p.citations.some((c) => c.status === 'agent_verified')),
+    )
+    return { covered, byPath: [...byPath.entries()], agentVerified }
   }, [envelopes])
 
   const parcelId = selected.parcelId
@@ -131,6 +134,12 @@ export default function ZoningCard() {
 
   return (
     <CardShell title="Zoning & legislation" note={plan.notes?.zoning_legislation}>
+      {summary.agentVerified && (
+        <p className="mb-3 border-l-2 border-amber-400 pl-3 text-sm text-neutral-300">
+          Legal rules here were built by the corpus agent from official text. Every quote is checked word for word
+          against the source page, but no person has reviewed them yet.
+        </p>
+      )}
       {!envelopes ? (
         <Empty>Waiting for the zoning agent…</Empty>
       ) : (

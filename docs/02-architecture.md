@@ -189,7 +189,7 @@ class CapitalStack(BaseModel):
     tax_credit_equity_usd: float
     incentive_usd: float        # e.g. local per-unit rebate, when a factor exists for it
     investor_equity_usd: float
-    gap_usd: float
+    funding_required_usd: float  # outside funding still needed after the stack; <= 0: it pencils
     pencils: bool
     assumptions: list[str]      # factors.yaml keys used
 

@@ -3,7 +3,7 @@ import { Map as MlMap, NavigationControl, type IControl, type StyleSpecification
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import { AmbientLight, DirectionalLight, LightingEffect, MapView as DeckMapView, type PickingInfo } from '@deck.gl/core'
 import { GeoJsonLayer } from '@deck.gl/layers'
-import { boundaryPoints, outerRing, type BBox } from '../geo'
+import { boundaryPoints, outerRing, pointInRing, type BBox } from '../geo'
 import {
   buildDuration,
   CLEARED_MS,
@@ -20,24 +20,33 @@ import {
   amenitiesLayer,
   buildingsLayer,
   demolitionLayer,
+  feedStopsLayer,
   flattenBuildings,
   floodLayer,
   FT_TO_M,
+  isProposedRoute,
+  lineLabel,
   newBuildingsLayer,
   parcelsLayer,
   selectedBuildingLayer,
   selectedParcelLayer,
   proposedTransitLayer,
   pursuedSites,
+  routeKey,
   sitesLayer,
+  stationsLayer,
+  stopsLayer,
   transitExistingLayer,
+  transitKeyColors,
+  transitLines,
   utilitiesLayer,
   walkBikeLayer,
   decodePick,
   type Picked,
+  type TransitFocus,
 } from '../mapLayers'
 import type { Building, ConversionCandidate, DealKind, Geometry, InfraFeature, Parcel, Route, Site, Station, Stop } from '../types'
-import { fmtNum, humanize } from '../format'
+import { fmtNum, geometryCentroid, humanize } from '../format'
 
 export interface MapHandle {
   /** Pick the top object under a viewport (client) point, restricted to the given deck layer ids. */
@@ -175,10 +184,16 @@ function tooltipFor(info: PickingInfo): string | null {
     }
     case 'new_buildings':
       return `New building · ${fmtNum(p.site.homes)} homes · ${fmtNum(p.site.height_ft)} ft${p.site.status === 'watch' ? '\non watch: does not pencil yet' : ''}`
-    case 'proposed_stops':
+    case 'stops':
       return `${p.stop.name ?? `Stop ${p.stop.id}`}\n${fmtNum(p.stop.riders_per_day_low)}–${fmtNum(p.stop.riders_per_day_high)} riders/day (est.)`
-    case 'proposed_routes':
-      return `${humanize(p.route.kind)} · phase ${p.route.phase}${p.route.headway_min ? ` · every ${p.route.headway_min} min` : ''}`
+    case 'proposed_routes': {
+      const r = p.route.route
+      return `${p.route.name}\n${humanize(r.kind)} · phase ${r.phase}${r.headway_min ? ` · every ${r.headway_min} min` : ''}`
+    }
+    case 'transit_lines': {
+      const l = p.line
+      return `${lineLabel(l)}\n${l.mode === 'rail' ? 'rail' : 'bus'} · existing${l.headwayMin ? ` · every ${l.headwayMin} min at peak` : ''}`
+    }
     case 'stations':
       return `${p.station.name}${p.station.note ? `\n${p.station.note}` : ''}`
     case 'amenities': {
@@ -203,10 +218,28 @@ function selectFromPick(info: PickingInfo | null, dispatch: Dispatch<PlanAction>
       const s = p.layer === 'sites' ? p.site.site : p.site
       return dispatch({ type: 'select', selected: { parcelId: s.parcel_ids[0], buildingId: s.building_id ?? undefined } })
     }
-    case 'proposed_stops':
+    case 'stops':
       return dispatch({ type: 'select', selected: { stopId: p.stop.id } })
+    case 'transit_lines':
+      return dispatch({ type: 'select', selected: { routeKey: p.line.key } })
+    case 'proposed_routes':
+      return dispatch({ type: 'select', selected: { routeKey: p.route.key } })
     case undefined:
       return dispatch({ type: 'select', selected: {} })
+  }
+}
+
+/** Route keys a hovered object puts in focus: a line its own, a stop the routes that serve it. '|'-joined. */
+function focusKeysOf(p: Picked | null): string {
+  switch (p?.layer) {
+    case 'transit_lines':
+      return p.line.key
+    case 'proposed_routes':
+      return p.route.key
+    case 'stops':
+      return p.stop.route_ids.join('|')
+    default:
+      return ''
   }
 }
 
@@ -226,6 +259,7 @@ export default function MapView({
   const mapRef = useRef<MlMap | null>(null)
   const overlayRef = useRef<MapboxOverlay | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const [hoverKeys, setHoverKeys] = useState('')
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -249,6 +283,11 @@ export default function MapView({
       views: new DeckMapView({ id: 'mapbox', fovy: ISO_FOV_DEG }) as never,
       layers: [],
       effects: [LIGHTING],
+      pickingRadius: 4,
+      onHover: (info) => {
+        setHoverKeys(focusKeysOf(decodePick(info)))
+        map.getCanvas().style.cursor = info.object ? 'pointer' : ''
+      },
       getTooltip: (info) => {
         const text = tooltipFor(info)
         return text
@@ -342,13 +381,14 @@ export default function MapView({
     const byId = new Map(buildings.map((b) => [b.id, b]))
     const useOf = new Map(conversions.map((c) => [c.building_id, c.best_use]))
     const heightOf = (b: Building) => (storyHeightFt === null ? 0 : (b.stories.value ?? 0) * storyHeightFt * FT_TO_M)
-    const clearing = new Set<string>()
+    // plots being cleared: their outline and the parcel ids that whatever replaces the buildings waits on
+    const clearing: { ring: [number, number][]; parcels: string[] }[] = []
     const kept = new Set<string>() // buildings a conversion keeps
     for (const s of sites) {
       if (s.status === 'pass') continue
       if (s.kind === 'new_build' && showNew) {
-        s.parcel_ids.forEach((p) => clearing.add(p))
         const ring = outerRing(s.geometry)
+        if (ring) clearing.push({ ring, parcels: s.parcel_ids })
         if (ring) want.set(`new:${s.id}`, { kind: 'new', ring, heightM: s.height_ft * FT_TO_M, parcels: s.parcel_ids })
       } else if (s.kind === 'conversion' && s.building_id) {
         kept.add(s.building_id)
@@ -365,13 +405,17 @@ export default function MapView({
       const pid = f.attrs.parcel_id
       const ring = outerRing(f.geometry)
       if (f.kind !== 'park' || typeof pid !== 'string' || !ring) continue
-      clearing.add(pid)
+      clearing.push({ ring, parcels: [pid] })
       want.set(`park:${pid}`, { kind: 'park', ring, heightM: 0, parcels: [pid] })
     }
+    // a building comes down when it is on a cleared parcel by id, or its footprint centre falls inside a cleared plot
+    // (parcel links miss buildings that straddle parcels or were matched to a neighbour)
     for (const b of buildings) {
       const ring = outerRing(b.footprint)
-      if (!b.parcel_id || !clearing.has(b.parcel_id) || kept.has(b.id) || !ring) continue
-      want.set(`demo:${b.id}`, { kind: 'demolish', ring, heightM: heightOf(b), parcels: [b.parcel_id] })
+      const c = geometryCentroid(b.footprint)
+      if (kept.has(b.id) || !ring) continue
+      const plot = clearing.find((p) => (b.parcel_id && p.parcels.includes(b.parcel_id)) || (c && pointInRing(c, p.ring)))
+      if (plot) want.set(`demo:${b.id}`, { kind: 'demolish', ring, heightM: heightOf(b), parcels: plot.parcels })
     }
     const m = builds.current
     let changed = false
@@ -412,7 +456,21 @@ export default function MapView({
     .join('|')
   const pendingParks = useMemo(() => new Set(pendingKey ? pendingKey.split('|') : []), [pendingKey])
 
-  const lTransit = useMemo(() => transitExistingLayer(infra, stations, L.transit_existing), [infra, stations, L.transit_existing])
+  // Transit focus: a hovered line or stop on the map, else a route hovered in the transit card, else the selected
+  // route, else the routes serving the selected stop. Kept as a '|'-joined string so equal focus keeps the layers.
+  const selStop = sel.stopId ? stops.find((s) => s.id === sel.stopId) : undefined
+  const focusSpec = hoverKeys || state.hoverRouteKey || sel.routeKey || selStop?.route_ids.join('|') || ''
+  const focus: TransitFocus = useMemo(() => (focusSpec ? new Set(focusSpec.split('|')) : null), [focusSpec])
+  const lines = useMemo(() => transitLines(infra), [infra])
+  const lineIndex = useMemo(() => new Map(lines.map((l) => [l.key, l])), [lines])
+  const keyColors = useMemo(() => transitKeyColors(lines, routes), [lines, routes])
+  const proposedKeys = useMemo(() => new Set(routes.filter(isProposedRoute).map((r) => routeKey(r.id))), [routes])
+  const lTransit = useMemo(() => transitExistingLayer(lines, L.transit_existing, focus), [lines, L.transit_existing, focus])
+  const lFeedStops = useMemo(
+    () => feedStopsLayer(infra, L.transit_existing && stops.length === 0),
+    [infra, L.transit_existing, stops.length],
+  )
+  const lStations = useMemo(() => stationsLayer(stations, L.transit_existing), [stations, L.transit_existing])
   const lWalk = useMemo(() => walkBikeLayer(infra, L.walk_bike), [infra, L.walk_bike])
   const lUtil = useMemo(() => utilitiesLayer(infra, L.utilities), [infra, L.utilities])
   const lAmen = useMemo(
@@ -439,8 +497,12 @@ export default function MapView({
     [boundary],
   )
   const lProp = useMemo(
-    () => proposedTransitLayer(routes, stops, L.proposed_transit, sel.stopId),
-    [routes, stops, L.proposed_transit, sel.stopId],
+    () => proposedTransitLayer(routes, lineIndex, L.proposed_transit, focus),
+    [routes, lineIndex, L.proposed_transit, focus],
+  )
+  const lStops = useMemo(
+    () => stopsLayer(stops, proposedKeys, keyColors, { existing: L.transit_existing, proposed: L.proposed_transit }, focus, sel.stopId),
+    [stops, proposedKeys, keyColors, L.transit_existing, L.proposed_transit, focus, sel.stopId],
   )
   const lParcels = useMemo(() => parcelsLayer(parcels, L.parcels || large, sel.parcelId), [parcels, L.parcels, large, sel.parcelId])
   // the selected parcel stays outlined even when the parcels layer is off (card links can select any parcel)
@@ -475,14 +537,18 @@ export default function MapView({
   }, [sites, showNew, stage])
   const lBuild = useMemo(() => constructionLayer(stage.builds.values(), stage.clock), [stage])
 
+  // Transit draws over the other ground layers (parcels, sidewalks) so lines stay legible; buildings still hide it.
   useEffect(() => {
     overlayRef.current?.setProps({
       layers: [
-        ...lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, ...lProp, lParcels, lSelParcel,
+        lWalk, lUtil, lAmen, lFlood, lBoundary, lParcels, lSelParcel, ...lTransit, lFeedStops, ...lProp, lStops, lStations,
         lBuildings, lDemo, lSelBuilding, ...lSites, lNew, ...lBuild,
       ],
     })
-  }, [lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, lProp, lParcels, lSelParcel, lBuildings, lDemo, lSelBuilding, lSites, lNew, lBuild, large])
+  }, [
+    lWalk, lUtil, lAmen, lFlood, lBoundary, lParcels, lSelParcel, lTransit, lFeedStops, lProp, lStops, lStations,
+    lBuildings, lDemo, lSelBuilding, lSites, lNew, lBuild, large,
+  ])
 
   // maplibre's own CSS sets `.maplibregl-map { position: relative }`, so the map gets a sized inner box.
   return (

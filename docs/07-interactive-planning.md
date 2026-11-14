@@ -7,7 +7,7 @@ This replaces the hardware table and sensor node from earlier drafts. The goal i
 - Route: `/meeting/:planId`. Full screen, large type, high contrast, works on a projector or a touchscreen laptop/tablet.
 - **Tile tray:** Homes, Park, Stop, Convert to housing, Convert to hotel. Drag a tile onto a parcel (new build, park, stop) or a building (conversions).
 - **Validity check on drop:** if the target isn't eligible (for example, Convert on a building the legal check rules out, or Homes inside a flood zone), the tile snaps back and a short reason appears with its citation or factor.
-- **Scoreboard:** homes, affordable homes, walk access %, transport CO₂ avoided, embodied carbon saved, and the funding gap; affordable homes and the funding gap (sum of positive gaps) count funded sites only, matching the Funding card's goals table. Each change animates a +/− delta. Meeting mode never reselects sites.
+- **Scoreboard:** homes, affordable homes, walk access %, transport CO₂ avoided, embodied carbon saved, and the funding required; affordable homes and the funding required (sum of each site's positive funding required) count funded sites only, matching the Funding card's goals table. Each change animates a +/− delta. Meeting mode never reselects sites.
 - **History:** undo, reset, and a list of changes made in the session, so a facilitator can recap ("We added a park on lot C, which cost 48 homes and raised walk access by 15 points").
 - Each drop sends an `Edit` to `/api/plan/{id}/rescore`; no LLM is involved, so it stays under 1 s even offline.
 

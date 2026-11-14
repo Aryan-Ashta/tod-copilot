@@ -205,6 +205,8 @@ export interface Citation {
   section: string
   quote: string
   url: string | null
+  /** agent_verified: built by the corpus agent and code-checked, not reviewed by a person */
+  status?: 'reviewed' | 'agent_verified'
   /** UI only: every quote when chips for the same (doc_id, section) are merged */
   quotes?: string[]
 }
@@ -245,7 +247,7 @@ export interface DealStrategy {
 }
 
 export interface GapToPencil {
-  gap_per_home_usd: number | null
+  funding_required_per_home_usd: number | null
   cost_per_home_usd: number | null
   value_per_home_usd: number | null
   rent_usd_per_unit_month: number
@@ -263,7 +265,8 @@ export interface CapitalStack {
   tax_credit_equity_usd: number
   incentive_usd: number
   investor_equity_usd: number
-  gap_usd: number
+  /** outside funding still needed after the stack; <= 0: it pencils */
+  funding_required_usd: number
   pencils: boolean
   assumptions: string[]
   gap_to_pencil?: GapToPencil | null
@@ -300,7 +303,7 @@ export interface GoalReport {
   goals: GoalProgress[]
   sites_funded: number
   total_cost_usd: number
-  housing_gap_usd: number
+  housing_funding_required_usd: number
   tax_credit_equity_usd: number
   incentive_usd: number
   transit_operating_usd_per_year: number
@@ -452,7 +455,7 @@ export interface Scoreboard {
   transport_co2_tonnes_per_year: number
   embodied_co2_saved_tonnes: number
   affordable_homes: number
-  funding_gap_usd: number
+  funding_required_usd: number
   walk_by_amenity_pct?: Record<string, number>
 }
 

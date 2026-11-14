@@ -233,7 +233,7 @@ export default function PromptScreen() {
             ? check.error
             : check.kind === 'subarea'
               ? `${check.label} · recorded data · ${check.area_km2?.toFixed(1)} km²`
-              : `${check.label} · recorded live from county, CoStar and imagery sources (a few minutes) · ${check.area_km2?.toFixed(1)} km²`
+              : `${check.label} · recorded live from public county sources; a county drawn in for the first time is onboarded by agents first, which can take several minutes · ${check.area_km2?.toFixed(1)} km²`
   const statusTone = check?.error ? 'error' : areaOk ? 'ok' : 'idle'
   const areaStatus = (
     <span

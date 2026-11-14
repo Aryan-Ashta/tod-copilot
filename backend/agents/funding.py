@@ -8,7 +8,7 @@ from backend.schemas import CapitalStack, ExistingAffordable
 
 NAME = "funding"
 GOAL = ("Build a pro forma and capital stack per site, decide new build vs conversion where both exist, and pick the "
-        "sites that reach the goals at the smallest funding gap.")
+        "sites that reach the goals at the smallest funding required.")
 
 
 def tools(ctx: RunContext):
@@ -43,7 +43,8 @@ def tools(ctx: RunContext):
             (f". Acquisition basis missing for {', '.join(missing)}" if missing else "")
 
     def capital_stack() -> str:
-        """Capital stacks (debt, tax credit equity, incentive, investor equity, gap) and whether each pencils."""
+        """Capital stacks (debt, tax credit equity, incentive, investor equity, funding required) and whether each
+        pencils."""
         res = ctx.cache.get("pro_formas")
         if res is None:
             raise ValueError("run pro_forma first")
@@ -52,7 +53,7 @@ def tools(ctx: RunContext):
         yes = sum(1 for s in ctx.plan_parts["stacks"] if s.pencils)
         ctx.step(NAME, f"{yes} of {len(ctx.plan_parts['stacks'])} sites pencil")
         lines = [f"{common.site_label(ctx, s.site_id)}: cost ${s.total_cost_usd:,.0f}, "
-                 + ("pencils" if s.pencils else f"gap ${s.gap_usd:,.0f}" + gap_text(s))
+                 + ("pencils" if s.pencils else f"funding required ${s.funding_required_usd:,.0f}" + gap_text(s))
                  for s in ctx.plan_parts["stacks"]]
         return f"{yes} of {len(ctx.plan_parts['stacks'])} pencil. " + "; ".join(lines)
 
@@ -92,7 +93,7 @@ def tools(ctx: RunContext):
             + (f", {st['pass']} passed" if st["pass"] else "")
 
     def fund_goals() -> str:
-        """Pick the priced sites that reach the housing goals at the smallest funding gap (raising affordable homes
+        """Pick the priced sites that reach the housing goals at the smallest funding required (raising affordable homes
         per site only if every site is in and the goal is still short), then total the funding the goals need."""
         if "stack_math" not in ctx.cache or "sites" not in ctx.plan_parts:
             raise ValueError("run compare_options first")
@@ -124,12 +125,13 @@ def tools(ctx: RunContext):
         if no_li:
             rep.notes.append(f"{no_li} HUD LIHTC properties report no low-income unit count")
         ctx.plan_parts["goals_report"] = rep
-        ctx.step(NAME, f"{rep.sites_funded} sites funded; housing gap ${rep.housing_gap_usd:,.0f}")
+        ctx.step(NAME, f"{rep.sites_funded} sites funded; housing funding required "
+                       f"${rep.housing_funding_required_usd:,.0f}")
         rows = [f"{r.key.replace('_', ' ')}: {r.achieved:,g} {r.unit}"
                 + ("" if r.goal is None else f" of a {r.goal:,g} goal ({'met' if r.met else 'short'})")
                 for r in rep.goals]
-        return ("; ".join(rows) + f". {rep.sites_funded} sites funded: one-time housing funding gap "
-                f"${rep.housing_gap_usd:,.0f} after ${rep.tax_credit_equity_usd:,.0f} tax credit equity and "
+        return ("; ".join(rows) + f". {rep.sites_funded} sites funded: one-time housing funding required "
+                f"${rep.housing_funding_required_usd:,.0f} after ${rep.tax_credit_equity_usd:,.0f} tax credit equity and "
                 f"${rep.incentive_usd:,.0f} incentives (total cost ${rep.total_cost_usd:,.0f}); transit operating "
                 f"funding ${rep.transit_operating_usd_per_year:,.0f}/yr. " + " ".join(rep.notes)).strip()
 
@@ -142,14 +144,15 @@ def run(ctx: RunContext) -> None:
 
 
 def gap_text(s: CapitalStack) -> str:
-    """' ($64,000 per home; cost ... vs value ... per home; closes with $64,000 more incentive per home, or rent ...)'."""
+    """' ($64,000 per home; cost ... vs value ... per home; covered by $64,000 more incentive per home, or rent ...)'."""
     g = s.gap_to_pencil
-    if g is None or g.gap_per_home_usd is None:
+    if g is None or g.funding_required_per_home_usd is None:
         return ""
     rent = (f", or rent of ${g.break_even_rent_usd_per_unit_month:,.0f}/mo vs ${g.rent_usd_per_unit_month:,.0f}"
-            if g.break_even_rent_usd_per_unit_month is not None else "; rent alone cannot close it (loan-to-cost cap)")
-    return (f" (${g.gap_per_home_usd:,.0f} per home; cost ${g.cost_per_home_usd:,.0f} vs value "
-            f"${g.value_per_home_usd:,.0f} per home; closes with ${g.gap_per_home_usd:,.0f} more incentive per home"
+            if g.break_even_rent_usd_per_unit_month is not None else "; rent alone cannot cover it (loan-to-cost cap)")
+    return (f" (${g.funding_required_per_home_usd:,.0f} per home; cost ${g.cost_per_home_usd:,.0f} vs value "
+            f"${g.value_per_home_usd:,.0f} per home; covered by ${g.funding_required_per_home_usd:,.0f} more incentive "
+            f"per home"
             f"{rent})")
 
 
@@ -161,10 +164,10 @@ def explain(ctx: RunContext) -> str:
     fs = [x for x in stacks if x.site_id in funded]
     homes = sum(x.units for x in fs)
     aff = sum(x.affordable_units for x in fs)
-    gap = sum(max(x.gap_usd, 0.0) for x in fs)
+    required = sum(max(x.funding_required_usd, 0.0) for x in fs)
     tc = sum(x.tax_credit_equity_usd for x in fs)
-    text = (f"{len(fs)} sites funded: {homes:,} homes, {aff:,} affordable; one-time funding gap ${gap:,.0f} after "
-            f"${tc:,.0f} tax credit equity.")
+    text = (f"{len(fs)} sites funded: {homes:,} homes, {aff:,} affordable; one-time funding required ${required:,.0f} "
+            f"after ${tc:,.0f} tax credit equity.")
     if rep is not None:
         unmet = sum(1 for r in rep.goals if r.met is False)
         text += "".join(f" {n[0].upper() + n[1:]}." for n in rep.notes[:unmet])

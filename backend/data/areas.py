@@ -42,6 +42,7 @@ class AreaResolution:
     county_fips: Optional[str] = None
     label: Optional[str] = None       # "City of Houston", "Harris County (outside city limits)"
     area_km2: Optional[float] = None
+    place_geoid: Optional[str] = None  # the city whose law applies (metro areas mostly inside one city)
 
 
 def utm_epsg(lon: float, lat: float) -> int:
@@ -85,7 +86,8 @@ def resolve_area(locale_id: Optional[str], boundary: Optional[dict], f_max_km2: 
         jur = registry.county_jurisdiction(registry.county(fips) or {"state": fips[:2], "name": county["name"]})
         label = f"{county['name']} (outside city limits)"
     return AreaResolution("metro", None, boundary, sources_from=registry.county(fips).get("recorded_locale"),
-                          jurisdiction=jur, county_fips=fips, label=label, area_km2=round(a, 2))
+                          jurisdiction=jur, county_fips=fips, label=label, area_km2=round(a, 2),
+                          place_geoid=place["geoid"] if place is not None and share >= 0.5 else None)
 
 
 def record_area(name: str, res: AreaResolution, step: Callable[[str], None]) -> str:
@@ -96,7 +98,9 @@ def record_area(name: str, res: AreaResolution, step: Callable[[str], None]) -> 
     d = locale_dir(area_id)
     d.mkdir(parents=True)
     g = shape(res.boundary)
-    failures = list(onboard_county(res.county_fips, g.bounds, step=step)["errors"])
+    legal = f"place:{res.place_geoid}" if res.place_geoid else f"county:{res.county_fips}"
+    failures = list(onboard_county(res.county_fips, g.bounds, step=step,
+                                   corpus_targets=[f"state:{res.county_fips[:2]}", legal])["errors"])
     county = registry.county(res.county_fips)
     if res.sources_from:
         src = get_locale(res.sources_from)

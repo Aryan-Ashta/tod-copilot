@@ -22,9 +22,9 @@ def _final_stacks(cands, sel):
             for s, m in cands if s.id in sel.selected]
 
 
-def test_cheapest_gap_per_affordable_home_first_and_stops_at_goal():
-    cands = _cands({"a": 20e6, "b": 10e6, "c": 1e6})    # "c" has the smallest gap
-    assert all(m["gap_usd"] > 0 for _, m in cands)
+def test_cheapest_funding_required_per_affordable_home_first_and_stops_at_goal():
+    cands = _cands({"a": 20e6, "b": 10e6, "c": 1e6})    # "c" requires the least funding
+    assert all(m["funding_required_usd"] > 0 for _, m in cands)
     a0 = cands[0][1]["affordable_units"]
     sel = goals.select_sites(cands, PlanGoals(affordable_homes=a0 + 1), F)
     assert sel.selected == ["c", "b"] and not sel.raised
@@ -47,7 +47,8 @@ def test_unreachable_goal_reported_short():
     rep = goals.report([s for s, _ in cands], stacks, PlanGoals(affordable_homes=1000), None, None)
     row = next(r for r in rep.goals if r.key == "affordable_homes")
     assert row.met is False and row.achieved == 200 and len(rep.notes) == 1
-    assert rep.housing_gap_usd == pytest.approx(sum(max(x.gap_usd, 0) for x in stacks), abs=0.05)
+    assert rep.housing_funding_required_usd == pytest.approx(sum(max(x.funding_required_usd, 0) for x in stacks),
+                                                             abs=0.05)
 
 
 def test_with_affordable_value_is_linear_in_count():

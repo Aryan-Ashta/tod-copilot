@@ -26,12 +26,15 @@ def test_ridership_split_and_simulated_count():
     assert s.after == (32.0, 56.0)                          # half-width 30 x .4 = 12
 
 
-def test_measurements_one_per_stop_name():
+def test_measurements_one_per_stop_name_and_catchment():
     from backend.models.transit import suggest_measurements
     from backend.schemas import Stop
-    stops = [Stop(id=i, lonlat=(0, 0), route_ids=[], riders_per_day_low=lo, riders_per_day_high=hi, prov=P)
-             for i, lo, hi in (("n", 10, 90), ("s", 10, 80), ("w", 5, 50), ("v", 1, 10))]
-    names = {"n": "8th / Westmoreland", "s": "Westmoreland / 8th", "w": "Wilshire / Western", "v": "Vermont"}
+    # "x" is a differently named stop 100 m from "n": a count there would narrow the same demand
+    stops = [Stop(id=i, lonlat=ll, route_ids=[], riders_per_day_low=lo, riders_per_day_high=hi, prov=P)
+             for i, ll, lo, hi in (("n", (0, 0), 10, 90), ("s", (0.1, 0), 10, 80), ("x", (0.0009, 0), 10, 85),
+                                   ("w", (0.2, 0), 5, 50), ("v", (0.3, 0), 1, 10))]
+    names = {"n": "8th / Westmoreland", "s": "Westmoreland / 8th", "x": "Wilshire / Hobart",
+             "w": "Wilshire / Western", "v": "Vermont"}
     ms = suggest_measurements(stops, {i: 1.0 for i in names}, names, F)
     assert [m.target_id for m in ms] == ["n", "w", "v"]
 
@@ -45,7 +48,8 @@ def test_measurements_favour_stops_serving_planned_homes():
     names = {"far": "Far", "near": "Near"}
     assert [m.target_id for m in suggest_measurements(stops, {"far": 1, "near": 1}, names, F)] == ["far", "near"]
     site = ((1.0009, 0.0), 200)
-    assert [m.target_id for m in suggest_measurements(stops, {"far": 1, "near": 1}, names, F, (site,))] == ["near", "far"]
+    # once sites exist, a stop whose catchment holds no planned homes changes no decision
+    assert [m.target_id for m in suggest_measurements(stops, {"far": 1, "near": 1}, names, F, (site,))] == ["near"]
 
 
 def test_optimize_network_stops_at_coverage_goal():

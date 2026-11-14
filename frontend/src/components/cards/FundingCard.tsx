@@ -15,7 +15,7 @@ const INCENTIVE = 'houston_downtown_per_unit_incentive_usd'
 const NO_SITES: Site[] = []
 const PARTS: { key: keyof CapitalStack; label: string }[] = [
   ...SLICES.map((p) => ({ key: p.key, label: p.label })),
-  { key: 'gap_usd', label: 'Gap' },
+  { key: 'funding_required_usd', label: 'Funding required' },
 ]
 
 function MathRow({ s }: { s: CapitalStack }) {
@@ -47,7 +47,7 @@ function MathRow({ s }: { s: CapitalStack }) {
   )
 }
 
-/** One line per open gap: its size per home, cost vs value per home, and what would close it (from the backend). */
+/** One line per site still requiring funding: per home, cost vs value per home, and what would cover it (backend). */
 function GapLine({ s, name }: { s: CapitalStack; name: string }) {
   const g = s.gap_to_pencil
   const label = useFactorLabel()
@@ -56,17 +56,17 @@ function GapLine({ s, name }: { s: CapitalStack; name: string }) {
   const inc = s.assumptions.includes(INCENTIVE) ? factorNumber(INCENTIVE) : null
   return (
     <li>
-      <span className="font-semibold">{name}</span>: gap {fmtUsd(s.gap_usd)}
-      {g.gap_per_home_usd === null ? (
+      <span className="font-semibold">{name}</span>: funding required {fmtUsd(s.funding_required_usd)}
+      {g.funding_required_per_home_usd === null ? (
         '; no homes, so no per-home lever.'
       ) : (
         <>
           {' '}
-          ({fmtUsd(g.gap_per_home_usd)} per home;{' '}
+          ({fmtUsd(g.funding_required_per_home_usd)} per home;{' '}
           <FactorHover keys={g.factor_keys}>
             cost {fmtUsd(g.cost_per_home_usd)} vs value {fmtUsd(g.value_per_home_usd)} per home
           </FactorHover>
-          ). Closes with {fmtUsd(g.gap_per_home_usd)} more incentive per home
+          ). Covered by {fmtUsd(g.funding_required_per_home_usd)} more incentive per home
           {inc !== null && (
             <>
               {' '}
@@ -80,7 +80,7 @@ function GapLine({ s, name }: { s: CapitalStack; name: string }) {
             </>
           ) : (
             <>
-              ; rent alone cannot close it (<FactorHover keys={['debt_ratio']}>{label('debt_ratio')}</FactorHover> cap).
+              ; rent alone cannot cover it (<FactorHover keys={['debt_ratio']}>{label('debt_ratio')}</FactorHover> cap).
             </>
           )}
         </>
@@ -100,7 +100,8 @@ function fmtGoal(v: number, unit: string): string {
   return unit === '% of demand' ? `${fmtNum(v, 1)}%` : fmtNum(v)
 }
 
-/** What the goals need: per-goal progress, the one-time housing gap, yearly transit funding, the existing baseline. */
+/** What the goals need: per-goal progress, the one-time housing funding required, yearly transit funding, the existing
+ *  baseline. */
 function GoalsSection({ r }: { r: GoalReport }) {
   const ex = r.existing_affordable
   return (
@@ -129,9 +130,9 @@ function GoalsSection({ r }: { r: GoalReport }) {
       </table>
       <ul className="mt-2 space-y-1 text-[14px]">
         <li>
-          One-time housing funding gap:{' '}
+          One-time housing funding required:{' '}
           <FactorHover keys={['per_unit_credit_equity_usd', 'affordable_share', 'debt_ratio', 'investor_equity_share']}>
-            <span className="font-semibold">{fmtUsd(r.housing_gap_usd)}</span>
+            <span className="font-semibold">{fmtUsd(r.housing_funding_required_usd)}</span>
           </FactorHover>{' '}
           across {r.sites_funded} sites (total cost {fmtUsd(r.total_cost_usd)}; tax credit equity{' '}
           {fmtUsd(r.tax_credit_equity_usd)}; incentives {fmtUsd(r.incentive_usd)})
@@ -199,11 +200,11 @@ export default function FundingCard() {
   // header totals cover funded sites only, so they match the goals table and the scoreboard
   const funded = shown.filter((s) => siteById.get(s.site_id)?.status === 'pursue')
   const yes = funded.filter((s) => s.pencils).length
-  const gapSum = funded.reduce((a, s) => a + Math.max(s.gap_usd, 0), 0)
-  // default selection: the site closest to pencilling (smallest gap per home), else the first stack
+  const requiredSum = funded.reduce((a, s) => a + Math.max(s.funding_required_usd, 0), 0)
+  // default selection: the site closest to pencilling (least funding required per home), else the first stack
   const closest = shown
-    .filter((s) => s.gap_to_pencil?.gap_per_home_usd != null)
-    .sort((a, b) => a.gap_to_pencil!.gap_per_home_usd! - b.gap_to_pencil!.gap_per_home_usd!)[0]
+    .filter((s) => s.gap_to_pencil?.funding_required_per_home_usd != null)
+    .sort((a, b) => a.gap_to_pencil!.funding_required_per_home_usd! - b.gap_to_pencil!.funding_required_per_home_usd!)[0]
   const sel = (picked && stackById.get(picked)) || closest || shown[0]
 
   return (
@@ -216,10 +217,10 @@ export default function FundingCard() {
       ) : (
         <>
           <p className="text-[15px]">
-            <span className={`font-bold ${gapSum > 0 ? 'text-gap' : 'text-emerald-300'}`}>
-              Funding gap {fmtUsd(gapSum)} · {yes} of {funded.length} funded sites pencil without it
+            <span className={`font-bold ${requiredSum > 0 ? 'text-gap' : 'text-emerald-300'}`}>
+              Funding required {fmtUsd(requiredSum)} · {yes} of {funded.length} funded sites pencil without it
             </span>
-            <span className="text-slate"> · columns are each site's capital stack; dashed red is the gap.</span>
+            <span className="text-slate"> · columns are each site's capital stack; dashed red is the funding required.</span>
           </p>
           {reserve > 0 && (
             <p className="text-[14px] text-slate">{reserve} priced sites held in reserve (not needed for the goals)</p>
@@ -269,7 +270,7 @@ export default function FundingCard() {
                     <th className={th}>Site</th>
                     <th className={th}>Total cost</th>
                     <th className={th}>Affordable</th>
-                    <th className={th}>Gap</th>
+                    <th className={th}>Funding required</th>
                     <th className={th}>Pencils?</th>
                     <th className={th}>Status</th>
                   </tr>
@@ -286,7 +287,7 @@ export default function FundingCard() {
                       <td className={`${td} tabular-nums`}>
                         {fmtNum(s.affordable_units)} of {fmtNum(s.units)}
                       </td>
-                      <td className={`${td} tabular-nums`}>{fmtUsd(s.gap_usd)}</td>
+                      <td className={`${td} tabular-nums`}>{fmtUsd(s.funding_required_usd)}</td>
                       <td className={`${td} ${s.pencils ? 'text-emerald-300' : 'text-gap'}`}>{s.pencils ? 'yes' : 'no'}</td>
                       <td className={td}>{siteById.get(s.site_id)?.status ?? '—'}</td>
                     </tr>
@@ -306,7 +307,7 @@ export default function FundingCard() {
             </div>
           )}
           {showTable && shown.some((s) => s.gap_to_pencil) && (
-            <Section title="Gap to pencil, every site">
+            <Section title="Funding required to pencil, every site">
               <ul className="space-y-1.5 text-[13px]">
                 {shown
                   .filter((s) => s.gap_to_pencil)
@@ -325,7 +326,7 @@ export default function FundingCard() {
                     <th className={th}>Option</th>
                     <th className={th}>Homes</th>
                     <th className={th}>Total cost</th>
-                    <th className={th}>Gap</th>
+                    <th className={th}>Funding required</th>
                     <th className={th}>Pencils</th>
                     <th className={th}>Status</th>
                   </tr>
@@ -342,7 +343,7 @@ export default function FundingCard() {
                           <td className={td}>{s.kind === 'new_build' ? 'New build' : 'Convert'}</td>
                           <td className={`${td} tabular-nums`}>{fmtNum(s.homes)}</td>
                           <td className={`${td} tabular-nums`}>{fmtUsd(st?.total_cost_usd)}</td>
-                          <td className={`${td} tabular-nums`}>{fmtUsd(st?.gap_usd)}</td>
+                          <td className={`${td} tabular-nums`}>{fmtUsd(st?.funding_required_usd)}</td>
                           <td className={td}>{st ? (st.pencils ? 'yes' : 'no') : '—'}</td>
                           <td className={`${td} ${s.status === 'pass' || s.status === 'reserve' ? 'text-neutral-500' : s.status === 'watch' ? 'text-amber-300' : 'text-emerald-300'}`}>{s.status}</td>
                         </tr>

@@ -87,9 +87,6 @@ export const STRATEGY_COLORS: Record<DealKind, Color> = {
 const INK: Color = [28, 34, 48]
 const TEAL: Color = [19, 128, 138]
 const INFRA_COLORS: Partial<Record<InfraKind, Color>> = {
-  rail: INK,
-  bus_route: [19, 128, 138, 120],
-  bus_stop: TEAL,
   sidewalk: [154, 160, 154],
   bike_lane: [46, 125, 91],
   water_main: [47, 91, 211],
@@ -119,42 +116,306 @@ const withAlpha = (c: Color, a: number): Color => [c[0], c[1], c[2], a]
 /** OSM sidewalk tag values that mean "no sidewalk on this frontage". */
 const NO_SIDEWALK: Record<string, true> = { no: true, none: true }
 
-export function transitExistingLayer(infra: InfraFeature[], stations: Station[], visible: boolean) {
-  const feats = infra
-    .filter((f) => f.kind === 'rail' || f.kind === 'bus_route' || f.kind === 'bus_stop')
-    .map((f) => feature(f.geometry, f))
+// ---------------------------------------------------------------- transit
+// Lines draw as on a transit map: each route in its feed colour over a white casing, so routes sharing a street read as
+// one corridor and stay legible over parcels and sidewalks. Hovering or selecting a route (on the map, or a row in the
+// transit card) or a stop focuses it: its lines and stops come forward and widen, the rest of the network fades.
+
+/** Route keys in focus (hovered or selected), or null when nothing is. */
+export type TransitFocus = ReadonlySet<string> | null
+
+const ROUTE_ID_PREFIXES = ['rail-', 'bus-', 'upg-']
+
+/**
+ * The key tying a plan route to its feed line and its stops: the GTFS route id behind an existing, upgraded or BRT
+ * route ('rail-700', 'bus-003', 'upg-003', 'brt-upg-003' → '700', '003'). New services (feeders 'fdr-…', on-demand
+ * zones 'odz-…') keep their own id, which is what their stops list (backend/models/transit.py).
+ */
+export function routeKey(routeId: string): string {
+  const id = routeId.startsWith('brt-') ? routeId.slice('brt-'.length) : routeId
+  const p = ROUTE_ID_PREFIXES.find((x) => id.startsWith(x))
+  return p ? id.slice(p.length) : id
+}
+
+/** One existing line from the feed: an infrastructure rail or bus_route feature. */
+export interface TransitLine {
+  key: string
+  name: string
+  mode: 'rail' | 'bus'
+  color: Color
+  headwayMin: number | null
+  geometry: Geometry
+}
+
+const WHITE: Color = [255, 255, 255]
+type RGB = [number, number, number]
+const BUS_FALLBACK: RGB = [74, 128, 214]
+const PROPOSED_COLORS: Record<'frequent_bus' | 'brt' | 'on_demand_zone', Color> = {
+  frequent_bus: TEAL,
+  brt: [46, 125, 91],
+  on_demand_zone: [47, 91, 211],
+}
+
+/**
+ * A feed colour ('#EF0000') as RGB; null when missing, malformed, so pale it would vanish on the paper base, or a
+ * neutral grey/black (agencies paint whole bus networks #8A8A8A or #000000, which reads as base-map streets).
+ */
+function feedColor(v: unknown): RGB | null {
+  const m = typeof v === 'string' ? /^#?([0-9a-f]{6})$/i.exec(v.trim()) : null
+  if (!m) return null
+  const n = parseInt(m[1], 16)
+  const c: RGB = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+  const pale = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 200
+  const neutral = Math.max(...c) - Math.min(...c) < 40
+  return pale || neutral ? null : c
+}
+
+/**
+ * A bus colour lifted to mid lightness and some saturation: agencies' navy and indigo at bus width read as the ink
+ * outlines of parcels and buildings. Rail keeps its true colour; it is bold enough to read either way.
+ */
+function vivid([r, g, b]: RGB): Color {
+  const [R, G, B] = [r / 255, g / 255, b / 255]
+  const max = Math.max(R, G, B)
+  const min = Math.min(R, G, B)
+  const d = max - min
+  const h = d === 0 ? 0 : max === R ? ((G - B) / d + 6) % 6 : max === G ? (B - R) / d + 2 : (R - G) / d + 4
+  const l = Math.min(Math.max((max + min) / 2, 0.48), 0.6)
+  const s = Math.max(d === 0 ? 0 : d / (1 - Math.abs(max + min - 1)), 0.55)
+  // HSL → RGB
+  const c = (1 - Math.abs(2 * l - 1)) * s
+  const x = c * (1 - Math.abs((h % 2) - 1))
+  const [r1, g1, b1] = h < 1 ? [c, x, 0] : h < 2 ? [x, c, 0] : h < 3 ? [0, c, x] : h < 4 ? [0, x, c] : h < 5 ? [x, 0, c] : [c, 0, x]
+  const m = l - c / 2
+  return [Math.round((r1 + m) * 255), Math.round((g1 + m) * 255), Math.round((b1 + m) * 255)]
+}
+
+export function transitLines(infra: InfraFeature[]): TransitLine[] {
+  const out: TransitLine[] = []
+  infra.forEach((f, i) => {
+    if (f.kind !== 'rail' && f.kind !== 'bus_route') return
+    const mode = f.kind === 'rail' ? 'rail' : 'bus'
+    const { route_id: id, short_name: short, peak_headway_min: hw, color } = f.attrs
+    const key = typeof id === 'string' || typeof id === 'number' ? String(id) : `line-${i}`
+    out.push({
+      key,
+      name: typeof short === 'string' && short ? short : key,
+      mode,
+      color: mode === 'rail' ? (feedColor(color) ?? INK) : vivid(feedColor(color) ?? BUS_FALLBACK),
+      headwayMin: typeof hw === 'number' ? Math.round(hw) : null,
+      geometry: f.geometry,
+    })
+  })
+  return out
+}
+
+/** Feed names that are already words ("Metro B Line") as they are; bare route numbers with their mode. */
+export const lineLabel = (l: TransitLine) => (/\s/.test(l.name) ? l.name : `${l.mode === 'rail' ? 'Rail' : 'Bus'} ${l.name}`)
+
+const PROPOSED_KINDS: Partial<Record<Route['kind'], true>> = { frequent_bus: true, brt: true, on_demand_zone: true }
+export const isProposedRoute = (r: Route) => PROPOSED_KINDS[r.kind] === true
+
+export function routeLabel(r: Route, lines: ReadonlyMap<string, TransitLine>): string {
+  const line = lines.get(routeKey(r.id))
+  if (line) return lineLabel(line)
+  if (r.kind === 'on_demand_zone') return 'On-demand zone'
+  return routeKey(r.id).startsWith('fdr-') ? 'New feeder' : r.id
+}
+
+/** The colour a route draws in: the plan's service colour for new or upgraded service, else its feed colour. */
+export function routeColor(r: Route, lines: ReadonlyMap<string, TransitLine>): Color {
+  if (r.kind === 'frequent_bus' || r.kind === 'brt' || r.kind === 'on_demand_zone') return PROPOSED_COLORS[r.kind]
+  return lines.get(routeKey(r.id))?.color ?? (r.kind === 'rail_existing' ? INK : BUS_FALLBACK)
+}
+
+/** Colour per route key for stop rings: feed colours, overridden by the plan's colour where a route is upgraded. */
+export function transitKeyColors(lines: TransitLine[], routes: Route[]): Map<string, Color> {
+  const m = new Map(lines.map((l) => [l.key, l.color]))
+  // BRT before frequent bus, so a corridor that gets both rings in the frequent-bus colour it draws on top
+  for (const r of routes.filter(isProposedRoute).sort((a, b) => PROPOSED_ORDER[a.kind] - PROPOSED_ORDER[b.kind])) {
+    m.set(routeKey(r.id), routeColor(r, NO_LINES))
+  }
+  return m
+}
+const NO_LINES: ReadonlyMap<string, TransitLine> = new Map()
+
+const focused = (focus: TransitFocus, key: string) => focus?.has(key) === true
+const dimmed = (focus: TransitFocus, key: string) => focus !== null && !focus.has(key)
+const ROUNDED = { lineJointRounded: true, lineCapRounded: true } as const
+
+/** Existing feed lines: buses thin and softened, rail bold, both over one white casing. */
+export function transitExistingLayer(lines: TransitLine[], visible: boolean, focus: TransitFocus) {
+  // buses under rail, focused lines over both
+  const rank = (l: TransitLine) => (focused(focus, l.key) ? 2 : 0) + (l.mode === 'rail' ? 1 : 0)
+  const data = [...lines].sort((a, b) => rank(a) - rank(b)).map((l) => feature(l.geometry, l))
+  const width = (l: TransitLine) => (l.mode === 'rail' ? 4.5 : 2.5) + (focused(focus, l.key) ? 2.5 : 0)
+  const color = (l: TransitLine): Color => {
+    if (dimmed(focus, l.key)) return withAlpha(l.color, l.mode === 'rail' ? 80 : 45)
+    return withAlpha(l.color, focus || l.mode === 'rail' ? 255 : 210)
+  }
   return [
-    new GeoJsonLayer<InfraFeature>({
-      id: 'transit_existing',
+    new GeoJsonLayer<TransitLine>({
+      id: 'transit_casing',
       parameters: FLAT,
-      data: feats,
+      data,
       visible,
-      stroked: true,
-      filled: true,
+      filled: false,
+      ...ROUNDED,
       lineWidthUnits: 'pixels',
-      getLineWidth: (f) => (f.properties.kind === 'rail' ? 3 : 1.5),
-      getLineColor: (f) => INFRA_COLORS[f.properties.kind] ?? [160, 160, 160],
-      getFillColor: (f) => INFRA_COLORS[f.properties.kind] ?? [160, 160, 160],
-      pointType: 'circle',
-      pointRadiusUnits: 'pixels',
-      getPointRadius: 2,
+      getLineWidth: (f) => width(f.properties) + 3,
+      getLineColor: (f) => withAlpha(WHITE, dimmed(focus, f.properties.key) ? 90 : 255),
     }),
-    new ScatterplotLayer<Station>({
-      id: 'stations',
+    new GeoJsonLayer<TransitLine>({
+      id: 'transit_lines',
       parameters: FLAT,
-      data: stations,
+      data,
       visible,
-      getPosition: (s) => s.lonlat,
-      radiusUnits: 'pixels',
-      getRadius: 7,
-      stroked: true,
-      lineWidthUnits: 'pixels',
-      getLineWidth: 3,
-      getLineColor: INK,
-      getFillColor: (s) => (s.mode === 'intercity_rail_planned' ? [237, 239, 234] : [255, 255, 255]),
       pickable: true,
+      filled: false,
+      ...ROUNDED,
+      lineWidthUnits: 'pixels',
+      getLineWidth: (f) => width(f.properties),
+      getLineColor: (f) => color(f.properties),
     }),
   ]
+}
+
+/** Feed stops as plain dots, only until the transit plan's stops (with ridership) arrive. */
+export function feedStopsLayer(infra: InfraFeature[], visible: boolean) {
+  return new ScatterplotLayer<InfraFeature>({
+    id: 'feed_stops',
+    parameters: FLAT,
+    data: infra.filter((f) => f.kind === 'bus_stop' && f.geometry.type === 'Point'),
+    visible,
+    getPosition: (f) => f.geometry.coordinates as unknown as LonLat,
+    radiusUnits: 'meters',
+    getRadius: 5,
+    radiusMinPixels: 2,
+    radiusMaxPixels: 6,
+    stroked: true,
+    lineWidthUnits: 'pixels',
+    getLineWidth: 1.5,
+    getLineColor: withAlpha(INK, 200),
+    getFillColor: WHITE,
+  })
+}
+
+export function stationsLayer(stations: Station[], visible: boolean) {
+  return new ScatterplotLayer<Station>({
+    id: 'stations',
+    parameters: FLAT,
+    data: stations,
+    visible,
+    getPosition: (s) => s.lonlat,
+    radiusUnits: 'pixels',
+    getRadius: 7,
+    stroked: true,
+    lineWidthUnits: 'pixels',
+    getLineWidth: 3,
+    getLineColor: INK,
+    getFillColor: (s) => (s.mode === 'intercity_rail_planned' ? [237, 239, 234] : [255, 255, 255]),
+    pickable: true,
+  })
+}
+
+export interface ProposedDatum {
+  route: Route
+  key: string
+  name: string
+  color: Color
+}
+
+// BRT draws under the frequent-bus line on the same corridor, so the pair reads as a green-edged teal band.
+const PROPOSED_ORDER: Record<Route['kind'], number> = { rail_existing: 0, bus_existing: 0, on_demand_zone: 0, brt: 1, frequent_bus: 2 }
+
+export function proposedTransitLayer(routes: Route[], lines: ReadonlyMap<string, TransitLine>, visible: boolean, focus: TransitFocus) {
+  const rank = (d: ProposedDatum) => (focused(focus, d.key) ? 3 : 0) + PROPOSED_ORDER[d.route.kind]
+  const data = routes
+    .filter(isProposedRoute)
+    .map((r): ProposedDatum => ({ route: r, key: routeKey(r.id), name: routeLabel(r, lines), color: routeColor(r, lines) }))
+    .sort((a, b) => rank(a) - rank(b))
+    .map((d) => feature(d.route.geometry, d))
+  const width = (d: ProposedDatum) =>
+    (d.route.kind === 'brt' ? 10 : d.route.kind === 'on_demand_zone' ? 2 : 5) + (focused(focus, d.key) ? 3 : 0)
+  return [
+    new GeoJsonLayer<ProposedDatum>({
+      id: 'proposed_casing',
+      parameters: FLAT,
+      data,
+      visible,
+      filled: false,
+      ...ROUNDED,
+      lineWidthUnits: 'pixels',
+      getLineWidth: (f) => width(f.properties) + 3,
+      getLineColor: (f) => withAlpha(WHITE, dimmed(focus, f.properties.key) ? 90 : 255),
+    }),
+    new GeoJsonLayer<ProposedDatum, { getDashArray?: unknown; dashJustified?: boolean }>({
+      id: 'proposed_routes',
+      parameters: FLAT,
+      data,
+      visible,
+      pickable: true,
+      filled: true,
+      stroked: true,
+      ...ROUNDED,
+      lineWidthUnits: 'pixels',
+      getLineWidth: (f) => width(f.properties),
+      getLineColor: (f) => withAlpha(f.properties.color, dimmed(focus, f.properties.key) ? 70 : 255),
+      getFillColor: (f) => withAlpha(f.properties.color, dimmed(focus, f.properties.key) ? 8 : focused(focus, f.properties.key) ? 48 : 24),
+      getDashArray: (f: Feat<ProposedDatum>) => (f.properties.route.kind === 'on_demand_zone' ? [6, 4] : [0, 0]),
+      dashJustified: true,
+      extensions: [new PathStyleExtension({ dash: true })],
+    }),
+  ]
+}
+
+export interface StopDatum {
+  stop: Stop
+  /** Serves a new or upgraded route. */
+  proposed: boolean
+  /** Ring colour of the focused route it serves, when it serves one. */
+  focusColor: Color | null
+}
+
+/**
+ * The plan's stops (with ridership ranges): those on new or upgraded routes with the proposed layer, the rest with the
+ * existing one. Sized in metres so the network thins out when zoomed out; the selected stop is always drawn.
+ */
+export function stopsLayer(
+  stops: Stop[],
+  proposedKeys: ReadonlySet<string>,
+  keyColors: ReadonlyMap<string, Color>,
+  show: { existing: boolean; proposed: boolean },
+  focus: TransitFocus,
+  selectedStop?: string,
+) {
+  const data: StopDatum[] = []
+  for (const stop of stops) {
+    const proposed = stop.route_ids.some((k) => proposedKeys.has(k))
+    if (stop.id !== selectedStop && !(proposed ? show.proposed : show.existing)) continue
+    const k = focus ? stop.route_ids.find((r) => focus.has(r)) : undefined
+    data.push({ stop, proposed, focusColor: k === undefined ? null : keyColors.get(k) ?? INK })
+  }
+  // focused and selected stops on top
+  const rank = (d: StopDatum) => (d.stop.id === selectedStop ? 2 : d.focusColor ? 1 : 0)
+  data.sort((a, b) => rank(a) - rank(b))
+  const faded = (d: StopDatum) => focus !== null && !d.focusColor && d.stop.id !== selectedStop
+  return new ScatterplotLayer<StopDatum>({
+    id: 'stops',
+    parameters: FLAT,
+    data,
+    pickable: true,
+    getPosition: (d) => d.stop.lonlat,
+    radiusUnits: 'meters',
+    getRadius: (d) => (d.stop.id === selectedStop ? 14 : d.focusColor ? 9 : d.proposed ? 7 : 5),
+    radiusMinPixels: 2.5,
+    radiusMaxPixels: 10,
+    stroked: true,
+    lineWidthUnits: 'pixels',
+    getLineWidth: (d) => (d.focusColor ? 2.5 : 1.5),
+    getLineColor: (d) => (faded(d) ? withAlpha(INK, 50) : d.focusColor ?? (d.proposed ? TEAL : withAlpha(INK, 200))),
+    getFillColor: (d) => (d.stop.id === selectedStop ? AMBER : withAlpha(WHITE, faded(d) ? 90 : 255)),
+  })
 }
 
 export function walkBikeLayer(infra: InfraFeature[], visible: boolean) {
@@ -244,48 +505,6 @@ export function floodLayer(infra: InfraFeature[], visible: boolean) {
     lineWidthUnits: 'pixels',
     getLineWidth: 1,
   })
-}
-
-const PROPOSED_KINDS: Partial<Record<Route['kind'], true>> = { frequent_bus: true, brt: true, on_demand_zone: true }
-
-export function proposedTransitLayer(routes: Route[], stops: Stop[], visible: boolean, selectedStop?: string) {
-  const proposed = routes.filter((r) => PROPOSED_KINDS[r.kind])
-  const feats = proposed.map((r) => feature(r.geometry, r))
-  const proposedRouteIds = new Set(proposed.map((r) => r.id))
-  return [
-    new GeoJsonLayer<Route, { getDashArray?: unknown; dashJustified?: boolean }>({
-      id: 'proposed_routes',
-      parameters: FLAT,
-      data: feats,
-      visible,
-      pickable: true,
-      filled: true,
-      stroked: true,
-      lineWidthUnits: 'pixels',
-      getLineWidth: (f) => (f.properties.kind === 'brt' ? 9 : f.properties.kind === 'on_demand_zone' ? 2 : 4),
-      getLineColor: (f) => (f.properties.kind === 'brt' ? [46, 125, 91] : f.properties.kind === 'on_demand_zone' ? [47, 91, 211] : TEAL),
-      getFillColor: [47, 91, 211, 24],
-      getDashArray: (f: Feat<Route>) => (f.properties.kind === 'on_demand_zone' ? [6, 4] : [0, 0]),
-      dashJustified: true,
-      extensions: [new PathStyleExtension({ dash: true })],
-    }),
-    new ScatterplotLayer<Stop>({
-      id: 'proposed_stops',
-      parameters: FLAT,
-      data: stops,
-      visible,
-      pickable: true,
-      getPosition: (s) => s.lonlat,
-      radiusUnits: 'pixels',
-      getRadius: (s) => (s.id === selectedStop ? 8 : s.route_ids.some((r) => proposedRouteIds.has(r)) ? 5 : 3),
-      stroked: true,
-      lineWidthUnits: 'pixels',
-      getLineWidth: 2,
-      getLineColor: INK,
-      getFillColor: (s) => (s.id === selectedStop ? [227, 180, 72] : [255, 255, 255]),
-      updateTriggers: { getRadius: [selectedStop, proposedRouteIds.size], getFillColor: selectedStop },
-    }),
-  ]
 }
 
 export interface ParcelDatum {
@@ -541,8 +760,9 @@ export type Picked =
   | { layer: 'buildings'; building: Building; conversion: ConversionCandidate | undefined }
   | { layer: 'sites'; site: SiteDatum }
   | { layer: 'new_buildings'; site: Site }
-  | { layer: 'proposed_stops'; stop: Stop }
-  | { layer: 'proposed_routes'; route: Route }
+  | { layer: 'stops'; stop: Stop }
+  | { layer: 'proposed_routes'; route: ProposedDatum }
+  | { layer: 'transit_lines'; line: TransitLine }
   | { layer: 'stations'; station: Station }
   | { layer: 'amenities'; feature: InfraFeature }
 
@@ -570,11 +790,15 @@ export function decodePick(info: PickingInfo | null | undefined): Picked | null 
       const f = obj as Feat<Site> // newBuildingsLayer data
       return { layer: 'new_buildings', site: f.properties }
     }
-    case 'proposed_stops':
-      return { layer: 'proposed_stops', stop: obj as Stop }
+    case 'stops':
+      return { layer: 'stops', stop: (obj as StopDatum).stop } // stopsLayer data
     case 'proposed_routes': {
-      const f = obj as Feat<Route> // proposedTransitLayer route data
+      const f = obj as Feat<ProposedDatum> // proposedTransitLayer data
       return { layer: 'proposed_routes', route: f.properties }
+    }
+    case 'transit_lines': {
+      const f = obj as Feat<TransitLine> // transitExistingLayer data
+      return { layer: 'transit_lines', line: f.properties }
     }
     case 'stations':
       return { layer: 'stations', station: obj as Station }

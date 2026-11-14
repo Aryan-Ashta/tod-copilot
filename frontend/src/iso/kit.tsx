@@ -110,7 +110,7 @@ export const IsoGhost = memo(function IsoGhost({ sw = 1, color = ISO.ink, label,
 export interface StackLayer {
   h: number
   color: string
-  /** Draw this layer as a dashed ghost (e.g. the funding gap). */
+  /** Draw this layer as a dashed ghost (e.g. the funding still required). */
   ghost?: boolean
   stroke?: boolean
   title?: string

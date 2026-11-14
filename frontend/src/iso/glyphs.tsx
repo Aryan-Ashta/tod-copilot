@@ -70,7 +70,7 @@ const STATUS_COLOR = { pending: '#c4c9c1', running: ISO.blue, done: ISO.green, e
 
 export const AgentGlyph = memo(function AgentGlyph({ agent, status }: { agent: AgentName; status: keyof typeof STATUS_COLOR }) {
   return (
-    <svg viewBox={VB} className={`block h-7 w-8 shrink-0 ${status === 'running' ? 'iso-running' : ''}`} aria-hidden>
+    <svg viewBox={VB} className={`block h-9 w-10 shrink-0 ${status === 'running' ? 'iso-running' : ''}`} aria-hidden>
       {draw(agent, STATUS_COLOR[status])}
     </svg>
   )

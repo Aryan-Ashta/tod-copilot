@@ -1,7 +1,9 @@
+import { useEffect, useMemo } from 'react'
 import { usePlan } from '../../state/PlanContext'
 import { fmtNum, fmtUsd, humanize } from '../../format'
 import { CardShell, Empty, Section, td, th } from './common'
 import FactorHover from '../FactorHover'
+import { routeColor, routeKey, routeLabel, transitLines } from '../../mapLayers'
 import type { Route } from '../../types'
 
 const COST_KEYS: Record<Route['kind'], string[]> = {
@@ -12,18 +14,17 @@ const COST_KEYS: Record<Route['kind'], string[]> = {
   on_demand_zone: ['on_demand_cost_usd_per_zone_year'],
 }
 
-const KIND_DOT: Record<Route['kind'], string> = {
-  rail_existing: 'bg-red-500',
-  bus_existing: 'bg-neutral-500',
-  frequent_bus: 'bg-teal-500',
-  brt: 'bg-emerald-500',
-  on_demand_zone: 'bg-purple-500',
-}
-
 export default function TransitCard() {
-  const { state } = usePlan()
+  const { state, dispatch } = usePlan()
   const t = state.plan.transit
-  const routes = t ? [...t.routes].sort((a, b) => a.phase - b.phase || a.id.localeCompare(b.id)) : []
+  const infra = state.plan.infrastructure
+  const lines = useMemo(() => new Map(transitLines(infra ?? []).map((l) => [l.key, l])), [infra])
+  // the plan's new and upgraded services first, then existing rail, then existing buses
+  const order = (r: Route) => (r.phase > 0 ? r.phase - 10 : r.kind === 'rail_existing' ? 0 : 1)
+  const routes = t ? [...t.routes].sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id)) : []
+  const focusKey = state.selected.routeKey
+  // a row hovered as the card goes away would otherwise leave its route focused on the map
+  useEffect(() => () => dispatch({ type: 'hover_route', key: null }), [dispatch])
   const proposed = routes.filter((r) => r.phase > 0)
   return (
     <CardShell title="Transit network" note={state.plan.notes?.transit_network}>
@@ -61,23 +62,35 @@ export default function TransitCard() {
                 </tr>
               </thead>
               <tbody>
-                {routes.map((r) => (
-                  <tr key={r.id} className="border-t border-neutral-900">
-                    <td className={td}>
-                      <span className="flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${KIND_DOT[r.kind]}`} />
-                        <span>
-                          {r.id} <span className="text-neutral-500">{humanize(r.kind)}</span>
+                {routes.map((r) => {
+                  const key = routeKey(r.id)
+                  const [cr, cg, cb] = routeColor(r, lines) as readonly number[]
+                  return (
+                    <tr
+                      key={r.id}
+                      title={r.id}
+                      // hover and click focus the route on the map, as hovering or clicking its line there does
+                      onMouseEnter={() => dispatch({ type: 'hover_route', key })}
+                      onMouseLeave={() => dispatch({ type: 'hover_route', key: null })}
+                      onClick={() => dispatch({ type: 'select', selected: focusKey === key ? {} : { routeKey: key } })}
+                      className={`cursor-pointer border-t border-neutral-900 hover:bg-ink/[0.03] ${focusKey === key ? 'bg-ink/[0.06]' : ''}`}
+                    >
+                      <td className={td}>
+                        <span className="flex items-center gap-2">
+                          <span className="h-1.5 w-4 shrink-0 rounded-full" style={{ background: `rgb(${cr},${cg},${cb})` }} />
+                          <span>
+                            {routeLabel(r, lines)} <span className="text-neutral-500">{humanize(r.kind)}</span>
+                          </span>
                         </span>
-                      </span>
-                    </td>
-                    <td className={td}>{r.phase === 0 ? 'existing' : r.phase}</td>
-                    <td className={td}>{r.headway_min ? `${r.headway_min} min` : '—'}</td>
-                    <td className={`${td} tabular-nums`}>
-                      <FactorHover keys={COST_KEYS[r.kind]}>{r.phase === 0 ? '—' : fmtUsd(r.annual_operating_cost_usd)}</FactorHover>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className={td}>{r.phase === 0 ? 'existing' : r.phase}</td>
+                      <td className={td}>{r.headway_min ? `${r.headway_min} min` : '—'}</td>
+                      <td className={`${td} tabular-nums`}>
+                        <FactorHover keys={COST_KEYS[r.kind]}>{r.phase === 0 ? '—' : fmtUsd(r.annual_operating_cost_usd)}</FactorHover>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </Section>
