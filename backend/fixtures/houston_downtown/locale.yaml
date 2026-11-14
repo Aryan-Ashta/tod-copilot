@@ -1,0 +1,95 @@
+id: houston_downtown
+name: 'Houston: Downtown + Main St rail'
+purpose: The building reuse engine on a high-vacancy office market, plus the no-zoning
+  legal path
+data_tier: costar_full
+jurisdiction: houston
+bbox:
+- -95.38139
+- 29.73717
+- -95.35547
+- 29.76552
+utm_epsg: 32615
+county_fips: '48201'
+transit_agency: METRO
+stations:
+- name: Bell Station
+  lonlat:
+  - -95.36788
+  - 29.753227
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Central Station Capitol
+  lonlat:
+  - -95.361938
+  - 29.758368
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Central Station Main
+  lonlat:
+  - -95.363487
+  - 29.758776
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Central Station Rusk
+  lonlat:
+  - -95.362608
+  - 29.757693
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Convention District Capitol
+  lonlat:
+  - -95.356331
+  - 29.754992
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Convention District Rusk
+  lonlat:
+  - -95.357716
+  - 29.75472
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Downtown Transit Center Station
+  lonlat:
+  - -95.370256
+  - 29.75023
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Ensemble/Hcc Station
+  lonlat:
+  - -95.379037
+  - 29.739123
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Main Street Square Station
+  lonlat:
+  - -95.36519
+  - 29.756625
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Mcgowen Station
+  lonlat:
+  - -95.374086
+  - 29.745387
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Preston Station
+  lonlat:
+  - -95.361345
+  - 29.761496
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Theater District Capitol
+  lonlat:
+  - -95.366257
+  - 29.760969
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+- name: Theater District Rusk
+  lonlat:
+  - -95.367692
+  - 29.760751
+  mode: light_rail
+  source_url: https://files.mobilitydatabase.org/mdb-2060/latest.zip
+bbox_note: shrunk 2x by 10% per side toward the stations from [-95.385, 29.733, -95.353,
+  29.768] to keep parcels under 6000 (4977 parcels)

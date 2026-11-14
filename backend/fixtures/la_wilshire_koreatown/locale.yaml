@@ -1,0 +1,33 @@
+id: la_wilshire_koreatown
+name: 'Los Angeles: Wilshire corridor, Koreatown'
+purpose: 'Overlapping laws: choose per parcel between new construction under SB 79
+  and conversion under LA''s Citywide Adaptive Reuse Ordinance'
+data_tier: costar_full
+jurisdiction: los_angeles
+bbox:
+- -118.314
+- 34.056
+- -118.286
+- 34.068
+utm_epsg: 32611
+county_fips: '06037'
+transit_agency: LA Metro
+stations:
+- name: Wilshire / Normandie Station
+  lonlat:
+  - -118.301458
+  - 34.061753
+  mode: heavy_rail
+  source_url: https://gitlab.com/LACMTA/gtfs_rail/-/raw/master/gtfs_rail.zip
+- name: Wilshire / Vermont Station
+  lonlat:
+  - -118.290082
+  - 34.062701
+  mode: heavy_rail
+  source_url: https://gitlab.com/LACMTA/gtfs_rail/-/raw/master/gtfs_rail.zip
+- name: Wilshire / Western Station
+  lonlat:
+  - -118.308756
+  - 34.061689
+  mode: heavy_rail
+  source_url: https://gitlab.com/LACMTA/gtfs_rail/-/raw/master/gtfs_rail.zip

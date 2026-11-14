@@ -1,0 +1,275 @@
+[
+ {
+  "id": "osm:427272095",
+  "parcel_id": "5502027010",
+  "fields": {
+   "property_type": {
+    "value": "office",
+    "source_url": "https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/",
+    "note": "Jamison Properties is planning to convert a 13-story office building into a 236-unit, mixed-use apartment property"
+   },
+   "stories": {
+    "value": 13,
+    "source_url": "https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/",
+    "note": "a 13-story office conversion"
+   },
+   "rentable_area_sqft": {
+    "value": 233000,
+    "source_url": "https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/",
+    "note": "The 233,000-square-foot building at 3325 Wilshire Boulevard (building total, reported as building SF)"
+   },
+   "parking_spaces": {
+    "value": 450,
+    "source_url": "https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/",
+    "note": "over 450 underground parking spaces (Urbanize: retaining parking for 450 vehicles)"
+   },
+   "name": {
+    "value": "3325 Wilshire Boulevard",
+    "source_url": "https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/",
+    "note": "3325 Wilshire Blvd, Los Angeles, CA 90010"
+   },
+   "address": {
+    "value": "3325 Wilshire Blvd, Los Angeles, CA 90010",
+    "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3325+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
+    "note": "geocoded address"
+   }
+  }
+ },
+ {
+  "id": "osm:r6356829",
+  "parcel_id": "5502030014",
+  "fields": {
+   "name": {
+    "value": "Former IBM Los Angeles headquarters",
+    "source_url": "https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing",
+    "note": "3424 Wilshire Blvd, Los Angeles, CA 90010"
+   },
+   "property_type": {
+    "value": "office",
+    "source_url": "https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing",
+    "note": "Former IBM offices at 3424 Wilshire to become housing"
+   },
+   "year_built": {
+    "value": 1958,
+    "source_url": "https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing",
+    "note": "The 13-story, approximately 250,000-square-foot building was completed in 1958"
+   },
+   "stories": {
+    "value": 13,
+    "source_url": "https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing",
+    "note": "The 13-story, approximately 250,000-square-foot building"
+   },
+   "rentable_area_sqft": {
+    "value": 250000,
+    "source_url": "https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing",
+    "note": "approximately 250,000-square-foot building"
+   },
+   "address": {
+    "value": "3424 Wilshire Blvd, Los Angeles, CA 90010",
+    "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3424+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
+    "note": "geocoded address"
+   }
+  }
+ },
+ {
+  "id": "osm:1395739331",
+  "parcel_id": "5503025129",
+  "fields": {
+   "property_type": {
+    "value": "office",
+    "source_url": "https://thelalocal.org/housing/jamison-property-office-conversions-into-housing-august-2026-koreatown-westlake/",
+    "note": "a 20-story office tower is being turned into 507 apartments"
+   },
+   "stories": {
+    "value": 20,
+    "source_url": "https://la.urbanize.city/post/adaptive-reuse-create-495-apartments-3550-wilshire-blvd-koreatown",
+    "note": "the conversion of a 20-story towers into 495 apartments"
+   },
+   "name": {
+    "value": "3550 Wilshire Boulevard",
+    "source_url": "https://thelalocal.org/housing/jamison-property-office-conversions-into-housing-august-2026-koreatown-westlake/",
+    "note": "3550 Wilshire Blvd, Los Angeles, CA 90010"
+   },
+   "address": {
+    "value": "3550 Wilshire Blvd, Los Angeles, CA 90010",
+    "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3550+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
+    "note": "geocoded address"
+   }
+  }
+ },
+ {
+  "id": "osm:427278443",
+  "parcel_id": "5503029017",
+  "fields": {
+   "name": {
+    "value": "Wilshire Park Place (Beneficial Plaza)",
+    "source_url": "https://planning.lacity.gov/StaffRpt/CHC/2017/12-7-2017/9_Beneficial%20Plaza%20Liberty%20Park_FINAL.pdf",
+    "note": "3700 Wilshire Blvd, Los Angeles, CA 90010"
+   },
+   "property_type": {
+    "value": "office",
+    "source_url": "https://planning.lacity.gov/StaffRpt/CHC/2017/12-7-2017/9_Beneficial%20Plaza%20Liberty%20Park_FINAL.pdf",
+    "note": "Beneficial Plaza and Liberty Park is comprised of an 11-story office tower"
+   },
+   "year_built": {
+    "value": 1967,
+    "source_url": "https://planning.lacity.gov/StaffRpt/CHC/2017/12-7-2017/9_Beneficial%20Plaza%20Liberty%20Park_FINAL.pdf",
+    "note": "Completed in 1967, the Late-Modern architectural style office tower"
+   },
+   "stories": {
+    "value": 11,
+    "source_url": "https://planning.lacity.gov/StaffRpt/CHC/2017/12-7-2017/9_Beneficial%20Plaza%20Liberty%20Park_FINAL.pdf",
+    "note": "an 11-story office tower with a three-level underground parking"
+   },
+   "address": {
+    "value": "3700 Wilshire Blvd, Los Angeles, CA 90010",
+    "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3700+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
+    "note": "geocoded address"
+   }
+  }
+ },
+ {
+  "id": "osm:427462762",
+  "parcel_id": "5503031020",
+  "fields": {
+   "name": {
+    "value": "Pierce National Life Building",
+    "source_url": "https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/",
+    "note": "3807 Wilshire Blvd, Los Angeles, CA 90010"
+   },
+   "property_type": {
+    "value": "office",
+    "source_url": "https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/",
+    "note": "convert the blighted 13-story building at 3807-3815 Wilshire Boulevard"
+   },
+   "stories": {
+    "value": 13,
+    "source_url": "https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/",
+    "note": "the blighted 13-story building at 3807-3815 Wilshire Boulevard"
+   },
+   "address": {
+    "value": "3807 Wilshire Blvd, Los Angeles, CA 90010",
+    "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3807+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
+    "note": "geocoded address"
+   }
+  }
+ },
+ {
+  "id": "osm:r6356829",
+  "parcel_id": "5502030014",
+  "fields": {
+   "name": {
+    "value": "Equitable Plaza",
+    "source_url": "https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/",
+    "note": "3435 Wilshire Blvd, Los Angeles, CA 90010"
+   },
+   "property_type": {
+    "value": "office",
+    "source_url": "https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/",
+    "note": "the 34-story office tower at 3435 Wilshire Boulevard"
+   },
+   "year_built": {
+    "value": 1970,
+    "source_url": "https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf",
+    "note": "SurveyLA p.28: the Equitable Building, completed in 1970. Located at 3435 Wilshire (Wikipedia says 1969)"
+   },
+   "stories": {
+    "value": 34,
+    "source_url": "https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf",
+    "note": "SurveyLA p.29: the thirty-four story Equitable Building"
+   },
+   "rentable_area_sqft": {
+    "value": 688000,
+    "source_url": "https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/",
+    "note": "Occupancy dwindled at the 688,000-square-foot building"
+   },
+   "vacancy_pct": {
+    "value": 43,
+    "source_url": "https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/",
+    "note": "occupancy falling from 67 percent in 2021 to 57 percent today (Nov 2024; vacancy = 100 - 57)"
+   },
+   "address": {
+    "value": "3435 Wilshire Blvd, Los Angeles, CA 90010",
+    "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3435+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
+    "note": "geocoded address"
+   }
+  }
+ },
+ {
+  "id": "osm:402036182",
+  "parcel_id": "5093020001",
+  "fields": {
+   "name": {
+    "value": "Travelers Building",
+    "source_url": "https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf",
+    "note": "3600 Wilshire Blvd, Los Angeles, CA 90010"
+   },
+   "property_type": {
+    "value": "office",
+    "source_url": "https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf",
+    "note": "SurveyLA p.27: made it the tallest office building in the city"
+   },
+   "year_built": {
+    "value": 1961,
+    "source_url": "https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf",
+    "note": "SurveyLA p.27: Completed in 1961, it was designed by Welton Becket"
+   },
+   "stories": {
+    "value": 22,
+    "source_url": "https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf",
+    "note": "SurveyLA p.27: its twenty-two stories and three-hundred-foot height"
+   },
+   "address": {
+    "value": "3600 Wilshire Blvd, Los Angeles, CA 90010",
+    "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3600+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
+    "note": "geocoded address"
+   }
+  }
+ },
+ {
+  "id": "osm:427295565",
+  "parcel_id": "5094008027",
+  "fields": {
+   "name": {
+    "value": "One Park Plaza",
+    "source_url": "https://mdofficespaces.com/los-angeles/koreatown/3250-wilshire-blvd",
+    "note": "3250 Wilshire Blvd, Los Angeles, CA 90010"
+   },
+   "property_type": {
+    "value": "office",
+    "source_url": "https://mdofficespaces.com/los-angeles/koreatown/3250-wilshire-blvd",
+    "note": "Suites listed as Office/Medical; Building class Class B"
+   },
+   "building_class": {
+    "value": "B",
+    "source_url": "https://mdofficespaces.com/los-angeles/koreatown/3250-wilshire-blvd",
+    "note": "Building class Class B (listing data as of September 2026)"
+   },
+   "year_built": {
+    "value": 1971,
+    "source_url": "https://mdofficespaces.com/los-angeles/koreatown/3250-wilshire-blvd",
+    "note": "Built 1971"
+   },
+   "stories": {
+    "value": 22,
+    "source_url": "https://mdofficespaces.com/los-angeles/koreatown/3250-wilshire-blvd",
+    "note": "Stories 22"
+   },
+   "rentable_area_sqft": {
+    "value": 700000,
+    "source_url": "https://mdofficespaces.com/los-angeles/koreatown/3250-wilshire-blvd",
+    "note": "Rentable building area 700,000 SF (a CommercialCafe listing snippet says 445,076 SF; unverified conflict)"
+   },
+   "vacancy_pct": {
+    "value": 19,
+    "source_url": "https://mdofficespaces.com/los-angeles/koreatown/3250-wilshire-blvd",
+    "note": "Leased 81% (Sept 2026; vacancy = 100 - 81)"
+   },
+   "address": {
+    "value": "3250 Wilshire Blvd, Los Angeles, CA 90010",
+    "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3250+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
+    "note": "geocoded address"
+   }
+  }
+ }
+]

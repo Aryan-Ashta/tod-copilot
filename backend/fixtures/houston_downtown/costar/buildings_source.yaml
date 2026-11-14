@@ -1,0 +1,232 @@
+# Hand-entered public facts about real downtown Houston office buildings (CoStar-shaped fixture input).
+# Every value carries the URL it came from; fields without a public source are omitted (they stay missing).
+# Primary source: AECOM for Central Houston / Houston Downtown Redevelopment Authority, "Downtown Houston
+# Office Conversion Study", November 2023 (figures in it are CoStar-derived, Spring 2023). The URL named in
+# docs/11 (centercityphila.org) returned 404 on 2026-11-13; the same PDF is served at the ctycms.com URL below.
+# Page numbers are the PDF pages: p.65 = conversion scoring table (Built, RBA); pp.68/73/81 = building profiles;
+# p.53 = conversion benchmarking table.
+# `extra` holds sourced facts that are not schema fields (the linker may ignore them).
+# lonlat = Nominatim (OSM) geocode of the address, retrieved 2026-11-13.
+# 1801 Smith St is deliberately excluded (already converted; backtest only, see backend/tests/locales/backtests.yaml).
+
+- name: One City Centre
+  address: 1021 Main St, Houston, TX 77002
+  lonlat: [-95.3650056, 29.7567008]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1021+Main+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    name: {value: One City Centre, source_url: https://propmodo.com/playbook/one-city-centres-second-life-as-downtown-houston-housing/, note: "One City Centre. Address: 1021 Main St., Houston, TX"}
+    property_type: {value: office, source_url: https://propmodo.com/playbook/one-city-centres-second-life-as-downtown-houston-housing/, note: "begin converting the 780,530-square-foot tower at 1021 Main St. into housing (office-to-residential)"}
+    year_built: {value: 1960, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: YEAR BUILT / RENOVATED: 1960 / 2010"}
+    year_renovated: {value: 2010, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: YEAR BUILT / RENOVATED: 1960 / 2010"}
+    stories: {value: 29, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: STORIES: 29 (Connect CRE/HBJ 2025 say 27-story)"}
+    rentable_area_sqft: {value: 609000, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: RENTABLE BUILDING AREA: 609,000 SF (p.65 RBA 608,660; Propmodo 2025 cites 780,530 SF gross)"}
+    typical_floor_sqft: {value: 21000, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: TYPICAL FLOOR SIZE: 21,000 SF"}
+    vacancy_pct: {value: 72, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: VACANT / AVAILABLE: 72% / 93% (2023)"}
+    asking_rent_usd_sqft_yr: {value: 18.06, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: CURRENT RENTS: $18.06 PSF (2023)"}
+    parking_spaces: {value: 1300, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: PARKING: 1,300 spaces between 2 decks"}
+  parcel_fields:
+    owner: {value: 3L Real Estate, source_url: https://traded.co/deals/texas/office/sale/1021-main-street-1/, note: "Joseph Slezak Of 3L Real Estate Purchases Office Building From Accesso Partners For $24.62M"}
+    last_sale_usd: {value: 24620000, source_url: https://traded.co/deals/texas/office/sale/1021-main-street-1/, note: "1021 Main Street ... sold on 03-27-2025 for $24,620,000"}
+    last_sale_year: {value: 2025, source_url: https://traded.co/deals/texas/office/sale/1021-main-street-1/, note: "Closing Mar 27, 2025"}
+  extra:
+    min_floorplate_dimension_ft: {value: 90, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: MINIMUM FLOORPLATE DEPTH: 90 feet (whole-plate minimum dimension, not core-to-window)"}
+    planned_units: {value: 553, source_url: https://www.connectcre.com/stories/3l-provides-update-on-conversion-of-houston-highrise/, note: "includes the construction of 553 apartment units, some of which would be for short-term use"}
+    status: {value: "conversion planned (TDLR filing Aug 2025; construction start targeted Feb 2026)", source_url: https://propmodo.com/playbook/one-city-centres-second-life-as-downtown-houston-housing/, note: "schedule in the Aug. 12 filing targets a construction start in February 2026 and completion by December 2027"}
+
+- name: 708 Main
+  address: 708 Main St, Houston, TX 77002
+  lonlat: [-95.3633395, 29.7590946]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=708+Main+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: one of 165 office buildings scored; conversion concept 1 'The Houston Shoebox'"}
+    year_built: {value: 1923, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: YEAR BUILT / RENOVATED: 1923 / 2002"}
+    year_renovated: {value: 2002, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: YEAR BUILT / RENOVATED: 1923 / 2002"}
+    stories: {value: 10, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: STORIES: 10"}
+    rentable_area_sqft: {value: 98000, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: RENTABLE BUILDING AREA: 98,000 SF (p.65 RBA 98,253)"}
+    typical_floor_sqft: {value: 8600, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: TYPICAL FLOOR SIZE: 8,600 SF"}
+    vacancy_pct: {value: 88, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: VACANT / AVAILABLE: 88% / 88% (2023)"}
+    asking_rent_usd_sqft_yr: {value: 24, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: CURRENT RENTS: $24 PSF (2023)"}
+    parking_spaces: {value: 0, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: PARKING: None on-site"}
+  parcel_fields:
+    owner: {value: Lionstone Partners, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: OWNER: Lionstone Partners (2023)"}
+    last_sale_year: {value: 2015, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: LAST SALE: Not Disclosed, January 2015"}
+  extra:
+    min_floorplate_dimension_ft: {value: 45, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: MINIMUM FLOORPLATE DEPTH: 45 feet"}
+
+- name: Wedge International Tower
+  address: 1415 Louisiana St, Houston, TX 77002
+  lonlat: [-95.3698513, 29.7547951]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1415+Louisiana+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    name: {value: Wedge International Tower, source_url: "https://nominatim.openstreetmap.org/search?format=jsonv2&q=1415+Louisiana+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1", note: "OSM name: Wedge International Tower, 1415, Louisiana Street"}
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building scored; conversion concept 2 'The Typical Atypical'"}
+    year_built: {value: 1983, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: YEAR BUILT / RENOVATED: 1983 / 2022"}
+    year_renovated: {value: 2022, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: YEAR BUILT / RENOVATED: 1983 / 2022"}
+    stories: {value: 43, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: STORIES: 43"}
+    rentable_area_sqft: {value: 521000, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: RENTABLE BUILDING AREA: 521,000 SF (p.65 RBA 520,602)"}
+    vacancy_pct: {value: 43, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: VACANT / AVAILABLE: 43% / 44% (2023)"}
+    asking_rent_usd_sqft_yr: {value: 19.55, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: CURRENT RENTS: $19.55 PSF (2023)"}
+    parking_spaces: {value: 1604, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: PARKING: 1,604 spaces (3.1 spaces per 1,000 SF)"}
+  parcel_fields:
+    owner: {value: Wedge Commercial Properties, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: OWNER: Wedge Commercial Properties (2023)"}
+  extra:
+    min_floorplate_dimension_ft: {value: 90, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: MINIMUM FLOORPLATE DEPTH: 90 feet"}
+    typical_floor_sqft_range: {value: [12000, 18000], source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: TYPICAL FLOOR SIZE: 12,000 - 18,000 SF (range, so not entered as typical_floor_sqft)"}
+
+- name: 800 Bell (former Humble Oil / Exxon Building)
+  address: 800 Bell St, Houston, TX 77002
+  lonlat: [-95.3695646, 29.7535870]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=800+Bell+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    name: {value: 800 Bell (former Humble Oil / Exxon Building), source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "The 45-story former headquarters of Humble Oil, a predecessor to Exxon ... located at 800 Bell"}
+    property_type: {value: office, source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "plans to convert the vacant office building to residential units"}
+    year_built: {value: 1962, source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "The tower was completed in 1962 (AECOM p.65 also: Built 1962)"}
+    stories: {value: 45, source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "The 45-story former headquarters of Humble Oil"}
+    rentable_area_sqft: {value: 1314350, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 800 Bell St, Built 1962, RBA 1,314,350"}
+    vacancy_pct: {value: 100, source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "has been empty since the oil company relocated (as of Jan 2023)"}
+  parcel_fields:
+    owner: {value: New York investment group affiliated with CMI Developers, source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "The buyer, a New York investment group affiliated with CMI Developers"}
+    last_sale_year: {value: 2022, source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "The sale closed at the-end of 2022 (price not determined)"}
+  extra:
+    min_floorplate_dimension_ft: {value: 130, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.53 benchmarking: 800 Bell, 45 stories, Min. Depth 130"}
+
+- name: Esperson Buildings
+  address: 808 Travis St, Houston, TX 77002
+  lonlat: [-95.3650524, 29.7588001]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=808+Travis+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    name: {value: Esperson Buildings, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.53: Esperson Buildings, Houston, 599,107 total GSF (matches p.65 808 Travis St RBA 599,107)"}
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building scored; p.53: conversion to Mixed-Use TBD"}
+    year_built: {value: 1941, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 808 Travis St Built 1941 (p.53 lists 1927/41 for the pair)"}
+    stories: {value: 27, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.53: Esperson Buildings # of Stories 27"}
+    rentable_area_sqft: {value: 599107, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 599,107"}
+  extra:
+    min_floorplate_dimension_ft: {value: 60, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.53: Esperson Buildings Min. Depth 60"}
+
+- name: 919 Milam
+  address: 919 Milam St, Houston, TX 77002
+  lonlat: [-95.3661555, 29.7584922]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=919+Milam+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 25"}
+    year_built: {value: 1956, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 919 Milam St, Built 1956"}
+    rentable_area_sqft: {value: 542078, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 542,078"}
+
+- name: 700 Milam
+  address: 700 Milam St, Houston, TX 77002
+  lonlat: [-95.3655397, 29.7604041]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=700+Milam+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 22"}
+    year_built: {value: 1975, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 700 Milam St, Built 1975"}
+    rentable_area_sqft: {value: 694021, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 694,021"}
+
+- name: 1001 Texas
+  address: 1001 Texas Ave, Houston, TX 77002
+  lonlat: [-95.3623630, 29.7599720]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1001+Texas+Ave%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 21"}
+    year_built: {value: 1982, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1001 Texas Ave, Built 1982"}
+    rentable_area_sqft: {value: 119436, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 119,436"}
+
+- name: 1010 Lamar
+  address: 1010 Lamar St, Houston, TX 77002
+  lonlat: [-95.3653774, 29.7560350]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1010+Lamar+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 21"}
+    year_built: {value: 1981, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1010 Lamar St, Built 1981"}
+    rentable_area_sqft: {value: 277991, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 277,991"}
+
+- name: 1600 Smith
+  address: 1600 Smith St, Houston, TX 77002
+  lonlat: [-95.3716830, 29.7550130]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1600+Smith+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 21"}
+    year_built: {value: 1984, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1600 Smith St, Built 1984"}
+    rentable_area_sqft: {value: 1098399, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 1,098,399"}
+
+- name: 1001 McKinney
+  address: 1001 McKinney St, Houston, TX 77002
+  lonlat: [-95.3647460, 29.7569560]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1001+McKinney+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 20"}
+    year_built: {value: 1947, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1001 McKinney St, Built 1947"}
+    rentable_area_sqft: {value: 375440, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 375,440"}
+
+- name: 440 Louisiana
+  address: 440 Louisiana St, Houston, TX 77002
+  lonlat: [-95.3647109, 29.7627698]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=440+Louisiana+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 20"}
+    year_built: {value: 1983, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 440 Louisiana St, Built 1983"}
+    rentable_area_sqft: {value: 379382, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 379,382"}
+
+- name: 1331 Lamar
+  address: 1331 Lamar St, Houston, TX 77010
+  lonlat: [-95.3625550, 29.7545166]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1331+Lamar+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 20"}
+    year_built: {value: 1983, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1331 Lamar St, Built 1983"}
+    rentable_area_sqft: {value: 985896, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 985,896"}
+
+- name: 1315 St Joseph Pkwy
+  address: 1315 St Joseph Pkwy, Houston, TX 77002
+  lonlat: [-95.3673863, 29.7486100]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1315+St+Joseph+Pkwy%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 19"}
+    year_built: {value: 1984, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1315 St Joseph Pky, Built 1984"}
+    rentable_area_sqft: {value: 170554, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 170,554"}
+
+- name: KBR Tower
+  address: 601 Jefferson St, Houston, TX 77002
+  lonlat: [-95.3723370, 29.7532501]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=601+Jefferson+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    name: {value: KBR Tower, source_url: "https://nominatim.openstreetmap.org/search?format=jsonv2&q=601+Jefferson+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1", note: "OSM name: KBR Tower, 601, Jefferson Street"}
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 19"}
+    year_built: {value: 1973, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 601 Jefferson St, Built 1973"}
+    rentable_area_sqft: {value: 1047748, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 1,047,748"}
+
+- name: 711 Louisiana
+  address: 711 Louisiana St, Houston, TX 77002
+  lonlat: [-95.3657052, 29.7598388]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=711+Louisiana+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 19"}
+    year_built: {value: 1975, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 711 Louisiana St, Built 1975"}
+    rentable_area_sqft: {value: 666762, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 666,762"}
+
+- name: 801 Louisiana
+  address: 801 Louisiana St, Houston, TX 77002
+  lonlat: [-95.3663550, 29.7598630]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=801+Louisiana+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 19"}
+    year_built: {value: 1978, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 801 Louisiana St, Built 1978"}
+    rentable_area_sqft: {value: 105145, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 105,145"}
+
+- name: Kinder Morgan Building
+  address: 1001 Louisiana St, Houston, TX 77002
+  lonlat: [-95.3673868, 29.7578893]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1001+Louisiana+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    name: {value: Kinder Morgan Building, source_url: "https://nominatim.openstreetmap.org/search?format=jsonv2&q=1001+Louisiana+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1", note: "OSM name: Kinder Morgan Building, 1001, Louisiana Street"}
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 18"}
+    year_built: {value: 1962, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1001 Louisiana St, Built 1962"}
+    rentable_area_sqft: {value: 937003, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 937,003"}
+
+- name: 1221 McKinney
+  address: 1221 McKinney St, Houston, TX 77002
+  lonlat: [-95.3623322, 29.7559940]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1221+McKinney+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  fields:
+    property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 18"}
+    year_built: {value: 1977, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1221 McKinney St, Built 1977"}
+    rentable_area_sqft: {value: 1065215, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 1,065,215"}

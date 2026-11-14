@@ -1,0 +1,10 @@
+{
+ "source": "county_parcels",
+ "urls": [
+  "https://www.gis.hctx.net/arcgis/rest/services/HCAD/Parcels/MapServer/0"
+ ],
+ "retrieved_at": "2026-11-14T04:59:38.429308+00:00",
+ "where": "Stacked=0 OR Stacked IS NULL",
+ "zoning": null,
+ "houston_zoning": "Houston has no zoning"
+}

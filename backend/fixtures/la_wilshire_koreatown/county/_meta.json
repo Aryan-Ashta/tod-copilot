@@ -1,0 +1,11 @@
+{
+ "source": "county_parcels",
+ "urls": [
+  "https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0",
+  "https://maps.lacity.org/lahub/rest/services/City_Planning_Department/MapServer/8"
+ ],
+ "retrieved_at": "2026-11-14T05:07:42.475294+00:00",
+ "where": "1=1",
+ "zoning": "City of LA Generalized Zoning layer, field ZONE_CMPLT (440 polygons)",
+ "houston_zoning": null
+}

@@ -1,0 +1,65 @@
+# Curated legal corpus (docs/10-legal-corpus.md). Official sources only.
+# path_name: the legal path the document supports (null = supporting/background document).
+
+- doc_id: houston_planning_no_zoning
+  title: City of Houston Planning & Development - Development Regulations page and Official City of Houston Zoning Letter (2026)
+  jurisdiction: houston
+  path_name: Houston development rules
+  url: https://www.houstontx.gov/planning/DevelopRegs/index.html
+  retrieved_at: 2026-11-13
+
+- doc_id: houston_ch42_development
+  title: Houston Code of Ordinances, Chapter 42 - Subdivisions, Developments and Platting (building lines, lots and reserves)
+  jurisdiction: houston
+  path_name: Houston development rules
+  url: https://library.municode.com/tx/houston/codes/code_of_ordinances?nodeId=COOR_CH42SUDEPL
+  retrieved_at: 2026-11-13
+
+- doc_id: houston_ch26_parking
+  title: Houston Code of Ordinances, Chapter 26, Article VIII - Off-Street Parking and Loading
+  jurisdiction: houston
+  path_name: Houston development rules
+  url: https://library.municode.com/tx/houston/codes/code_of_ordinances?nodeId=COOR_CH26PA_ARTVIIIOREPALO
+  retrieved_at: 2026-11-13
+
+- doc_id: houston_dra_programs
+  title: Downtown Redevelopment Authority (TIRZ #3) - Programs (Downtown Living Initiative; office conversion program development)
+  jurisdiction: houston
+  path_name: null
+  url: https://downtownhouston.org/downtown-redevelopment-authority/programs
+  retrieved_at: 2026-11-13
+
+- doc_id: ca_sb79_2025
+  title: SB 79 (2025), Chapter 512 - Housing development, transit-oriented development (Gov. Code §§ 65912.155-65912.162)
+  jurisdiction: california
+  path_name: SB 79 new construction
+  url: https://leginfo.legislature.ca.gov/faces/billTextClient.xhtml?bill_id=202520260SB79
+  retrieved_at: 2026-11-13
+
+- doc_id: ca_gov_code_65915
+  title: California Government Code § 65915 - Density Bonus Law (subdivisions (b), (f), (p))
+  jurisdiction: california
+  path_name: SB 79 new construction
+  url: https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=65915
+  retrieved_at: 2026-11-13
+
+- doc_id: la_adaptive_reuse_2026
+  title: Los Angeles Citywide Adaptive Reuse Ordinance (Ord. No. 188793, LAMC Sec. 12.22 A.26)
+  jurisdiction: los_angeles
+  path_name: LA Citywide Adaptive Reuse
+  url: https://cityclerk.lacity.org/onlinedocs/2021/21-1230-S9_ord_188793_12-23-25.pdf
+  retrieved_at: 2026-11-13
+
+- doc_id: la_aro_press_release_2026
+  title: LA City Planning - Old Building, New Life - Adaptive Reuse Unlocks More Housing (Feb. 9, 2026)
+  jurisdiction: los_angeles
+  path_name: LA Citywide Adaptive Reuse
+  url: https://planning.lacity.gov/odocument/0fa826b2-52c7-4ab7-ad29-e6edefed4493/Adaptive_Reuse_Ordinance_Feb_2026.pdf
+  retrieved_at: 2026-11-13
+
+- doc_id: cocoa_zoning_code
+  title: City of Cocoa Code of Ordinances, Appendix A - Zoning (Art. XI district regulations near the planned Brightline station; Art. XII parking)
+  jurisdiction: brevard
+  path_name: City of Cocoa land development code
+  url: https://library.municode.com/fl/cocoa/codes/code_of_ordinances?nodeId=PTIICO_APXAZO
+  retrieved_at: 2026-11-13

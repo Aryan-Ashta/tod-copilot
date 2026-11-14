@@ -1,0 +1,7 @@
+{
+ "source": "gtfs",
+ "urls": [
+  "https://files.mobilitydatabase.org/ntd-40063/latest.zip"
+ ],
+ "retrieved_at": "2026-11-14T05:03:35.926825+00:00"
+}

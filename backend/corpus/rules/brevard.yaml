@@ -1,0 +1,298 @@
+# Structured rules for Brevard / Cocoa (docs/10-legal-corpus.md).
+# Governing code: City of Cocoa Code of Ordinances, Appendix A (Zoning). 713 of 781 county parcels within
+# 0.5 mi of the planned Brightline station report CITY = COCOA, and the station-area parcels (Brightline,
+# Walmart, city land) are mapped in the City of Cocoa zoning layer. Unincorporated pockets (Brevard
+# County zoning RU-1-13, EU, EU-2, RU-1-9, RU-1-11, GML, TU-1) and Cocoa single-family districts are not
+# covered: those parcels get eligible = None.
+# zoning_code values are the `Zoning` field of the City of Cocoa zoning layer:
+# https://services1.arcgis.com/Tex1uhbqnOZPx6qT/arcgis/rest/services/Public_View_Cocoa_Zoning_with_Split_Lots_June_2023_view/FeatureServer/1
+# No adopted Brightline station-area overlay was found (layer fields FurtherRestrictions/RestrictionURL are empty there).
+
+# ---------------------------------------------------------------- eligibility (multi-family homes)
+- path: City of Cocoa land development code
+  rule: eligible
+  applies_if: {zoning_code: {eq: RU-2-15}}
+  value: true
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 5
+    quote: "Multiple-family dwellings (four (4) or more units per building) not more than fifteen (15) dwelling units per acre (two thousand nine hundred (2,900) square feet of lot per dwelling unit) for multi-storied structures."
+
+- path: City of Cocoa land development code
+  rule: eligible
+  applies_if: {zoning_code: {eq: RU-2-25}}
+  value: true
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 6
+    quote: "Multiple-family dwellings (five (5) or more units per building)."
+
+- path: City of Cocoa land development code
+  rule: eligible
+  applies_if: {zoning_code: {eq: C-N}}
+  value: true
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 11
+    quote: "Multiple-family and single-family residences as regulated in section 5, RU-2-15 District."
+
+- path: City of Cocoa land development code
+  rule: eligible
+  applies_if: {zoning_code: {eq: C-R}}
+  value: true
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 10A
+    quote: "Multiple-family and single-family residences as regulated in section 5, RU-2-15."
+
+# P-S and C-P allow multi-family only as a special exception.
+- path: City of Cocoa land development code
+  rule: eligible
+  applies_if: {zoning_code: {eq: P-S}}
+  value: true
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 10
+    quote: "Multiple-family dwellings as regulated by section 5, RU-2-15 District."
+
+- path: City of Cocoa land development code
+  rule: eligible
+  applies_if: {zoning_code: {eq: C-P}}
+  value: true
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 14
+    quote: "Multiple-family dwellings as regulated by section 6, RU-2-25 Multiple-Family District."
+
+- path: City of Cocoa land development code
+  rule: eligible
+  applies_if: {zoning_code: {eq: C-G}}
+  value: false
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 12
+    quote: "All principal uses and structures allowed in section 10, P-S Professional Services District, and section 11, C-N, Neighborhood Commercial District, except residential uses and child care centers, day nurseries or kindergartens."
+
+- path: City of Cocoa land development code
+  rule: eligible
+  applies_if: {zoning_code: {eq: C-W}}
+  value: false
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 15
+    quote: "Residential uses including hotels and motels."
+
+- path: City of Cocoa land development code
+  rule: eligible
+  applies_if: {zoning_code: {eq: M-2}}
+  value: false
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 19
+    quote: "Residential land uses."
+
+# ---------------------------------------------------------------- uses
+- path: City of Cocoa land development code
+  rule: allows_uses
+  applies_if: {zoning_code: {eq: RU-2-15}}
+  value: [residential]
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 5
+    quote: "Multiple-family dwellings (four (4) or more units per building) not more than fifteen (15) dwelling units per acre (two thousand nine hundred (2,900) square feet of lot per dwelling unit) for multi-storied structures."
+
+- path: City of Cocoa land development code
+  rule: allows_uses
+  applies_if: {zoning_code: {eq: RU-2-25}}
+  value: [residential]
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 6
+    quote: "Multiple-family dwellings (five (5) or more units per building)."
+
+- path: City of Cocoa land development code
+  rule: allows_uses
+  applies_if: {zoning_code: {eq: P-S}}
+  value: [residential]
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 10
+    quote: "Multiple-family dwellings as regulated by section 5, RU-2-15 District."
+
+- path: City of Cocoa land development code
+  rule: allows_uses
+  applies_if: {zoning_code: {eq: C-P}}
+  value: [residential]
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 14
+    quote: "Multiple-family dwellings as regulated by section 6, RU-2-25 Multiple-Family District."
+
+- path: City of Cocoa land development code
+  rule: allows_uses
+  applies_if: {zoning_code: {eq: C-N}}
+  value: [residential, mixed_use]
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 11
+    quote: "PRINCIPAL USES AND STRUCTURES. The following uses and structures are permitted for any use or group of uses that are developed, either separately, or as a unit with certain site improvements shared in common:"
+
+- path: City of Cocoa land development code
+  rule: allows_uses
+  applies_if: {zoning_code: {eq: C-R}}
+  value: [residential, mixed_use]
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 10A
+    quote: "PRINCIPAL USES AND STRUCTURES. The following uses and structures are permitted for any use or groups of uses that are developed, either separately, or as a unit with certain site improvements shared in common:"
+
+# ---------------------------------------------------------------- density
+# C-N, C-R and P-S allow multi-family "as regulated in section 5, RU-2-15"; C-P "as regulated by section 6, RU-2-25".
+- path: City of Cocoa land development code
+  rule: max_units_per_acre
+  applies_if: {zoning_code: {in: [RU-2-15, C-N, C-R, P-S]}}
+  value: 15
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 5
+    quote: "Multiple-family dwellings (four (4) or more units per building) not more than fifteen (15) dwelling units per acre (two thousand nine hundred (2,900) square feet of lot per dwelling unit) for multi-storied structures."
+
+- path: City of Cocoa land development code
+  rule: max_units_per_acre
+  applies_if: {zoning_code: {in: [RU-2-25, C-P]}}
+  value: 25
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 6
+    quote: "Multi-Family\t25 Units/acre"
+
+# ---------------------------------------------------------------- height
+- path: City of Cocoa land development code
+  rule: max_height_ft
+  applies_if: {zoning_code: {eq: RU-2-15}}
+  value: 35
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 5
+    quote: "Maximum height—Thirty-five (35) feet."
+
+- path: City of Cocoa land development code
+  rule: max_height_ft
+  applies_if: {zoning_code: {eq: C-N}}
+  value: 35
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 11
+    quote: "7,500 sq. ft.\t75 ft.\t100 ft.\t50%\t300 sq. ft.\t35 ft."
+
+- path: City of Cocoa land development code
+  rule: max_height_ft
+  applies_if: {zoning_code: {eq: C-R}}
+  value: 35
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 10A
+    quote: "25,000 sq. ft.\t100 ft.\t250 ft.\t40%\t1,000 sq. ft.\t35 ft."
+
+- path: City of Cocoa land development code
+  rule: max_height_ft
+  applies_if: {zoning_code: {eq: P-S}}
+  value: 35
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 10
+    quote: "7,500 sq. ft.\t75 ft.\t100 ft.\t40%\t300 sq. ft.\t35 ft."
+
+- path: City of Cocoa land development code
+  rule: max_height_ft
+  applies_if: {zoning_code: {eq: RU-2-25}}
+  value: 45
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 6
+    quote: "Maximum Building Height\t45 feet, except as provided by special exception"
+
+- path: City of Cocoa land development code
+  rule: max_height_ft
+  applies_if: {zoning_code: {eq: C-P}}
+  value: 45
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 14
+    quote: "10,000 sq. ft.\t100 ft.\t100 ft.\t40%\t300 sq. ft.\t45 ft."
+
+# ---------------------------------------------------------------- process
+- path: City of Cocoa land development code
+  rule: discretionary
+  applies_if: {zoning_code: {eq: RU-2-15}}
+  value: false
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 5
+    quote: "Multiple-family dwellings (four (4) or more units per building) not more than fifteen (15) dwelling units per acre (two thousand nine hundred (2,900) square feet of lot per dwelling unit) for multi-storied structures."
+
+- path: City of Cocoa land development code
+  rule: discretionary
+  applies_if: {zoning_code: {eq: RU-2-25}}
+  value: false
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 6
+    quote: "Multiple-family dwellings (five (5) or more units per building)."
+
+- path: City of Cocoa land development code
+  rule: discretionary
+  applies_if: {zoning_code: {eq: C-N}}
+  value: false
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 11
+    quote: "Multiple-family and single-family residences as regulated in section 5, RU-2-15 District."
+
+- path: City of Cocoa land development code
+  rule: discretionary
+  applies_if: {zoning_code: {eq: C-R}}
+  value: false
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 10A
+    quote: "Multiple-family and single-family residences as regulated in section 5, RU-2-15."
+
+- path: City of Cocoa land development code
+  rule: discretionary
+  applies_if: {zoning_code: {eq: P-S}}
+  value: true
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 10
+    quote: "Multiple-family dwellings as regulated by section 5, RU-2-15 District."
+
+- path: City of Cocoa land development code
+  rule: discretionary
+  applies_if: {zoning_code: {eq: C-P}}
+  value: true
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 14
+    quote: "Multiple-family dwellings as regulated by section 6, RU-2-25 Multiple-Family District."
+
+# Site plan approval is required in RU-2-25 (and C-P multi-family follows RU-2-25); the total number of
+# approval steps is not stated.
+- path: City of Cocoa land development code
+  rule: approval_steps
+  applies_if: {zoning_code: {in: [RU-2-25, C-P]}}
+  value: TODO
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 6
+    quote: "All development in the RU-2-25 Multiple-Family Dwelling District, except for the construction of an individual single-family dwelling unit on a single lot, shall be required to submit a site plan and obtain approval pursuant to article XIII, section 1 of this zoning ordinance."
+
+# Multi-family parking depends on bedroom count (1, 1.5 or 2 spaces per unit); no single per-unit value.
+- path: City of Cocoa land development code
+  rule: parking_min_per_unit
+  applies_if: {}
+  value: TODO
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XII, Sec. 1
+    quote: "Efficiency unit - One (1) space per dwelling unit."

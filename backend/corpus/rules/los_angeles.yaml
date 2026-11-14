@@ -1,0 +1,330 @@
+# Structured rules for Los Angeles (docs/10-legal-corpus.md). Two paths are evaluated per parcel:
+# "SB 79 new construction" (state law, Gov. Code 65912.155 et seq.) and
+# "LA Citywide Adaptive Reuse" (LAMC 12.22 A.26, Ord. No. 188793).
+# applies_if: {attribute: {operator: value, ...}}; every listed operator must hold.
+# A rule whose value is TODO, or whose applies_if references a missing attribute, is "not covered".
+
+# ---------------------------------------------------------------- SB 79 new construction
+# Station tier, keyed on the station's mode. Wilshire D Line stations are heavy rail.
+- path: SB 79 new construction
+  rule: stop_tier
+  applies_if: {station_mode: {eq: heavy_rail}}
+  value: 1
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.156
+    quote: "“Tier 1 transit-oriented development stop” means a transit-oriented development stop within an urban transit county served by heavy rail transit or very high frequency commuter rail."
+
+- path: SB 79 new construction
+  rule: stop_tier
+  applies_if: {station_mode: {eq: light_rail}}
+  value: 2
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.156
+    quote: "“Tier 2 transit-oriented development stop” means a transit-oriented development stop within an urban transit county, excluding a Tier 1 transit-oriented development stop, served by light rail transit, by high-frequency commuter rail, or by bus service meeting the standards of paragraph (1) of subdivision (a) of Section 21060.2 of the Public Resources Code."
+
+# Eligibility: within one-half mile of a Tier 1 or Tier 2 stop. The statute also requires a site
+# zoned for residential, mixed, or commercial development; LA zone strings are not matched here.
+- path: SB 79 new construction
+  rule: eligible
+  applies_if: {distance_to_stop_mi: {lte: 0.5}, stop_tier: {in: [1, 2]}}
+  value: true
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A housing development project shall be an allowed use as a transit-oriented housing development on any site zoned for residential, mixed, or commercial development within one-half or one-quarter mile of a transit-oriented development stop, if the development complies with the applicable of all of the following requirements:"
+
+- path: SB 79 new construction
+  rule: eligible
+  applies_if: {distance_to_stop_mi: {gte: 0.501}}
+  value: false
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A housing development project shall be an allowed use as a transit-oriented housing development on any site zoned for residential, mixed, or commercial development within one-half or one-quarter mile of a transit-oriented development stop, if the development complies with the applicable of all of the following requirements:"
+
+# Housing development projects under SB 79 exclude any hotel or transient-lodging portion.
+- path: SB 79 new construction
+  rule: allows_uses
+  applies_if: {}
+  value: [residential]
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.156
+    quote: "“Housing development project” has the same meaning as defined in Section 65589.5, but does not include a project of which any portion is designated for use as a hotel, motel, bed and breakfast inn, or other transient lodging."
+
+# Ministerial approval is available; the number of approval steps is not stated.
+- path: SB 79 new construction
+  rule: approval_steps
+  applies_if: {}
+  value: TODO
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.159
+    quote: "A housing development project proposed pursuant to Section 65912.157 shall be eligible for streamlined ministerial approval pursuant to Section 65913.4 in accordance with all of the following:"
+
+- path: SB 79 new construction
+  rule: discretionary
+  applies_if: {}
+  value: false
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.159
+    quote: "A housing development project proposed pursuant to Section 65912.157 shall be eligible for streamlined ministerial approval pursuant to Section 65913.4 in accordance with all of the following:"
+
+# Height / density / residential FAR floors by tier and distance band (Gov. Code 65912.157(a)(3)-(6)).
+# The outer bands (>1/4 mi to 1/2 mi) apply in cities of at least 35,000 people (Los Angeles qualifies).
+- path: SB 79 new construction
+  rule: max_height_ft
+  applies_if: {distance_to_stop_mi: {lte: 0.25}, stop_tier: {eq: 1}}
+  value: 75
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not impose any height limit less than 75 feet."
+
+- path: SB 79 new construction
+  rule: max_units_per_acre
+  applies_if: {distance_to_stop_mi: {lte: 0.25}, stop_tier: {eq: 1}}
+  value: 120
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not impose any maximum density of less than 120 dwelling units per acre."
+
+- path: SB 79 new construction
+  rule: max_far
+  applies_if: {distance_to_stop_mi: {lte: 0.25}, stop_tier: {eq: 1}}
+  value: 3.5
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not enforce any other local development standard or combination of standards that would physically preclude achieving a residential floor area ratio of up to 3.5."
+
+- path: SB 79 new construction
+  rule: max_height_ft
+  applies_if: {distance_to_stop_mi: {gte: 0.25, lte: 0.5}, stop_tier: {eq: 1}}
+  value: 65
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not impose any height limit less than 65 feet."
+
+- path: SB 79 new construction
+  rule: max_units_per_acre
+  applies_if: {distance_to_stop_mi: {gte: 0.25, lte: 0.5}, stop_tier: {eq: 1}}
+  value: 100
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not impose any maximum density standard of less than 100 dwelling units per acre."
+
+- path: SB 79 new construction
+  rule: max_far
+  applies_if: {distance_to_stop_mi: {gte: 0.25, lte: 0.5}, stop_tier: {eq: 1}}
+  value: 3
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not enforce any other local development standard or combination of standards that would physically preclude achieving a residential floor area ratio of up to 3."
+
+- path: SB 79 new construction
+  rule: max_height_ft
+  applies_if: {distance_to_stop_mi: {lte: 0.25}, stop_tier: {eq: 2}}
+  value: 65
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not impose any height limit less than 65 feet."
+
+- path: SB 79 new construction
+  rule: max_units_per_acre
+  applies_if: {distance_to_stop_mi: {lte: 0.25}, stop_tier: {eq: 2}}
+  value: 100
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not impose any maximum density standard of less than 100 dwelling units per acre."
+
+- path: SB 79 new construction
+  rule: max_far
+  applies_if: {distance_to_stop_mi: {lte: 0.25}, stop_tier: {eq: 2}}
+  value: 3
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not enforce any other local development standard or combination of standards that would physically preclude achieving a residential floor area ratio of up to 3."
+
+- path: SB 79 new construction
+  rule: max_height_ft
+  applies_if: {distance_to_stop_mi: {gte: 0.25, lte: 0.5}, stop_tier: {eq: 2}}
+  value: 55
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not impose any height limit less than 55 feet."
+
+- path: SB 79 new construction
+  rule: max_units_per_acre
+  applies_if: {distance_to_stop_mi: {gte: 0.25, lte: 0.5}, stop_tier: {eq: 2}}
+  value: 80
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not impose any maximum density standard of less than 80 dwelling units per acre."
+
+- path: SB 79 new construction
+  rule: max_far
+  applies_if: {distance_to_stop_mi: {gte: 0.25, lte: 0.5}, stop_tier: {eq: 2}}
+  value: 2.5
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "A local government shall not enforce any other local development standard or combination of standards that would physically preclude achieving a residential floor area ratio of up to 2.5."
+
+# Parking ratios come from Gov. Code 65915(p) (bedroom-dependent; no single per-unit value) and
+# Gov. Code 65863.2, which is not in the corpus.
+- path: SB 79 new construction
+  rule: parking_min_per_unit
+  applies_if: {}
+  value: TODO
+  cite:
+    doc_id: ca_gov_code_65915
+    section: Gov. Code § 65915(p)
+    quote: "(A) Zero to one bedroom: one onsite parking space."
+
+- path: SB 79 new construction
+  rule: note
+  applies_if: {}
+  value: "lower-income set-aside required for projects over 10 units: 7% extremely low, 10% very low, or 13% lower income"
+  cite:
+    doc_id: ca_sb79_2025
+    section: Gov. Code § 65912.157
+    quote: "(iii) At least 13 percent of the total units, as defined in subparagraph (A) of paragraph (9) of subdivision (o) of Section 65915, are dedicated to lower income households, as defined in Section 50079.5 of the Health and Safety Code."
+
+# ---------------------------------------------------------------- LA Citywide Adaptive Reuse
+# Eligible: non-residential building at least 15 years old producing five or more units (by right),
+# or 5 to <15 years old with a Class 1 Conditional Use Permit, or a parking building at least 5 years old.
+# Zone list in 12.22 A.26.(e) is not matched (LA zone strings are not supplied as list members).
+- path: LA Citywide Adaptive Reuse
+  rule: eligible
+  applies_if: {property_type: {in: [office, retail, hotel, industrial, parking_garage]}, building_age_years: {gte: 15}, est_units: {gte: 5}}
+  value: true
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(e)
+    quote: "(1) Buildings constructed according to the building and zoning codes in effect at the time they were constructed, for which at least 15 years have elapsed since the date of permitted and completed construction."
+
+- path: LA Citywide Adaptive Reuse
+  rule: eligible
+  applies_if: {property_type: {eq: parking_garage}, building_age_years: {gte: 5}, est_units: {gte: 5}}
+  value: true
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(e)
+    quote: "(3) Any parking building, or parking area within an existing building, constructed according to the building and zoning codes in effect at the time they were constructed, for which at least five years have elapsed since the date of permitted and completed construction."
+
+- path: LA Citywide Adaptive Reuse
+  rule: eligible
+  applies_if: {property_type: {in: [office, retail, hotel, industrial]}, building_age_years: {gte: 5, lte: 14.99}, est_units: {gte: 5}}
+  value: true
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(e)
+    quote: "(2) Buildings constructed according to the building and zoning codes in effect at the time they were constructed, for which at least five years, but less than 15 years, have elapsed since the date of permitted and completed construction, if the Adaptive Reuse Project is approved pursuant to Section 12.24 X.1.(c) and Section 13B.2.1. (Class 1 Conditional Use Permit) of this Code."
+
+- path: LA Citywide Adaptive Reuse
+  rule: eligible
+  applies_if: {est_units: {lte: 4}}
+  value: false
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(d)
+    quote: "(4) Only an Adaptive Reuse Project that results in five or more residential units that meet the definition of Residential Use defined in this subdivision, shall be eligible for the incentives and procedures in this subdivision."
+
+- path: LA Citywide Adaptive Reuse
+  rule: eligible
+  applies_if: {building_age_years: {lte: 4.99}}
+  value: false
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(e)
+    quote: "(3) Any parking building, or parking area within an existing building, constructed according to the building and zoning codes in effect at the time they were constructed, for which at least five years have elapsed since the date of permitted and completed construction."
+
+- path: LA Citywide Adaptive Reuse
+  rule: eligible
+  applies_if: {property_type: {eq: residential}}
+  value: false
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(d)
+    quote: "(1) In all or any portion of an eligible building or parking building, a change of use is allowed from an existing Non-Residential Use or Hotel, excluding a Residential Hotel or Residential Unit as defined in Section 47.73 of this Code, to a new Residential Use."
+
+# Residential conversion, keeping active ground-floor commercial space (12.22 A.26.(d)(5), (h)(15)).
+# Conversion to hotel is limited to the Adaptive Reuse Subareas with a Class 3 CUP, so it is not listed.
+- path: LA Citywide Adaptive Reuse
+  rule: allows_uses
+  applies_if: {}
+  value: [residential, mixed_use]
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(d)
+    quote: "(1) In all or any portion of an eligible building or parking building, a change of use is allowed from an existing Non-Residential Use or Hotel, excluding a Residential Hotel or Residential Unit as defined in Section 47.73 of this Code, to a new Residential Use."
+
+# Buildings 15+ years old: building permit review only (one approval: the building permit).
+- path: LA Citywide Adaptive Reuse
+  rule: approval_steps
+  applies_if: {building_age_years: {gte: 15}}
+  value: 1
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(f)
+    quote: "(1) Building Permit Review. For purposes of this section, the following Adaptive Reuse Projects that seek incentives described in Section 12.22 A.26.(h) shall be issued building permits if they comply with this subdivision and all other applicable requirements under the Code:"
+
+- path: LA Citywide Adaptive Reuse
+  rule: discretionary
+  applies_if: {building_age_years: {gte: 15}}
+  value: false
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(f)
+    quote: "(1) Building Permit Review. For purposes of this section, the following Adaptive Reuse Projects that seek incentives described in Section 12.22 A.26.(h) shall be issued building permits if they comply with this subdivision and all other applicable requirements under the Code:"
+
+# Buildings 5 to <15 years old: Zoning Administrator Class 1 CUP; total step count not stated.
+- path: LA Citywide Adaptive Reuse
+  rule: approval_steps
+  applies_if: {building_age_years: {gte: 5, lte: 14.99}}
+  value: TODO
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(f)
+    quote: "(i) Adaptive Reuse Projects involving building(s) for which at least five years and less than 15 years have elapsed since the date of permitted and completed construction;"
+
+- path: LA Citywide Adaptive Reuse
+  rule: discretionary
+  applies_if: {building_age_years: {gte: 5, lte: 14.99}}
+  value: true
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(f)
+    quote: "The Zoning Administrator shall review and approve the following Adaptive Reuse Projects pursuant to Section 12.24 X.1. and Section 13B.2.1. (Class 1 Conditional Use Permit) of Chapter 1A of this Code:"
+
+# Required parking equals the spaces that physically exist today: not a per-unit ratio.
+- path: LA Citywide Adaptive Reuse
+  rule: parking_min_per_unit
+  applies_if: {}
+  value: TODO
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(h)
+    quote: "The required number of parking spaces shall be the same as the number of spaces that are observed to physically exist on the site at the time of application submittal for the Adaptive Reuse Project."
+
+- path: LA Citywide Adaptive Reuse
+  rule: note
+  applies_if: {}
+  value: "no lot-area-per-unit density limit; existing height and floor area may remain"
+  cite:
+    doc_id: la_adaptive_reuse_2026
+    section: Sec. 12.22 A.26.(h)
+    quote: "(3) Density. New Residential Uses shall not be subject to the minimum lot area per Dwelling Unit requirements, or minimum lot area per Guest Room requirements, of the zone in which they are located."

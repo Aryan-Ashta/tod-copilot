@@ -1,0 +1,8 @@
+{
+ "source": "fema",
+ "urls": [
+  "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28"
+ ],
+ "retrieved_at": "2026-11-14T05:03:35.924859+00:00",
+ "where": "SFHA_TF='T'"
+}

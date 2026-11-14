@@ -1,0 +1,7 @@
+{
+ "source": "afdc",
+ "urls": [
+  "https://developer.nlr.gov/api/alt-fuel-stations/v1/nearest.json"
+ ],
+ "retrieved_at": "2026-11-14T05:03:35.924859+00:00"
+}

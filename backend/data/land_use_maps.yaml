@@ -1,0 +1,193 @@
+# Raw county land-use codes -> TOD Copilot vocabulary (plan Phase 2 step 10).
+# Vocabulary: surface_parking | vacant | retail_1story | office | retail | hotel | industrial | parking_garage | residential | public | other
+# Overlays applied after this map (backend/agents/common.py classify step):
+#   - surface_parking when OSM surface parking covers >= 50% of the parcel's area
+#   - retail_1story when the use is retail and the tallest building on the parcel has <= 1 story
+houston_downtown:
+  field: raw_use
+  source_url: https://hcad.org/hcad-resources/hcad-appraisal-codes/
+  note: HCAD state class codes. F1 'Real, Commercial' does not separate office from retail; it maps to retail and buildings refine it.
+  building_type_reliable: false  # do not give buildings a property_type from these codes
+  default: other
+  map:
+    A1: residential
+    A2: residential
+    A3: residential
+    A4: residential
+    B1: residential
+    B2: residential
+    B3: residential
+    B4: residential
+    O1: residential
+    C1: vacant
+    C2: vacant
+    C3: vacant
+    F1: retail
+    F2: industrial
+    HH: residential
+    J1: public
+    J2: public
+    J3: public
+    J4: public
+    J5: public
+    J6: public
+    J7: public
+    X1: public
+    X2: public
+    X3: other
+    X4: public
+    XE: public
+    XG: public
+    XI: public
+    XJ: public
+    XV: public
+la_wilshire_koreatown:
+  field: raw_use_desc
+  vacant_code_suffix: V
+  source_url: https://assessor.lacounty.gov/
+  note: LA County Assessor use description; a use code ending in V marks vacant land.
+  default: other
+  map:
+    Athletic & Amusement Facilities: retail
+    Auto, Recreation EQPT, Construction EQPT, Sales & Service: retail
+    Banks Savings & Loan: retail
+    Bowling Alleys: retail
+    Churches: other
+    Clubs., Lodge Halls, Fraternal Organizations: other
+    Colleges, Universities (Private): other
+    Commercial: retail
+    Five or more apartments: residential
+    Four Units (Any Combination): residential
+    Government Parcel: public
+    Homes For Aged & Others: residential
+    Hotel & Motels: hotel
+    Irrigated Farm: other
+    Lgt Manf.Sm. EQPT. Manuf Sm.Shps Instr.Manuf. Prnt Plnts: industrial
+    Office Buildings: office
+    Parking Lots (Commercial Use Properties): surface_parking
+    Professional Buildings: office
+    Restaurants, Cocktail Lounges: retail
+    Rooming Houses: residential
+    Schools (Private): other
+    Service Stations: retail
+    Shopping Centers (Neighborhood, community): retail
+    Single: residential
+    Store Combination: retail
+    Stores: retail
+    Supermarkets: retail
+    Three Units (Any Combination): residential
+    Two Units: residential
+    Warehousing, Distribution, Storage: industrial
+    Wholesale & Manufacturing Outlets: industrial
+brevard_cocoa:
+  field: raw_use_desc
+  source_url: https://www.bcpao.us/
+  note: Brevard County Property Appraiser use code description (whitespace normalized).
+  default: other
+  map:
+    BOWLING ALLEYS, SKATING RINKS, AND POOL HALLS: retail
+    CAR WASH: retail
+    CEMETERY: other
+    CENTRALLY ASSESSED: public
+    CHURCH: other
+    COLLEGE - IMPROVED: public
+    COLLEGE - RELATED AMENITIES: public
+    COLLEGE - VACANT: vacant
+    COMMERCIAL IMPROVEMENT NOT SUITABLE FOR OCCUPANCY: retail
+    COMMERCIAL RELATED AMENITIES: retail
+    CONCRETE / ASPHALT PLANT: industrial
+    CONDOMINIUM NOT SUITABLE FOR OCCUPANCY: residential
+    CONDOMINIUM UNIT: residential
+    CONVENIENCE STORE: retail
+    CONVENIENCE STORE WITH GAS PUMP: retail
+    COUNTY OWNED LAND - VACANT: vacant
+    DUPLEX: residential
+    FAST FOOD RESTAURANT: retail
+    FEDERALLY OWNED LAND - IMPROVED: public
+    FINANCIAL INSTITUTION - BRANCH FACILITY: retail
+    FLEA MARKET: retail
+    GARAGE / AUTO-BODY / AUTO PAINT SHOP: retail
+    GARDEN APARTMENTS - 1 STORY - 10 TO 49 UNITS: residential
+    GARDEN APARTMENTS - 1 STORY - 50 UNITS AND UP: residential
+    GRAZING LAND - SOIL CAPABILITY CLASS II - WITH BUI: other
+    HALF-DUPLEX USED AS SFR: residential
+    HIGH RISE APARTMENTS - 4 STORIES AND UP: residential
+    HOME FOR THE AGED: residential
+    HOUSE AND IMPROVEMENT NOT SUITABLE FOR OCCUPANCY: residential
+    HVY IND (HVY EQUIP MFG, LG MACH SHOPS, FOUNDRIES,: industrial
+    IMPROVED RESIDENTIAL COMMON AREA: residential
+    LIGHT MANUFACTURING (SMALL EQUIPMENT MFG PLANT, SM: industrial
+    LIMITED SERVICE HOTEL: hotel
+    LOCALLY-ASSESSED RAILROAD PROPERTY: public
+    LOW RISE APARTMENTS - 2 OR 3 STORIES - 10 TO 49 U: residential
+    LOW RISE APARTMENTS - 2 OR 3 STORIES - 50 UNITS A: residential
+    MANUF. HOUSING PARK - 26 TO 50 SPACES RENTALS: residential
+    MANUF. HOUSING PARK - 51 TO 100 SPACES RENTALS: residential
+    MANUFACTURED HOME NOT SUITABLE FOR OCCUPANCY: residential
+    MANUFACTURED HOUSING - DOUBLE WIDE: residential
+    MANUFACTURED HOUSING - SINGLE WIDE: residential
+    MANUFACTURED HOUSING RENTAL LOT WITH IMPROVEMENTS: residential
+    MINERAL PROCESSING, PHOSPHATE PROCESSING REFINERY,: industrial
+    MINI-WAREHOUSING: industrial
+    MIXED USE - COMMERCIAL PROPERTY: retail
+    MOTOR INN: hotel
+    MULTIPLE LIVING UNITS - 5 TO 9 UNITS: residential
+    MULTIPLE LIVING UNITS - CONVERTED - 2 TO 9 UNITS: residential
+    MUNICIPALLY OWNED - RELATED AMENITIES: public
+    MUNICIPALLY OWNED LAND - IMPROVED: public
+    MUNICIPALLY OWNED LAND - VACANT: vacant
+    NIGHT CLUBS, COCKTAIL LOUNGES, BARS: retail
+    NON-TAXABLE CONDOMINIUM COMMON AREA: residential
+    NURSERY - WITH BUILDINGS OTHER THAN RESIDENCE: residential
+    NURSERY - WITH RESIDENCE: residential
+    OFFICE BUILDING - MODULAR: office
+    OFFICE BUILDING - MULTI TENANT - 1 STORY: office
+    OFFICE BUILDING - MULTI TENANT - 2 OR MORE STORI: office
+    OFFICE BUILDING - SINGLE TENANT - 1 STORY: office
+    OFFICE BUILDING - SINGLE TENANT - 2 OR MORE STORI: office
+    OPEN STOR, NEW & USED BLDG SUPP, JUNK YARDS, AUT: industrial
+    OTHER FOOD PROCESSING, CANDY FACTORIES, BAKERIES,: industrial
+    PARKING LOT - PATRON: surface_parking
+    PROFESSIONAL BUILDING - SINGLE TENANT - 1 STORY: office
+    PROFESSIONAL/OFFICE COMPLEX: office
+    QUADRUPLEX: residential
+    REC. VEH. OR MH SALES/NEW OR USED: retail
+    REPAIR SVC SHOP - EXCL AUTO - (RADIO, TV, ELECTRIC: retail
+    RESIDENTIAL IMPROVEMENT NOT SUITABLE FOR OCCUPANCY: residential
+    RESIDENTIAL RELATED AMENITIES: residential
+    RESTAURANT / CAFETERIA: retail
+    RETAIL DRUGSTORE - NOT ATTACHED: retail
+    RETAIL STORE - 1 UNIT: retail
+    RETAIL STORE - MULTIPLE UNITS: retail
+    RIVERS AND LAKES: other
+    SCHOOL (PUBLICALLY OWNED) - RELATED AMENITIES: public
+    SCHOOL (PUBLICLY OWNED) - IMPROVED: public
+    SCHOOL (PUBLICLY OWNED) - VACANT: vacant
+    SHOPPING COMPLEX - COMMUNITY/NEIGHBORHOOD: retail
+    SINGLE FAMILY - MODULAR: residential
+    SINGLE FAMILY RESIDENCE: residential
+    STATE OWNED - IMPROVED: public
+    STATE OWNED LAND - VACANT: vacant
+    SUPERMARKET: retail
+    THREE OR FOUR LIVING UNITS - NOT ATTACHED: residential
+    TOWNHOUSE: residential
+    TRIPLEX: residential
+    TWO OR THREE MOBILE HOMES (NOT A PARK): residential
+    TWO RESIDENTIAL UNITS - NOT ATTACHED: residential
+    USED AUTOMOBILE SALES: retail
+    UTILITY (ELECTRIC COMPANY) - IMPROVED: public
+    UTILITY (TELEPHONE/TELEGRAPH) - IMPROVED: public
+    VACANT COMMERCIAL LAND: vacant
+    VACANT INDUSTRIAL LAND: vacant
+    VACANT LAND - INSTITUTIONAL: vacant
+    VACANT MOBILE HOME SITE (PLATTED): vacant
+    VACANT RESIDENTIAL COMMON AREA: residential
+    VACANT RESIDENTIAL LAND (MULTI-FAMILY, PLATTED): vacant
+    VACANT RESIDENTIAL LAND (MULTI-FAMILY, UNPLATTED): vacant
+    VACANT RESIDENTIAL LAND (SINGLE FAMILY, PLATTED): vacant
+    VACANT RESIDENTIAL LAND (SINGLE FAMILY, UNPLATTED): vacant
+    VACANT RESIDENTIAL LAND (SINGLE-FAMILY, UNPLATTED): vacant
+    VACANT SINGLE-FAMILY PLATTED > 5 AC: vacant
+    WAREHOUSE - FLEX SPACE: industrial
+    WAREHOUSE DISCOUNT STORE: industrial
+    WAREHOUSING, DISTRIBUTION AND TRUCKING TERMINAL,: industrial

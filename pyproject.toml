@@ -1,0 +1,35 @@
+[project]
+name = "tod-copilot"
+version = "0.1.0"
+description = "TOD Copilot: transit-oriented development planning from one prompt"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic>=2",
+    "sse-starlette",
+    "pyyaml",
+    "httpx",
+    "shapely>=2",
+    "pyproj",
+    "geopandas",
+    "networkx",
+    "osmnx",
+    "numpy",
+    "scipy",
+    "pandas",
+    "h3>=4",
+    "rank-bm25",
+    "deepagents==0.7.38",
+    "langchain-anthropic",
+    "python-dotenv",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+
+[tool.uv]
+package = false

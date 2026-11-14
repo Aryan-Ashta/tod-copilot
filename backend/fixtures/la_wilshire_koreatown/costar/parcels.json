@@ -1,0 +1,72 @@
+[
+ {
+  "id": "5502027010",
+  "fields": {
+   "owner": {
+    "value": "Jamison Properties (with Arc Capital Partners)",
+    "source_url": "https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/",
+    "note": "Jamison, in partnership with Los Angeles-based investor Arc Capital Partners"
+   }
+  }
+ },
+ {
+  "id": "5502030014",
+  "fields": {
+   "owner": {
+    "value": "Jamison Services",
+    "source_url": "https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing",
+    "note": "the Archdiocese of Los Angeles, which sold the property to Jamison Services in 2008"
+   },
+   "last_sale_year": {
+    "value": 2008,
+    "source_url": "https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing",
+    "note": "sold the property to Jamison Services in 2008"
+   }
+  }
+ },
+ {
+  "id": "5503025129",
+  "fields": {
+   "owner": {
+    "value": "Jamison Services",
+    "source_url": "https://la.urbanize.city/post/adaptive-reuse-create-495-apartments-3550-wilshire-blvd-koreatown",
+    "note": "The project at 3550 Wilshire Boulevard, which is being developed by Jamison Services"
+   }
+  }
+ },
+ {
+  "id": "5503029017",
+  "fields": {
+   "owner": {
+    "value": "Jamison Services",
+    "source_url": "https://la.urbanize.city/post/koreatown-offices-3700-wilshire-blvd-be-converted-housing",
+    "note": "Jamison Services, owner of the Wilshire Park Place office complex at 3700 Wilshire Boulevard"
+   }
+  }
+ },
+ {
+  "id": "5503031020",
+  "fields": {
+   "owner": {
+    "value": "Jamison Properties",
+    "source_url": "https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/",
+    "note": "Jamison, its landlord"
+   }
+  }
+ },
+ {
+  "id": "5502030014",
+  "fields": {
+   "owner": {
+    "value": "Jamison Properties",
+    "source_url": "https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/",
+    "note": "Lee's firm acquired the 55-year-old office building in the 1990s; LNR poised to begin a UCC foreclosure (Oct 2024)"
+   },
+   "lease_expiry_year": {
+    "value": 2024,
+    "source_url": "https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/",
+    "note": "the two biggest tenants ... will both expire before the end of this year (2024)"
+   }
+  }
+ }
+]

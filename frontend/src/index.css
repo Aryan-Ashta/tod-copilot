@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+.delta-fade {
+  animation: delta-fade 1.5s ease-out forwards;
+}
+
+@keyframes delta-fade {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgba(10, 10, 10, 0.7) !important;
+  color: #a3a3a3;
+}
+.maplibregl-ctrl-attrib a {
+  color: #d4d4d4 !important;
+}

@@ -1,0 +1,27 @@
+id: brevard_cocoa
+name: 'Brevard County, FL: Cocoa'
+purpose: 'Fallback and greenfield transit: plan with no CoStar data, in a car-dependent
+  county, around a station that doesn''t exist yet, with flood risk'
+data_tier: public_only
+jurisdiction: brevard
+bbox:
+- -80.77872
+- 28.37248
+- -80.72547
+- 28.41933
+utm_epsg: 32617
+county_fips: '12009'
+transit_agency: Space Coast Area Transit
+stations:
+- name: Cocoa Brightline station (planned)
+  lonlat:
+  - -80.752093
+  - 28.395904
+  mode: intercity_rail_planned
+  source_url: https://nominatim.openstreetmap.org/search?format=json&q=Walmart+Supercenter+2700+Clearlake+Rd+Cocoa+FL
+  note: 'approximate: behind Walmart at 2700 Clearlake Rd, between it and the FEC
+    corridor (Space Coast TPO); midpoint of the store point and the nearest OSM railway=rail
+    line (233 m apart); sources: https://nominatim.openstreetmap.org/search?format=json&q=Walmart+Supercenter+2700+Clearlake+Rd+Cocoa+FL,
+    https://mynews13.com/fl/orlando/news/2026/10/06/-million-grant-advances-brightline-station-in-cocoa'
+bbox_note: shrunk 2x by 10% per side toward the stations from [-80.78496, 28.36699,
+  -80.71922, 28.42482] to keep parcels under 6000 (5238 parcels)

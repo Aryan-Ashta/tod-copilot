@@ -1,0 +1,13 @@
+{
+ "source": "osm",
+ "urls": [
+  "https://api.openstreetmap.org/api/0.6/map (tiled bbox calls; Overpass unreachable), parsed with osmnx 2.1.1"
+ ],
+ "retrieved_at": "2026-11-14T05:17:58.139817+00:00",
+ "bbox": [
+  -95.38139,
+  29.73717,
+  -95.35547,
+  29.76552
+ ]
+}

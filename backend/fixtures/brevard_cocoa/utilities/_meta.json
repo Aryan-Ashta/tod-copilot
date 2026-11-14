@@ -1,0 +1,12 @@
+{
+ "source": "city_open_data",
+ "urls": [
+  "https://gis.brevardfl.gov/gissrv/rest/services/Utility_Services/Other_Service_Area_WKID2881/MapServer/0",
+  "https://gis.brevardfl.gov/gissrv/rest/services/Utility_Services/Other_Service_Area_WKID2881/MapServer/1"
+ ],
+ "retrieved_at": "2026-11-14T05:03:07.825365+00:00",
+ "layers": {
+  "sewer_main": "City of Cocoa sewer service area",
+  "water_main": "City of Cocoa water service area"
+ }
+}

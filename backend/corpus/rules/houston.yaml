@@ -1,0 +1,53 @@
+# Structured rules for Houston (docs/10-legal-corpus.md). Every value is tied to a verbatim quote.
+# Houston has no zoning; the single legal path is the city's development ordinances.
+# A rule whose value is TODO, or whose applies_if references a missing attribute, is "not covered".
+
+- path: Houston development rules
+  rule: eligible
+  applies_if: {}
+  value: true
+  cite:
+    doc_id: houston_planning_no_zoning
+    section: Development Regulations
+    quote: "The City of Houston does not have zoning, but development is governed by ordinance codes that address how property can be subdivided."
+
+- path: Houston development rules
+  rule: allows_uses
+  applies_if: {}
+  value: [residential, hotel, mixed_use, keep_current]
+  cite:
+    doc_id: houston_planning_no_zoning
+    section: Development Regulations
+    quote: "The City codes do not address land use."
+
+- path: Houston development rules
+  rule: note
+  applies_if: {}
+  value: "deed restrictions: check title"
+  cite:
+    doc_id: houston_ch42_development
+    section: Sec. 42-150
+    quote: "Where deed restrictions provide for a greater building line or setback, the deed restrictions shall control over the provisions of this chapter."
+
+# The text names site plan review as "one of the steps" of the building permit process but never
+# states the total number of approval steps.
+- path: Houston development rules
+  rule: approval_steps
+  applies_if: {}
+  value: TODO
+  cite:
+    doc_id: houston_planning_no_zoning
+    section: Site Plan Review
+    quote: "Located at the Houston Permit Center, 1002 Washington Avenue, the Planning and Development Department Site Plan Review is one of the steps in the building permit process."
+
+# Sec. 26-492 sets apartment ratios by bedroom count (no single per-unit value), and Division 2
+# does not apply inside the market-based parking area (downtown); parcel membership in that area
+# is not an attribute the zoning agent supplies, so no per-unit minimum can be stated.
+- path: Houston development rules
+  rule: parking_min_per_unit
+  applies_if: {}
+  value: TODO
+  cite:
+    doc_id: houston_ch26_parking
+    section: Sec. 26-471
+    quote: "Buildings or tracts within the market-based parking area, except that division 2 of this article shall not apply to buildings or tracts within the market-based parking area; and"

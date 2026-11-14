@@ -1,0 +1,61 @@
+# Pre-conversion attributes of two real office-to-residential conversions, used as model backtests
+# (docs/11-test-locales.md). Not locale data: 1801 Smith is already converted.
+# lonlat = Nominatim (OSM) geocode of the address, retrieved 2026-11-13.
+
+houston_1801_smith:
+  name: 1801 Smith (now Elev8; formerly 600 Jefferson)
+  address: 1801 Smith St, Houston, TX 77002
+  lonlat: [-95.3731030, 29.7529220]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=1801+Smith+St%2C+Houston%2C+TX+77002&addressdetails=1&limit=1
+  property_type: office
+  stories: 20
+  rentable_area_sqft: 458000
+  year_built: 1971
+  actual_units: 372
+  min_floorplate_dimension_ft: 95
+  floor_to_floor_ft_min: 13
+  acquisition_usd_estimate: 20600000
+  source_urls:
+    stories: https://realtynewsreport.com/downtown-office-tower-converted-to-luxe-living/
+    rentable_area_sqft: https://realtynewsreport.com/downtown-office-tower-converted-to-luxe-living/
+    year_built: https://realtynewsreport.com/downtown-office-tower-converted-to-luxe-living/
+    actual_units: https://realtynewsreport.com/new-office-conversion-study-by-downtown-houston/
+    min_floorplate_dimension_ft: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf
+    floor_to_floor_ft_min: https://realtynewsreport.com/downtown-office-tower-converted-to-luxe-living/
+    acquisition_usd_estimate: https://realtynewsreport.com/downtown-office-tower-converted-to-luxe-living/
+    property_type: https://realtynewsreport.com/new-office-conversion-study-by-downtown-houston/
+  notes:
+    - "RNR 2024-02-01: 'At 20 stories, 1801 Smith is a 458,000-square-foot tower with parking.'"
+    - "RNR 2024-02-01: 'the 1971 building – previously known as 600 Jefferson – features 372 swank units'. Year conflicts: RNR 2023-12-20 says ''60s vintage'; AECOM 2023 p.53 lists Year Built 1972."
+    - "RNR 2023-12-20: 'Elev8, at 1801 Smith by DeBartolo Development. The ‘60s vintage 20-story tower of 458,000 SF has 372 new apartment units.'"
+    - "AECOM 2023 p.53 benchmarking: 1801 Smith Street, 20 stories, Min. Depth 95, 450,000 total GSF, 372 units (rentable area uses the 458,000 SF press figure)."
+    - "RNR 2024-02-01: 'the distance between floor plates was a generous 13-plus feet' (floor-to-floor, not clear ceiling height)."
+    - "RNR 2024-02-01: 'DeBartolo purchased the foreclosed property for an estimated $20.6 million'."
+    - "typical_floor_sqft: no public source found; omitted."
+
+la_jamison_wilshire:
+  name: 3325 Wilshire Boulevard (Jamison; now 'Mason')
+  address: 3325 Wilshire Blvd, Los Angeles, CA 90010
+  address_found: true
+  lonlat: [-118.2951789, 34.0618554]
+  geocode_url: https://nominatim.openstreetmap.org/search?format=jsonv2&q=3325+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1
+  property_type: office
+  stories: 13
+  rentable_area_sqft: 233000
+  actual_units: 236
+  parking_spaces: 450
+  retained_retail_sqft: 15000
+  source_urls:
+    address: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/
+    stories: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/
+    rentable_area_sqft: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/
+    actual_units: https://thelalocal.org/housing/jamison-property-office-conversions-into-housing-august-2026-koreatown-westlake/
+    parking_spaces: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/
+    retained_retail_sqft: https://la.urbanize.city/post/adaptive-reuse-k-town-offices-3325-wilshire-boulevard-create-236-apartments
+    property_type: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/
+    announcement: https://bisnow.com/los-angeles/news/architecture-design/adaptive-reuse-los-angeles-ordinance-citywide-128323
+  notes:
+    - "Multifamily Dive 2024-11-21: 'The 233,000-square-foot building at 3325 Wilshire Boulevard ... is set to become a mixed-use property with 236 apartments and 15,000 square feet of retail'."
+    - "LA Local 2026-08-18: 'Mason is also now open and leasing, with 236 apartments inside a former 13-story office building.'"
+    - "year_built: only 'A 1950s office building' (Urbanize LA 2024-11-01); no exact year found, omitted."
+    - "233,000 SF is the reported building total (includes ground-floor retail); no separate rentable figure published."

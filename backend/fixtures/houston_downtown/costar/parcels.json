@@ -1,0 +1,47 @@
+[
+ {
+  "id": "0011360000001",
+  "fields": {
+   "owner": {
+    "value": "3L Real Estate",
+    "source_url": "https://traded.co/deals/texas/office/sale/1021-main-street-1/",
+    "note": "Joseph Slezak Of 3L Real Estate Purchases Office Building From Accesso Partners For $24.62M"
+   },
+   "last_sale_usd": {
+    "value": 24620000,
+    "source_url": "https://traded.co/deals/texas/office/sale/1021-main-street-1/",
+    "note": "1021 Main Street ... sold on 03-27-2025 for $24,620,000"
+   },
+   "last_sale_year": {
+    "value": 2025,
+    "source_url": "https://traded.co/deals/texas/office/sale/1021-main-street-1/",
+    "note": "Closing Mar 27, 2025"
+   }
+  }
+ },
+ {
+  "id": "0020380000001",
+  "fields": {
+   "owner": {
+    "value": "Wedge Commercial Properties",
+    "source_url": "https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf",
+    "note": "AECOM p.73: OWNER: Wedge Commercial Properties (2023)"
+   }
+  }
+ },
+ {
+  "id": "0020540000001",
+  "fields": {
+   "owner": {
+    "value": "New York investment group affiliated with CMI Developers",
+    "source_url": "https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/",
+    "note": "The buyer, a New York investment group affiliated with CMI Developers"
+   },
+   "last_sale_year": {
+    "value": 2022,
+    "source_url": "https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/",
+    "note": "The sale closed at the-end of 2022 (price not determined)"
+   }
+  }
+ }
+]

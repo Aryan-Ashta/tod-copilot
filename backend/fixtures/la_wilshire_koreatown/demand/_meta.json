@@ -1,0 +1,10 @@
+{
+ "source": "census_lodes_acs",
+ "urls": [
+  "https://lehd.ces.census.gov/data/lodes/LODES8/ca/wac/ca_wac_S000_JT00_2024.csv.gz",
+  "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/2",
+  "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/ACS_Vehicle_Availability_Boundaries/FeatureServer/2"
+ ],
+ "retrieved_at": "2026-11-14T05:17:34.159853+00:00",
+ "note": "LODES8 WAC C000 jobs per 2020 block; 2020 Census HU100 housing units per block (TIGERweb); ACS 2019-2023 B08201_002E zero-vehicle households per tract (Esri Living Atlas), placed at the tract's interior point. The Census Data API now requires a key, so ACS block groups were not used."
+}
