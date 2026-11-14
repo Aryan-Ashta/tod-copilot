@@ -34,6 +34,13 @@ const US_LIMIT: [[number, number], [number, number]] = [
   [-55, 56],
 ]
 const DRAW_STYLE = { fillColor: '#2F5BD3', fillOpacity: 0.1, outlineColor: '#1C2230', outlineWidth: 2 } as const
+// Above this zoom the reader is looking at one area; city labels would only sit on top of it.
+const CITY_MAX_ZOOM = 9
+
+interface City {
+  name: string
+  lonlat: [number, number]
+}
 
 function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.FeatureCollection {
   return {
@@ -65,6 +72,8 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MlMap | null>(null)
   const drawRef = useRef<TerraDraw | null>(null)
+  // Re-places the city labels after the area pins change (set by the city effect).
+  const relayoutCities = useRef<() => void>(() => {})
   const [ready, setReady] = useState(false)
   const [mode, setMode] = useState<DrawMode | null>(null)
   // Latest callbacks for the long-lived map/draw listeners.
@@ -89,6 +98,18 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     map.on('error', () => {})
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left')
     map.on('load', () => {
+      // State lines (US Census cartographic boundaries; scripts/build_us_reference.py), under everything else.
+      map.addSource('states', { type: 'geojson', data: '/geo/us-states.geojson', attribution: 'States and cities: US Census Bureau' })
+      map.addLayer({
+        id: 'states-line',
+        type: 'line',
+        source: 'states',
+        paint: {
+          'line-color': '#1C2230',
+          'line-opacity': 0.4,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 8, 1.6],
+        },
+      })
       // Supported counties (thin grey) and their principal cities (dashed, brighter), under the recorded boxes.
       map.addSource('metros', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addLayer({
@@ -193,6 +214,8 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       const el = document.createElement('button')
       el.type = 'button'
       el.className = 'flex items-center gap-2 cursor-pointer'
+      el.style.zIndex = '2' // above the city markers
+      el.dataset.areaPin = ''
       el.setAttribute('aria-label', `Pick ${l.name}`)
       el.setAttribute('aria-pressed', String(on))
       const dot = document.createElement('span')
@@ -217,8 +240,66 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       const [w, s, e, n] = l.bbox
       return new Marker({ element: el, anchor: 'left', offset: [-7, 0] }).setLngLat([(w + e) / 2, (s + n) / 2]).addTo(map)
     })
+    relayoutCities.current()
     return () => markers.forEach((m) => m.remove())
   }, [locales, selectedLocale, ready])
+
+  // Each state's most populous city: a dot always, its name only where it fits. Bigger cities claim space first, and
+  // the area pins' labels are already taken. Hidden past CITY_MAX_ZOOM.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+    let markers: { marker: Marker; label: HTMLElement }[] = []
+    let frame = 0
+    let live = true
+    const layout = () => {
+      frame = 0
+      const box = map.getContainer().getBoundingClientRect()
+      const show = map.getZoom() < CITY_MAX_ZOOM
+      const taken = [...map.getContainer().querySelectorAll('[data-area-pin]')].map((el) => el.getBoundingClientRect())
+      for (const { marker, label } of markers) {
+        marker.getElement().style.display = show ? '' : 'none'
+        if (!show) continue
+        const r = label.getBoundingClientRect()
+        const inside = r.left >= box.left && r.right <= box.right && r.top >= box.top && r.bottom <= box.bottom
+        const fits = inside && !taken.some((t) => r.left < t.right + 3 && r.right > t.left - 3 && r.top < t.bottom + 3 && r.bottom > t.top - 3)
+        label.style.visibility = fits ? 'visible' : 'hidden'
+        if (fits) taken.push(r)
+      }
+    }
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(layout)
+    }
+    relayoutCities.current = schedule
+    fetch('/geo/us-largest-cities.json')
+      .then((r) => r.json() as Promise<{ cities: City[] }>)
+      .then(({ cities }) => {
+        if (!live) return
+        markers = cities.map((c) => {
+          const el = document.createElement('div')
+          el.className = 'pointer-events-none flex items-center gap-1'
+          const dot = document.createElement('span')
+          dot.className = 'block h-1.5 w-1.5 shrink-0 rounded-full bg-ink ring-2 ring-paper'
+          const label = document.createElement('span')
+          label.className = 'text-[11.5px] font-semibold whitespace-nowrap text-ink/80 [text-shadow:0_0_3px_#EDEFEA,0_0_3px_#EDEFEA,0_0_6px_#EDEFEA]'
+          label.textContent = c.name
+          el.append(dot, label)
+          return { marker: new Marker({ element: el, anchor: 'left', offset: [-3, 0] }).setLngLat(c.lonlat).addTo(map), label }
+        })
+        layout()
+      })
+      .catch(() => {
+        // reference labels are a guide only
+      })
+    map.on('move', schedule)
+    return () => {
+      live = false
+      cancelAnimationFrame(frame)
+      map.off('move', schedule)
+      relayoutCities.current = () => {}
+      markers.forEach((m) => m.marker.remove())
+    }
+  }, [ready])
 
   useEffect(() => {
     if (!flyTo || !mapRef.current) return
