@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type RefObject } from 'react'
 import { Map as MlMap, NavigationControl, type IControl, type StyleSpecification } from 'maplibre-gl'
 import { MapboxOverlay } from '@deck.gl/mapbox'
-import type { PickingInfo } from '@deck.gl/core'
+import { AmbientLight, DirectionalLight, LightingEffect, type PickingInfo } from '@deck.gl/core'
 import { GeoJsonLayer } from '@deck.gl/layers'
 import { geometryBounds } from '../geo'
 import { usePlan, type PlanAction } from '../state/PlanContext'
@@ -31,18 +31,18 @@ export interface MapHandle {
   pick: (clientX: number, clientY: number, layerIds: string[]) => Picked | null
 }
 
-// Esri's dark gray canvas needs no key (Carto's dark tiles now watermark "API KEY REQUIRED").
-// Source maxzoom: past it MapLibre overzooms the last real tile. The dark canvas serves "Map data not yet
-// available" placeholders (HTTP 200) from z17; World_Imagery has real tiles to z19 downtown.
+// Esri's light gray canvas needs no key, matches the paper ground of the iso figures and keeps labels off the base.
+// Source maxzoom: past it MapLibre overzooms the last real tile. The canvas serves "Map data not yet available"
+// placeholders (HTTP 200) from z17; World_Imagery has real tiles to z19 downtown.
 export const BASE_STYLE: StyleSpecification = {
   version: 8,
   sources: {
     dark: {
       type: 'raster',
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'],
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'],
       tileSize: 256,
       maxzoom: 16,
-      attribution: 'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors',
+      attribution: 'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors, and the GIS user community',
     },
     aerial: {
       type: 'raster',
@@ -53,11 +53,24 @@ export const BASE_STYLE: StyleSpecification = {
     },
   },
   layers: [
-    { id: 'background', type: 'background', paint: { 'background-color': '#0a0a0a' } },
+    { id: 'background', type: 'background', paint: { 'background-color': '#EDEFEA' } },
     { id: 'base_dark', type: 'raster', source: 'dark' },
     { id: 'aerial', type: 'raster', source: 'aerial', layout: { visibility: 'none' } },
   ],
 }
+
+// The iso look on a real map: looking north-west from 60° pitch (the 2:1 figures' 30° ground angle) with a narrow
+// field of view so verticals stay close to parallel. MapLibre has no orthographic camera; 10° is near enough.
+export const ISO_CAMERA = { bearing: -45, pitch: 60 }
+const ISO_FOV_DEG = 10
+const ISO_ZOOM_IN = 0.75 // zoom levels past the top-down fit (see the fit effect below)
+
+// One key light from the south-south-west and above: tops lightest, south faces (screen-left) mid, east faces
+// (screen-right) darkest, as in the iso figures.
+const LIGHTING = new LightingEffect({
+  ambient: new AmbientLight({ color: [255, 255, 255], intensity: 1.0 }),
+  key: new DirectionalLight({ color: [255, 255, 255], intensity: 0.9, direction: [0.35, 1, -2.2] }),
+})
 
 const NO_INFRA: InfraFeature[] = []
 const NO_STATIONS: Station[] = []
@@ -133,15 +146,17 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
       style: BASE_STYLE,
       center: [-95.37, 29.75],
       zoom: 14,
-      pitch: 45,
+      ...ISO_CAMERA,
       attributionControl: { compact: true },
     })
     // Offline: tile fetches fail; a listener keeps them silent while fixture layers still draw.
     map.on('error', () => {})
+    map.setVerticalFieldOfView(ISO_FOV_DEG)
     map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-left')
     const overlay = new MapboxOverlay({
       interleaved: true,
       layers: [],
+      effects: [LIGHTING],
       onClick: (info) => selectFromPick(info, dispatch),
       getTooltip: (info) => {
         const text = tooltipFor(info)
@@ -190,13 +205,16 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
     const map = mapRef.current
     if (!map || !locale) return
     const [a, b, c, d] = (locale.boundary && geometryBounds(locale.boundary)) || locale.bbox
-    map.fitBounds(
+    // Fit as if looking straight down (rotated), then tilt and step in: the boundary's corners are walk-shed edges,
+    // and at 60° the far half compresses, so the top-down fit leaves the plan small in the frame.
+    const cam = map.cameraForBounds(
       [
         [a, b],
         [c, d],
       ],
-      { padding: 40, duration: 0, pitch: 45 },
+      { padding: 40, bearing: ISO_CAMERA.bearing },
     )
+    if (cam) map.jumpTo({ ...cam, ...ISO_CAMERA, zoom: (cam.zoom ?? map.getZoom()) + ISO_ZOOM_IN })
   }, [locale, loaded])
 
   useEffect(() => {

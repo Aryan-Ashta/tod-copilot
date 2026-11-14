@@ -29,7 +29,7 @@ export default function LandDealCard() {
             const c = STRATEGY_COLORS[d.strategy]
             const title = names.get(d.site_id) ?? d.site_id
             return (
-              <li key={d.site_id} className="rounded border border-neutral-800 bg-neutral-900 p-3 text-sm">
+              <li key={d.site_id} className="border-t border-rule pt-3 text-sm">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   {letters.get(d.site_id) && <span className="font-bold">{letters.get(d.site_id)}</span>}
                   <button
@@ -41,7 +41,8 @@ export default function LandDealCard() {
                     {title}
                   </button>
                   <FactorHover keys={DEAL_KEYS}>
-                    <span className="rounded px-1.5 py-px text-[11px] text-white" style={{ background: `rgb(${c[0]},${c[1]},${c[2]})` }}>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
+                      <span aria-hidden className="inline-block h-2.5 w-2.5 border border-ink" style={{ background: `rgb(${c[0]},${c[1]},${c[2]})` }} />
                       {humanize(d.strategy)}
                     </span>
                   </FactorHover>

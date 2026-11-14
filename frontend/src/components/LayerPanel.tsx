@@ -23,8 +23,8 @@ export default function LayerPanel() {
           </fieldset>
         ))}
         <p className="text-xs text-slate">
-          Conversion colours: residential blue, hotel purple, mixed use teal, keep grey; opacity = overall score. Amber
-          sidewalk lines = frontage mapped without sidewalk.
+          Conversion colours: residential blue, hotel mustard, mixed use green, keep grey; paler = lower overall score.
+          Red sidewalk lines = frontage mapped without sidewalk. Mustard lots = underused parcels.
         </p>
       </div>
     </MapPanel>

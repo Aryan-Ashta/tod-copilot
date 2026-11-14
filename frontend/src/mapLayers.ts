@@ -36,7 +36,7 @@ export type LayerKey =
   | 'new_buildings'
 
 export const LAYER_DEFS: { key: LayerKey; label: string; group: 'Base' | 'Infrastructure' | 'Plan'; on: boolean }[] = [
-  { key: 'base_dark', label: 'Dark base map', group: 'Base', on: true },
+  { key: 'base_dark', label: 'Base map (light grey)', group: 'Base', on: true },
   { key: 'aerial', label: 'Aerial imagery', group: 'Base', on: false },
   { key: 'transit_existing', label: 'Rail and bus routes (existing)', group: 'Infrastructure', on: true },
   { key: 'walk_bike', label: 'Sidewalks / bike lanes', group: 'Infrastructure', on: true },
@@ -52,51 +52,55 @@ export const LAYER_DEFS: { key: LayerKey; label: string; group: 'Base' | 'Infras
 
 /** Legend swatch per layer (CSS background), kept next to the colours the layers use. */
 export const LAYER_SWATCH: Partial<Record<LayerKey, string>> = {
-  transit_existing: 'linear-gradient(90deg,#e63946 50%,#8c8c8c 50%)',
-  walk_bike: 'linear-gradient(90deg,#737373 50%,#a3e635 50%)',
-  utilities: 'repeating-linear-gradient(90deg,#3b82f6 0 3px,transparent 3px 5px)',
-  amenities: 'linear-gradient(90deg,#22d3ee,#facc15,#f43f5e,#22c55e,#fb923c)',
-  flood: 'rgba(37,99,235,0.5)',
-  proposed_transit: 'linear-gradient(90deg,#14b8a6 50%,#a855f7 50%)',
-  parcels: '#f59e0b',
-  buildings: 'linear-gradient(90deg,#3b82f6,#a855f7,#14b8a6,#8c8c8c)',
-  sites: '#ffffff',
-  new_buildings: '#60a5fa',
+  transit_existing: 'linear-gradient(90deg,#1C2230 50%,#13808A 50%)',
+  walk_bike: 'linear-gradient(90deg,#9AA09A 50%,#2E7D5B 50%)',
+  utilities: 'repeating-linear-gradient(90deg,#2F5BD3 0 3px,transparent 3px 5px)',
+  amenities: 'linear-gradient(90deg,#13808A,#E3B448,#B93A2E,#2E7D5B,#C0703A)',
+  flood: 'rgba(47,91,211,0.25)',
+  proposed_transit: 'linear-gradient(90deg,#2E7D5B 50%,#13808A 50%)',
+  parcels: '#E3B448',
+  buildings: 'linear-gradient(90deg,#2F5BD3,#E3B448,#2E7D5B,#C4C9C1)',
+  sites: '#1C2230',
+  new_buildings: '#A9BFE7',
 }
 
 export const UNDERUSED_LAND_USES: Record<string, true> = { surface_parking: true, vacant: true, retail_1story: true }
 
+// Accents shared with the iso figures (src/iso): residential blue, hotel mustard, mixed use green, keep grey.
 export const USE_COLORS: Record<UseType, Color> = {
-  residential: [59, 130, 246],
-  hotel: [168, 85, 247],
-  mixed_use: [20, 184, 166],
-  keep_current: [140, 140, 140],
+  residential: [47, 91, 211],
+  hotel: [227, 180, 72],
+  mixed_use: [46, 125, 91],
+  keep_current: [196, 201, 193],
 }
 
 export const STRATEGY_COLORS: Record<DealKind, Color> = {
-  buy: [34, 197, 94],
-  ground_lease: [234, 179, 8],
-  joint_development: [59, 130, 246],
-  owner_partnership: [236, 72, 153],
-  pass: [115, 115, 115],
+  buy: [46, 125, 91],
+  ground_lease: [227, 180, 72],
+  joint_development: [47, 91, 211],
+  owner_partnership: [19, 128, 138],
+  pass: [154, 160, 154],
 }
 
+const INK: Color = [28, 34, 48]
+const TEAL: Color = [19, 128, 138]
 const INFRA_COLORS: Partial<Record<InfraKind, Color>> = {
-  rail: [230, 57, 70],
-  bus_route: [140, 140, 140],
-  bus_stop: [160, 160, 160],
-  sidewalk: [115, 115, 115],
-  bike_lane: [163, 230, 53],
-  water_main: [59, 130, 246],
-  sewer_main: [180, 140, 90],
-  power_substation: [250, 204, 21],
-  ev_charger: [34, 211, 238],
-  school: [250, 204, 21],
-  clinic: [244, 63, 94],
-  park: [34, 197, 94],
-  grocery: [251, 146, 60],
+  rail: INK,
+  bus_route: [19, 128, 138, 120],
+  bus_stop: TEAL,
+  sidewalk: [154, 160, 154],
+  bike_lane: [46, 125, 91],
+  water_main: [47, 91, 211],
+  sewer_main: [138, 101, 18],
+  power_substation: [227, 180, 72],
+  ev_charger: TEAL,
+  school: [227, 180, 72],
+  clinic: [185, 58, 46],
+  park: [46, 125, 91],
+  grocery: [192, 112, 58],
 }
-const AMBER: Color = [245, 158, 11]
+const AMBER: Color = [227, 180, 72]
+const NO_SIDEWALK_COLOR: Color = [185, 58, 46]
 const FT_TO_M = 0.3048 // unit conversion, not a planning factor
 
 type Feat<P> = Feature<GJGeometry, P>
@@ -137,8 +141,8 @@ export function transitExistingLayer(infra: InfraFeature[], stations: Station[],
       stroked: true,
       lineWidthUnits: 'pixels',
       getLineWidth: 3,
-      getLineColor: [230, 57, 70],
-      getFillColor: (s) => (s.mode === 'intercity_rail_planned' ? [10, 10, 10] : [255, 255, 255]),
+      getLineColor: INK,
+      getFillColor: (s) => (s.mode === 'intercity_rail_planned' ? [237, 239, 234] : [255, 255, 255]),
       pickable: true,
     }),
   ]
@@ -154,8 +158,8 @@ export function walkBikeLayer(infra: InfraFeature[], visible: boolean) {
     getLineWidth: 1,
     getLineColor: (f) => {
       const p = f.properties
-      if (p.kind === 'sidewalk' && NO_SIDEWALK[String(p.attrs.sidewalk ?? '').toLowerCase()]) return AMBER
-      return withAlpha(INFRA_COLORS[p.kind] ?? [115, 115, 115], 170)
+      if (p.kind === 'sidewalk' && NO_SIDEWALK[String(p.attrs.sidewalk ?? '').toLowerCase()]) return NO_SIDEWALK_COLOR
+      return withAlpha(INFRA_COLORS[p.kind] ?? [154, 160, 154], 170)
     },
     pointRadiusUnits: 'pixels',
     getPointRadius: 1,
@@ -194,8 +198,8 @@ export function amenitiesLayer(infra: InfraFeature[], added: InfraFeature[], vis
     pickable: true,
     lineWidthUnits: 'pixels',
     getLineWidth: (f) => (f.properties.attrs.proposed ? 3 : 1),
-    getLineColor: (f) => (f.properties.attrs.proposed ? [255, 255, 255] : INFRA_COLORS[f.properties.kind] ?? [200, 200, 200]),
-    getFillColor: (f) => withAlpha(INFRA_COLORS[f.properties.kind] ?? [200, 200, 200], f.properties.attrs.proposed ? 170 : 90),
+    getLineColor: (f) => (f.properties.attrs.proposed ? INK : INFRA_COLORS[f.properties.kind] ?? [154, 160, 154]),
+    getFillColor: (f) => withAlpha(INFRA_COLORS[f.properties.kind] ?? [154, 160, 154], f.properties.attrs.proposed ? 200 : 110),
     pointType: 'circle',
     pointRadiusUnits: 'pixels',
     getPointRadius: 4,
@@ -211,8 +215,8 @@ export function floodLayer(infra: InfraFeature[], visible: boolean) {
     visible,
     filled: true,
     stroked: true,
-    getFillColor: [37, 99, 235, 60],
-    getLineColor: [96, 165, 250, 140],
+    getFillColor: [47, 91, 211, 28],
+    getLineColor: [47, 91, 211, 120],
     lineWidthUnits: 'pixels',
     getLineWidth: 1,
   })
@@ -234,9 +238,8 @@ export function proposedTransitLayer(routes: Route[], stops: Stop[], visible: bo
       stroked: true,
       lineWidthUnits: 'pixels',
       getLineWidth: (f) => (f.properties.kind === 'brt' ? 9 : f.properties.kind === 'on_demand_zone' ? 2 : 4),
-      getLineColor: (f) =>
-        f.properties.kind === 'brt' ? [16, 185, 129] : f.properties.kind === 'on_demand_zone' ? [168, 85, 247] : [20, 184, 166],
-      getFillColor: [168, 85, 247, 40],
+      getLineColor: (f) => (f.properties.kind === 'brt' ? [46, 125, 91] : f.properties.kind === 'on_demand_zone' ? [47, 91, 211] : TEAL),
+      getFillColor: [47, 91, 211, 24],
       getDashArray: (f: Feat<Route>) => (f.properties.kind === 'on_demand_zone' ? [6, 4] : [0, 0]),
       dashJustified: true,
       extensions: [new PathStyleExtension({ dash: true })],
@@ -252,8 +255,8 @@ export function proposedTransitLayer(routes: Route[], stops: Stop[], visible: bo
       stroked: true,
       lineWidthUnits: 'pixels',
       getLineWidth: 2,
-      getLineColor: [20, 184, 166],
-      getFillColor: (s) => (s.id === selectedStop ? [255, 255, 255] : [10, 10, 10]),
+      getLineColor: INK,
+      getFillColor: (s) => (s.id === selectedStop ? [227, 180, 72] : [255, 255, 255]),
       updateTriggers: { getRadius: [selectedStop, proposedRouteIds.size], getFillColor: selectedStop },
     }),
   ]
@@ -277,8 +280,8 @@ export function parcelsLayer(parcels: Parcel[], visible: boolean, selectedId?: s
     stroked: true,
     lineWidthUnits: 'pixels',
     getLineWidth: (f) => (f.properties.parcel.id === selectedId ? 3 : 0.5),
-    getLineColor: (f) => (f.properties.parcel.id === selectedId ? [255, 255, 255] : [255, 255, 255, 40]),
-    getFillColor: (f) => (f.properties.underused ? withAlpha(AMBER, 130) : [255, 255, 255, 8]),
+    getLineColor: (f) => (f.properties.parcel.id === selectedId ? INK : [28, 34, 48, 50]),
+    getFillColor: (f) => (f.properties.underused ? withAlpha(AMBER, 120) : [28, 34, 48, 6]),
     updateTriggers: { getLineWidth: selectedId, getLineColor: selectedId },
   })
 }
@@ -294,8 +297,8 @@ export function selectedParcelLayer(parcels: Parcel[], selectedId?: string) {
     stroked: true,
     lineWidthUnits: 'pixels',
     getLineWidth: 3,
-    getLineColor: [56, 189, 248],
-    getFillColor: [56, 189, 248, 60],
+    getLineColor: INK,
+    getFillColor: [227, 180, 72, 90],
   })
 }
 
@@ -320,9 +323,18 @@ export function flattenBuildings(buildings: Building[], conversions: ConversionC
   return out
 }
 
+/** Flat, matte material so the lighting reads as the iso figures' three face tones, not as gloss. */
+export const MATTE = { ambient: 0.62, diffuse: 0.5, shininess: 0, specularColor: [0, 0, 0] as [number, number, number] }
+const BLOCK: Color = [217, 221, 214]
+const mix = (a: Color, b: Color, t: number): Color => {
+  const at = (i: number) => Math.round(a[i] + (b[i] - a[i]) * t)
+  return [at(0), at(1), at(2)]
+}
+
 /**
- * Existing buildings: grey; conversion candidates coloured by best use with opacity by overall score.
- * Extrusion height = stories × story_height_ft (factor); without the factor, buildings stay flat.
+ * Existing buildings: light grey blocks; conversion candidates in their best-use colour, washed toward the block grey
+ * as the overall score falls. Ink wireframe edges. Extrusion height = stories × story_height_ft (factor); without
+ * the factor, buildings stay flat.
  */
 export function buildingsLayer(data: BuildingDatum[], storyHeightFt: number | null, visible: boolean, selectedId?: string) {
   return new PolygonLayer<BuildingDatum>({
@@ -331,18 +343,19 @@ export function buildingsLayer(data: BuildingDatum[], storyHeightFt: number | nu
     visible,
     pickable: true,
     extruded: storyHeightFt !== null,
-    wireframe: false,
+    wireframe: true,
     filled: true,
     stroked: true,
     lineWidthUnits: 'pixels',
+    material: MATTE,
     getPolygon: (d) => d.polygon,
     getElevation: (d) => (storyHeightFt !== null ? (d.building.stories.value ?? 0) * storyHeightFt * FT_TO_M : 0),
     getFillColor: (d) => {
-      if (d.building.id === selectedId) return [255, 255, 255, 230]
-      if (!d.conversion) return [90, 90, 90, 150]
-      return withAlpha(USE_COLORS[d.conversion.best_use], Math.round(255 * Math.max(0.15, d.conversion.overall)))
+      if (d.building.id === selectedId) return [255, 255, 255]
+      if (!d.conversion) return BLOCK
+      return mix(BLOCK, USE_COLORS[d.conversion.best_use], Math.max(0.15, d.conversion.overall))
     },
-    getLineColor: [20, 20, 20, 200],
+    getLineColor: [28, 34, 48, 150],
     getLineWidth: 0.5,
     updateTriggers: { getFillColor: selectedId, getElevation: storyHeightFt },
   })
@@ -389,7 +402,7 @@ export function sitesLayer(data: SiteDatum[], visible: boolean) {
       stroked: true,
       lineWidthUnits: 'pixels',
       getLineWidth: 3,
-      getLineColor: (f) => (f.properties.strategy ? STRATEGY_COLORS[f.properties.strategy] : [255, 255, 255]),
+      getLineColor: (f) => (f.properties.strategy ? STRATEGY_COLORS[f.properties.strategy] : INK),
     }),
     new TextLayer<SiteDatum>({
       id: 'site_labels',
@@ -398,10 +411,10 @@ export function sitesLayer(data: SiteDatum[], visible: boolean) {
       getPosition: (d) => d.centroid as LonLat,
       getText: (d) => d.letter,
       getSize: 18,
-      getColor: [255, 255, 255],
+      getColor: INK,
       fontWeight: 700,
-      outlineWidth: 3,
-      outlineColor: [0, 0, 0, 255],
+      outlineWidth: 4,
+      outlineColor: [237, 239, 234, 255],
       fontSettings: { sdf: true },
       billboard: true,
       getPixelOffset: [0, -14],
@@ -417,10 +430,12 @@ export function newBuildingsLayer(sites: Site[], visible: boolean) {
     visible,
     pickable: true,
     extruded: true,
+    wireframe: true,
     filled: true,
+    material: MATTE,
     getElevation: (f) => f.properties.height_ft * FT_TO_M,
-    getFillColor: [96, 165, 250, 200],
-    getLineColor: [191, 219, 254],
+    getFillColor: [169, 191, 231],
+    getLineColor: [28, 34, 48, 170],
   })
 }
 

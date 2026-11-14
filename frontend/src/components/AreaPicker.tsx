@@ -23,7 +23,8 @@ interface Props {
 
 type DrawMode = 'polygon' | 'rectangle'
 
-const tierColor = (l: Locale) => (l.data_tier === 'costar_full' ? '#38bdf8' : '#f59e0b')
+// Text-safe on paper: blue 5.1:1, dark mustard 4.6:1.
+const tierColor = (l: Locale) => (l.data_tier === 'costar_full' ? '#2F5BD3' : '#8A6512')
 
 function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.FeatureCollection {
   return {
@@ -85,21 +86,21 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
         type: 'fill',
         source: 'metros',
         filter: ['==', ['get', 'kind'], 'county'],
-        paint: { 'fill-color': '#a3a3a3', 'fill-opacity': 0.04 },
+        paint: { 'fill-color': '#1C2230', 'fill-opacity': 0.04 },
       })
       map.addLayer({
         id: 'metros-county',
         type: 'line',
         source: 'metros',
         filter: ['==', ['get', 'kind'], 'county'],
-        paint: { 'line-color': '#a3a3a3', 'line-width': 1 },
+        paint: { 'line-color': '#1C2230', 'line-width': 1 },
       })
       map.addLayer({
         id: 'metros-city',
         type: 'line',
         source: 'metros',
         filter: ['==', ['get', 'kind'], 'place'],
-        paint: { 'line-color': '#e5e5e5', 'line-width': 1.2, 'line-dasharray': [3, 2] },
+        paint: { 'line-color': '#5F6778', 'line-width': 1.2, 'line-dasharray': [3, 2] },
       })
       metros()
         .then((fc) => (map.getSource('metros') as GeoJSONSource | undefined)?.setData(fc as GeoJSON.FeatureCollection))
@@ -117,8 +118,8 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       const draw = new TerraDraw({
         adapter: new TerraDrawMapLibreGLAdapter({ map }),
         modes: [
-          new TerraDrawPolygonMode({ styles: { fillColor: '#ffffff', fillOpacity: 0.1, outlineColor: '#ffffff', outlineWidth: 2 } }),
-          new TerraDrawRectangleMode({ styles: { fillColor: '#ffffff', fillOpacity: 0.1, outlineColor: '#ffffff', outlineWidth: 2 } }),
+          new TerraDrawPolygonMode({ styles: { fillColor: '#2F5BD3', fillOpacity: 0.1, outlineColor: '#1C2230', outlineWidth: 2 } }),
+          new TerraDrawRectangleMode({ styles: { fillColor: '#2F5BD3', fillOpacity: 0.1, outlineColor: '#1C2230', outlineWidth: 2 } }),
         ],
       })
       draw.start()
@@ -160,7 +161,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     const markers = locales.map((l) => {
       const el = document.createElement('div')
       el.textContent = l.name
-      el.style.cssText = `color:${tierColor(l)};font:600 11px system-ui;text-shadow:0 0 3px #000;white-space:nowrap;pointer-events:none`
+      el.style.cssText = `color:${tierColor(l)};font:600 12px Archivo Variable,system-ui;text-shadow:0 0 3px #EDEFEA,0 0 3px #EDEFEA;white-space:nowrap;pointer-events:none`
       return new Marker({ element: el, anchor: 'bottom-left' }).setLngLat([l.bbox[0], l.bbox[3]]).addTo(map)
     })
     return () => markers.forEach((m) => m.remove())
