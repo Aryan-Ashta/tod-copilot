@@ -87,11 +87,11 @@ LABELS = {"transport_co2": "from transport", "embodied_co2_saved": "embodied car
 
 
 def scope_text(ctx: RunContext) -> str:
-    """Targets count every site still in the plan (pursued or on watch), not only those that pencil today."""
+    """Targets count every site in the plan: funded (priced) and on watch; reserve and passed sites are out."""
     sites = [s for s in ctx.plan_parts.get("sites", []) if rs.in_plan(s)]
-    ids = {s.id for s in sites}
-    yes = sum(1 for x in ctx.plan_parts.get("stacks", []) if x.site_id in ids and x.pencils)
-    return f"Targets assume all {len(sites)} candidate sites proceed; {yes} pencil today."
+    watch = sum(1 for s in sites if s.status == "watch")
+    return (f"Targets count the {len(sites)} sites in the plan ({watch} on watch: no price, or the owner will not "
+            f"sell).")
 
 
 def explain(ctx: RunContext) -> str:

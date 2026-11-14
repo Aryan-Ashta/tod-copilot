@@ -46,3 +46,34 @@ def test_measurements_favour_stops_serving_planned_homes():
     assert [m.target_id for m in suggest_measurements(stops, {"far": 1, "near": 1}, names, F)] == ["far", "near"]
     site = ((1.0009, 0.0), 200)
     assert [m.target_id for m in suggest_measurements(stops, {"far": 1, "near": 1}, names, F, (site,))] == ["near", "far"]
+
+
+def test_optimize_network_stops_at_coverage_goal():
+    from shapely.geometry import LineString, mapping
+
+    from backend.data.geo import lonlat_to_utm
+    from backend.models.transit import optimize_network
+    epsg = 32615
+    ll = [(-95.37, 29.76 + 0.02 * i) for i in range(4)]   # ~2.2 km apart: catchments never overlap
+    xy = [lonlat_to_utm(*p, epsg) for p in ll]
+    grid = [{"h3": h, "xy": xy[i], "lonlat": ll[i], "demand": d} for i, (h, d) in enumerate(
+        (("a", 50), ("b", 20), ("c", 20), ("d", 10)))]
+    line = mapping(LineString(ll[:2]))
+    existing = {"routes": [{"properties": {"route_id": "r1", "mode": "bus", "peak_headway_min": 10}, "geometry": line},
+                           {"properties": {"route_id": "r2", "mode": "bus", "peak_headway_min": 30}, "geometry": line}],
+                "stops": [{"properties": {"stop_id": "s1", "route_ids": ["r1"]}, "geometry": {"coordinates": ll[0]}},
+                          {"properties": {"stop_id": "s2", "route_ids": ["r2"]}, "geometry": {"coordinates": ll[3]}}]}
+    f = {**F, "frequent_bus_headway_min": 15, "brt_min_demand_per_km": 1e12, "brt_headway_min": 5,
+         "on_demand_cost_usd_per_zone_year": 1e6}
+
+    def cands():
+        return [{"id": cid, "kind": "frequent_bus", "type": "feeder", "phase": 2, "geometry": line, "headway_min": 15,
+                 "cost": cost, "stops_xy": [xy[i]], "length_km": 1.0, "name": cid}
+                for cid, i, cost in (("cheap", 1, 100.0), ("dear", 2, 200.0))]
+
+    res = optimize_network(existing, grid, cands(), 60, f, epsg, "t", None)
+    assert res["coverage_baseline_pct"] == 50.0       # the 30-min route's stop is not frequent
+    assert [c["id"] for c in res["selected"]] == ["cheap"]
+    assert res["coverage_pct"] == 70.0 and res["spent"] == 100.0
+    res = optimize_network(existing, grid, cands(), 40, f, epsg, "t", None)
+    assert res["selected"] == [] and res["spent"] == 0

@@ -53,7 +53,8 @@ def synthetic_plan(n_parcels=3000, n_buildings=500) -> Plan:
     sites = [Site(id=f"s{i}", kind="new_build", parcel_ids=[f"p{i + 1}"], building_id=None, geometry=SQ, homes=120,
                   height_ft=84, status="pursue") for i in range(5)]
     return Plan(id="t", locale=loc, infrastructure=[], readiness=[], transit=TransitPlan(routes=[], stops=[],
-                measurements=[], budget_usd=1e7), parcels=parcels, buildings=buildings,
+                measurements=[], coverage_goal_pct=90, coverage_baseline_pct=50, coverage_pct=90,
+                annual_operating_cost_usd=1e6), parcels=parcels, buildings=buildings,
                 envelopes=[ZoningEnvelope(parcel_id="p1", paths=[path], recommended_path=path.name, covered=True)],
                 conversions=convs, sites=sites, deals=[], stacks=[], targets=[], created_at=NOW, prompt="t", notes={},
                 agent_errors={}, precomputed=Precomputed(walk_m=walk, in_flood=flood, centroid=cent,

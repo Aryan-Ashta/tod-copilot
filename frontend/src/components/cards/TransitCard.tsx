@@ -31,16 +31,23 @@ export default function TransitCard() {
         <Empty>Waiting for the transit agent…</Empty>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="grid grid-cols-3 gap-2 text-sm">
             <div className="rounded bg-neutral-900 p-2">
               <div className="text-xs text-neutral-400">Proposed routes</div>
               <div className="text-lg font-semibold">{fmtNum(proposed.length)}</div>
             </div>
             <div className="rounded bg-neutral-900 p-2">
-              <FactorHover keys={['transit_budget_usd']}>
-                <span className="text-xs text-neutral-400">Budget / yr</span>
+              <FactorHover keys={['transit_coverage_goal_pct', 'bus_operating_cost_usd_per_revenue_hour']}>
+                <span className="text-xs text-neutral-400">Operating funding / yr</span>
               </FactorHover>
-              <div className="text-lg font-semibold">{fmtUsd(t.budget_usd)}</div>
+              <div className="text-lg font-semibold">{fmtUsd(t.annual_operating_cost_usd)}</div>
+            </div>
+            <div className="rounded bg-neutral-900 p-2">
+              <FactorHover keys={['frequent_bus_headway_min', 'stop_catchment_m', 'transit_coverage_goal_pct']}>
+                <span className="text-xs text-neutral-400">Frequent coverage</span>
+              </FactorHover>
+              <div className="text-lg font-semibold">{`${fmtNum(t.coverage_pct, 1)}%`}</div>
+              <div className="text-xs text-neutral-400">{`goal ${t.coverage_goal_pct}% · from ${t.coverage_baseline_pct}%`}</div>
             </div>
           </div>
           <Section title="Routes">

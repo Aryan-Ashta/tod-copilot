@@ -141,7 +141,10 @@ class TransitPlan(BaseModel):
     routes: list[Route]
     stops: list[Stop]
     measurements: list[MeasurementSuggestion]
-    budget_usd: float
+    coverage_goal_pct: float            # % of transit demand within a frequent stop the plan aims for
+    coverage_baseline_pct: float        # rail + existing frequent buses
+    coverage_pct: float                 # with the selected network
+    annual_operating_cost_usd: float    # operating funding the new network needs per year
 
 class Citation(BaseModel):
     doc_id: str
@@ -169,7 +172,7 @@ class Site(BaseModel):
     geometry: dict
     homes: int
     height_ft: float
-    status: Literal["pursue", "pass", "watch"]
+    status: Literal["pursue", "pass", "watch", "reserve"]   # reserve: priced, not needed for the goals
 
 class DealStrategy(BaseModel):
     site_id: str
@@ -179,6 +182,8 @@ class DealStrategy(BaseModel):
 
 class CapitalStack(BaseModel):
     site_id: str
+    units: int
+    affordable_units: int       # exact count; raised above affordable_share only to reach a goal
     total_cost_usd: float
     debt_usd: float
     tax_credit_equity_usd: float

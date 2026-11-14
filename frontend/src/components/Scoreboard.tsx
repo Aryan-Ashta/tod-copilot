@@ -1,13 +1,14 @@
 import { usePlan } from '../state/PlanContext'
 import { TargetScope } from './TargetBars'
-import { fmtDelta, fmtNum } from '../format'
+import { fmtDelta, fmtNum, fmtUsd } from '../format'
 import FactorHover from './FactorHover'
 import type { Scoreboard as SB } from '../types'
 
-type NumKey = Exclude<keyof SB, 'walk_by_amenity_pct'>
+type NumKey = Exclude<keyof SB, 'walk_by_amenity_pct' | 'funding_gap_usd'>
 
 const ITEMS: { key: NumKey; label: string; unit: string; digits: number; factors: string[] }[] = [
   { key: 'homes', label: 'Homes', unit: '', digits: 0, factors: ['avg_unit_sqft_residential', 'site_lot_coverage_ratio', 'newbuild_assumed_stories'] },
+  { key: 'affordable_homes', label: 'Affordable homes', unit: '', digits: 0, factors: ['affordable_share', 'affordable_rent_usd_per_unit_month'] },
   { key: 'walk_access_pct', label: 'Walk access', unit: '%', digits: 1, factors: ['walk_minutes_target', 'walk_speed_m_per_s', 'walk_detour_factor'] },
   {
     key: 'transport_co2_tonnes_per_year',
@@ -48,7 +49,7 @@ export default function Scoreboard() {
     )
   }
   return (
-    <div className="grid grid-cols-5 border border-ink bg-paper" role="region" aria-label="Scoreboard">
+    <div className="grid grid-cols-6 border border-ink bg-paper" role="region" aria-label="Scoreboard">
       {ITEMS.map((it) => (
         <div key={it.key} className="min-w-0 border-r border-rule px-3 pt-3">
           <FactorHover keys={it.factors}>
@@ -78,17 +79,19 @@ export default function Scoreboard() {
       ))}
       <div className="min-w-0 px-3 pt-3">
         <FactorHover keys={['cap_rate', 'debt_ratio', 'interest_rate', 'per_unit_credit_equity_usd', 'investor_equity_share']}>
-          <span className="text-[15px] text-slate">Pencils?</span>
+          <span className="text-[15px] text-slate">Funding gap</span>
         </FactorHover>
-        <div className="display text-4xl whitespace-nowrap tabular-nums">
-          {sb.pencils_yes}
-          <span className="text-xl font-normal text-slate">/{sb.pencils_total} sites</span>
-        </div>
-        <div className="flex h-7 items-baseline">
-          <Delta prev={prev?.pencils_yes} next={sb.pencils_yes} digits={0} tick={state.scoreTick} />
+        <div className="display text-4xl whitespace-nowrap tabular-nums">{fmtUsd(sb.funding_gap_usd)}</div>
+        <div className="flex h-7 items-baseline whitespace-nowrap tabular-nums">
+          {state.deltas.funding_gap_usd !== undefined && state.edits.length > 0 && (
+            <span className="text-sm text-slate">
+              vs base {state.deltas.funding_gap_usd < 0 ? '−' : '+'}
+              {fmtUsd(Math.abs(state.deltas.funding_gap_usd))}
+            </span>
+          )}
         </div>
       </div>
-      <TargetScope className="col-span-5 border-t border-rule px-4 py-1.5 text-sm" />
+      <TargetScope className="col-span-6 border-t border-rule px-4 py-1.5 text-sm" />
     </div>
   )
 }

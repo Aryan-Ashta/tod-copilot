@@ -9,7 +9,7 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Dark th
    - Left column (~640 px): agent checklist (8 rows: pending / running / done / error), then a detail card for the selected agent.
    - Right: map, full height, with a layer toggle panel.
    - Bottom right: targets panel with bars and the homes ↔ green-space slider.
-3. **Meeting mode:** projector-friendly full-screen map with large type. A tile tray (Homes, Park, Stop, Convert to housing, Convert to hotel) to drag onto parcels or buildings. A big scoreboard shows homes, walk access, CO₂, embodied carbon saved and "pencils?" with animated deltas. An "Undo" button and a "Reset" button.
+3. **Meeting mode:** projector-friendly full-screen map with large type. A tile tray (Homes, Park, Stop, Convert to housing, Convert to hotel) to drag onto parcels or buildings. A big scoreboard shows homes, affordable homes, walk access, CO₂, embodied carbon saved and the funding gap with animated deltas. An "Undo" button and a "Reset" button.
 
 ## Map layers (bottom → top), each toggleable
 
@@ -36,7 +36,7 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Dark th
 - **Site:** underused parcel count, top sites.
 - **Building reuse:** ranked table (building, current use, best use, overall, units); click → radar or bar chart of the five fit scores, blockers list with the input and threshold behind each, and source badges (CoStar / Matterport / derived).
 - **Land deal:** strategy tag per site, reasons, draft letter.
-- **Funding:** capital stack bars; for parcels with both options, "New build vs Convert" comparison; pencils verdict; "Show math."
+- **Funding:** goals table (target vs reached), the one-time housing funding gap, yearly transit operating funding and the existing HUD LIHTC baseline; capital stack bars for funded and watch sites (reserve sites as a count); for parcels with both options, "New build vs Convert" comparison; "Show math."
 - **Sustainability:** target bars including embodied carbon saved.
 
 ## Provenance UI (required)

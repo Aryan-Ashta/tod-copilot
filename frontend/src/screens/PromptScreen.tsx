@@ -10,16 +10,22 @@ import {
   type AreaCheck,
   type GeocodeResult,
   type Locale,
+  type PlanGoals,
   type PlanOptions,
   type StockPrompt,
 } from '../types'
 
 const REPLAY_HINT = 'Replays exist only for whole recorded areas with default options; this runs live'
 
-const OPTION_GROUPS: { key: keyof PlanOptions; legend: string; choices: [string, string][] }[] = [
+const OPTION_GROUPS: { key: 'focus'; legend: string; choices: [string, string][] }[] = [
   { key: 'focus', legend: 'Focus', choices: [['all', 'All'], ['conversions', 'Conversions only'], ['new_build', 'New construction only']] },
-  { key: 'transit_budget', legend: 'Transit budget', choices: [['default', 'Default'], ['half', 'Half'], ['double', 'Double']] },
-  { key: 'affordable', legend: 'Affordable homes', choices: [['default', 'Default'], ['high', 'High']] },
+]
+
+const GOAL_FIELDS: { key: keyof PlanGoals; label: string; max?: number; placeholder?: string }[] = [
+  { key: 'affordable_homes', label: 'New affordable homes' },
+  { key: 'total_homes', label: 'New homes total' },
+  { key: 'conversions', label: 'Buildings converted' },
+  { key: 'transit_coverage_pct', label: 'Transit coverage %', max: 100, placeholder: '90 (default)' },
 ]
 
 function SectionHead({ children }: { children: ReactNode }) {
@@ -40,7 +46,7 @@ export default function PromptScreen() {
   const [stock, setStock] = useState<StockPrompt[]>([])
   const [prompt, setPrompt] = useState('')
   const [options, setOptions] = useState<PlanOptions>(DEFAULT_PLAN_OPTIONS)
-  const [optionsTouched, setOptionsTouched] = useState(false)
+  const [focusTouched, setFocusTouched] = useState(false)
   const [replay, setReplay] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const parseSeq = useRef(0)
@@ -59,19 +65,19 @@ export default function PromptScreen() {
       })
   }, [])
 
-  // Free text steers the options until the user edits a select.
+  // Free text steers the focus until the user picks one.
   useEffect(() => {
-    if (optionsTouched || !prompt.trim()) return
+    if (focusTouched || !prompt.trim()) return
     const seq = ++parseSeq.current
     const t = setTimeout(() => {
       parsePrompt(prompt)
-        .then((o) => {
-          if (seq === parseSeq.current) setOptions(o)
+        .then((p) => {
+          if (seq === parseSeq.current) setOptions((o) => ({ ...o, focus: p.focus }))
         })
         .catch(() => {})
     }, 300)
     return () => clearTimeout(t)
-  }, [prompt, optionsTouched])
+  }, [prompt, focusTouched])
 
   // Server decides what a drawn boundary runs as (sub-area, metro, or rejected).
   const [check, setCheck] = useState<AreaCheck | null>(null)
@@ -94,8 +100,7 @@ export default function PromptScreen() {
 
   const wholeLocale = !boundary ? (locales?.find((x) => x.id === selected) ?? null) : null
   const areaLocaleId = wholeLocale ? wholeLocale.id : check?.kind === 'subarea' ? check.locale_id : null
-  const defaultOptions =
-    options.focus === 'all' && options.transit_budget === 'default' && options.affordable === 'default'
+  const defaultOptions = options.focus === 'all' && Object.values(options.goals).every((v) => v === null)
   const replayAllowed = wholeLocale !== null && defaultOptions
   const replayOn = replay && replayAllowed
   const areaOk = wholeLocale !== null || (check !== null && check.kind !== null && !check.error)
@@ -143,14 +148,23 @@ export default function PromptScreen() {
 
   const pickStock = (p: StockPrompt) => {
     setPrompt(p.prompt)
-    setOptions(p.options)
-    setOptionsTouched(false)
+    setOptions({
+      ...DEFAULT_PLAN_OPTIONS,
+      ...p.options,
+      goals: { ...DEFAULT_PLAN_OPTIONS.goals, ...p.options.goals },
+    })
+    setFocusTouched(false)
     parseSeq.current++ // drop any in-flight parse of the old text
   }
 
-  const setOption = <K extends keyof PlanOptions>(k: K, v: PlanOptions[K]) => {
-    setOptions((o) => ({ ...o, [k]: v }))
-    setOptionsTouched(true)
+  const setFocus = (v: PlanOptions['focus']) => {
+    setOptions((o) => ({ ...o, focus: v }))
+    setFocusTouched(true)
+  }
+
+  const setGoal = (k: keyof PlanGoals, raw: string) => {
+    const n = raw.trim() === '' ? null : Number(raw)
+    setOptions((o) => ({ ...o, goals: { ...o.goals, [k]: n === null || Number.isNaN(n) ? null : n } }))
   }
 
   const submit = async () => {
@@ -311,7 +325,7 @@ export default function PromptScreen() {
                         name={g.key}
                         value={v}
                         checked={options[g.key] === v}
-                        onChange={() => setOption(g.key, v as PlanOptions[typeof g.key])}
+                        onChange={() => setFocus(v as PlanOptions['focus'])}
                       />
                       {label}
                     </label>
@@ -319,6 +333,26 @@ export default function PromptScreen() {
                 </div>
               </fieldset>
             ))}
+            <fieldset>
+              <legend className="mb-1 text-sm text-slate">Goals (blank = no goal)</legend>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-[15px]">
+                {GOAL_FIELDS.map((g) => (
+                  <label key={g.key} className="flex items-center gap-2">
+                    {g.label}
+                    <input
+                      type="number"
+                      min={0}
+                      max={g.max}
+                      step={1}
+                      placeholder={g.placeholder}
+                      value={options.goals[g.key] ?? ''}
+                      onChange={(e) => setGoal(g.key, e.target.value)}
+                      className="w-28 border border-rule bg-transparent px-2 py-1 tabular-nums focus:border-ink focus:outline-none"
+                    />
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 border-t border-rule pt-5">

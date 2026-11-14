@@ -505,13 +505,17 @@ transit_demand_weights:
   source_url: team choice
   verified: false
   note: team design choice, labeled
-transit_budget_usd:
-  label: annual transit operating budget
-  value:
-    houston_downtown: 10000000
-    la_wilshire_koreatown: 10000000
-    brevard_cocoa: 3000000
-  unit: USD/year
+transit_coverage_goal_pct:
+  label: default frequent-transit coverage goal
+  value: 90
+  unit: "% of transit demand within stop_catchment_m of a frequent stop"
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled: used when the user leaves the coverage goal blank"
+goal_sites_top_n:
+  label: candidate sites kept per kind when a housing goal is set
+  value: 20
+  unit: sites
   source_url: team choice
   verified: false
   note: team design choice, labeled
@@ -659,24 +663,6 @@ surface_parking_min_share:
   verified: false
   note: "team design choice, labeled: a parcel is classed as surface parking when imagery or OSM surface-parking
     flags cover at least this share of its area (plan Phase 2 step 10)"
-transit_budget_option_multipliers:
-  label: transit budget multipliers by option
-  value:
-    half: 0.5
-    double: 2.0
-  unit: multiplier on transit_budget_usd
-  source_url: team choice
-  verified: false
-  note: "team design choice, labeled: the 'tight budget' and 'expand transit' prompt options scale the annual
-    transit operating budget by these multipliers (backend/agents/plan_options.py)"
-affordable_share_high:
-  label: affordable share of homes (high option)
-  value: 0.4
-  unit: fraction of units
-  source_url: team choice
-  verified: false
-  note: "team design choice, labeled: affordable share used when the prompt asks to maximize affordable homes;
-    reference: Florida Live Local Act requires 40% affordable units"
 area_max_km2:
   label: max drawn area
   value: 25

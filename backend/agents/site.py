@@ -90,7 +90,8 @@ def tools(ctx: RunContext):
         ranked.sort(key=lambda x: -x[0])
         skip = ctx.options.focus == "conversions"
         sites = []
-        for score, g, homes in ([] if skip else ranked[: f["sites_top_n"]]):
+        n = f["goal_sites_top_n"] if ctx.options.goals.housing() else f["sites_top_n"]
+        for score, g, homes in ([] if skip else ranked[:n]):
             env = envs.get(g[0].id)
             max_h = next((x.allows.get("max_height_ft") for x in env.paths if x.eligible and x.allows.get("max_height_ft")),
                          None) if env else None

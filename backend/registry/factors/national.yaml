@@ -103,11 +103,3 @@ affordable_rent_usd_per_unit_month:
   scope: national
   note: 'national fallback: median of the three recorded locales (houston_downtown 1137, la_wilshire_koreatown 1704, brevard_cocoa
     1125); not a national statistic; replace with a national source'
-transit_budget_usd:
-  value: 10000000
-  unit: USD/year
-  source_url: team choice
-  verified: false
-  scope: national
-  note: 'national fallback: median of the three recorded locales (houston_downtown 10000000, la_wilshire_koreatown 10000000,
-    brevard_cocoa 3000000); not a national statistic; replace with a national source'

@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { usePlan } from '../state/PlanContext'
-import { fmtNum } from '../format'
+import { fmtNum, fmtUsd } from '../format'
 import FactorHover from './FactorHover'
 import { IsoBox, IsoGhost, ISO, isoViewBox } from '../iso'
 import type { TargetKey } from '../types'
@@ -28,16 +28,20 @@ export const TARGET_LABELS: Record<TargetKey, string> = {
   flood_exposure: 'Flood exposure',
 }
 
-/** Targets and the scoreboard count every site still in the plan (pursued or on watch), not only those that pencil. */
+/** Targets and the scoreboard count every site in the plan (funded or on watch); reserve and passed sites are out. */
 export function TargetScope({ className = '' }: { className?: string }) {
   const { state } = usePlan()
-  const inPlan = (state.plan.sites ?? []).filter((s) => s.status !== 'pass')
+  const inPlan = (state.plan.sites ?? []).filter((s) => s.status === 'pursue' || s.status === 'watch')
   if (!inPlan.length) return null
-  const ids = new Set(inPlan.map((s) => s.id))
-  const yes = (state.plan.stacks ?? []).filter((x) => ids.has(x.site_id) && x.pencils).length
+  const funded = new Set(inPlan.filter((s) => s.status === 'pursue').map((s) => s.id))
+  const watch = inPlan.filter((s) => s.status === 'watch').length
+  const gap = (state.plan.stacks ?? [])
+    .filter((x) => funded.has(x.site_id))
+    .reduce((a, x) => a + Math.max(x.gap_usd, 0), 0)
   return (
     <p className={`text-amber-200 ${className}`}>
-      If all {inPlan.length} candidate sites proceed · {yes} of {inPlan.length} pencil today
+      Counts {inPlan.length} sites in the plan ({watch} on watch: no price, or the owner will not sell) · funding gap of
+      the {funded.size} funded sites {fmtUsd(gap)}
     </p>
   )
 }

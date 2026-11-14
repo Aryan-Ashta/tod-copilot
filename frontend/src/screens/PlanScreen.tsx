@@ -15,8 +15,10 @@ function PlanView({ replay }: { replay: boolean }) {
   const optionChips = o
     ? [
         o.focus !== 'all' && `focus: ${o.focus.replace('_', ' ')}`,
-        o.transit_budget !== 'default' && `transit budget: ${o.transit_budget}`,
-        o.affordable !== 'default' && `affordable: ${o.affordable}`,
+        o.goals.affordable_homes !== null && `affordable homes goal: ${o.goals.affordable_homes}`,
+        o.goals.total_homes !== null && `homes goal: ${o.goals.total_homes}`,
+        o.goals.conversions !== null && `conversions goal: ${o.goals.conversions}`,
+        o.goals.transit_coverage_pct !== null && `transit coverage goal: ${o.goals.transit_coverage_pct}%`,
       ].filter((c): c is string => !!c)
     : []
   return (
