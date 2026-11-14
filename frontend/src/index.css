@@ -241,6 +241,90 @@ textarea:focus-visible,
   animation: pin-pulse 1.6s ease-out infinite;
 }
 
+/* Landing load sequence: blocks rise in by --d (0, 1, 2…), headline lines slide up out of a mask, the map fades in
+   under them. Keyframes use `transform` so they compose with Tailwind's `translate` utilities. */
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+.enter {
+  animation: enter-up 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--d, 0) * 90ms + 120ms);
+}
+@keyframes line-up {
+  from {
+    transform: translateY(105%);
+  }
+}
+.line-reveal > span {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em;
+}
+.line-reveal > span > span {
+  display: block;
+  animation: line-up 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--d, 0) * 110ms + 80ms);
+}
+@keyframes map-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+.map-in {
+  animation: map-in 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.chip-in {
+  animation: enter-up 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--d, 0) * 45ms + 500ms);
+}
+/* status text and hints swap with a short drop-in when their content changes (keyed in React) */
+@keyframes hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.hint-in {
+  animation: hint-in 280ms ease-out both;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+.pop-in {
+  animation: pop-in 280ms cubic-bezier(0.34, 1.4, 0.5, 1) both;
+  transform-origin: 50% 100%;
+}
+/* the main action: a light sweep crosses it on hover */
+.go {
+  position: relative;
+  overflow: hidden;
+}
+.go::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.28) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 700ms ease;
+  pointer-events: none;
+}
+.go:enabled:hover::after {
+  transform: translateX(120%);
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 input[type="radio"],
 input[type="checkbox"],
 input[type="range"] {
