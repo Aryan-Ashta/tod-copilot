@@ -29,9 +29,9 @@ export default function CitationDrawer({ citation, onClose }: { citation: Citati
   }, [doc, citation.section])
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-end bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex justify-end bg-ink/30" onClick={onClose}>
       <aside
-        className="flex h-full w-[560px] max-w-full flex-col border-l border-neutral-800 bg-neutral-950 shadow-2xl"
+        className="flex h-full w-[560px] max-w-full flex-col border-l border-rule bg-paper"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-start justify-between gap-3 border-b border-neutral-800 p-4">
@@ -50,15 +50,15 @@ export default function CitationDrawer({ citation, onClose }: { citation: Citati
               </a>
             )}
           </div>
-          <button onClick={onClose} className="rounded px-2 py-1 text-neutral-400 hover:bg-neutral-800 hover:text-white">
+          <button onClick={onClose} aria-label="Close" className="ctl px-2 py-0.5">
             ✕
           </button>
         </header>
-        <div className="border-b border-neutral-800 bg-neutral-900 p-4 text-sm">
-          <div className="mb-1 text-[10px] tracking-wide text-neutral-400 uppercase">Cited text</div>
+        <div className="border-b border-rule p-4 text-sm">
+          <div className="mb-1 text-xs text-slate">Cited text</div>
           <div className="space-y-2">
             {(citation.quotes ?? [citation.quote]).map((q) => (
-              <blockquote key={q} className="border-l-2 border-sky-500 pl-3 text-neutral-100">
+              <blockquote key={q} className="border-l-2 border-blue pl-3">
                 “{q}”
               </blockquote>
             ))}
@@ -72,7 +72,7 @@ export default function CitationDrawer({ citation, onClose }: { citation: Citati
               <section
                 key={s.section}
                 data-section={s.section}
-                className={`mb-4 rounded p-2 ${active ? 'bg-sky-950/60 ring-1 ring-sky-700' : ''}`}
+                className={`mb-4 p-2 ${active ? 'border-l-2 border-blue bg-blue/[0.06]' : ''}`}
               >
                 <h3 className="mb-1 font-semibold text-neutral-200">{sectionLabel(s.section)}</h3>
                 <p className="whitespace-pre-wrap text-neutral-300">
@@ -97,7 +97,7 @@ function Highlighted({ text, quotes }: { text: string; quotes: string[] }) {
   let at = 0
   for (const { q, i } of spans) {
     if (i < at) continue
-    out.push(text.slice(at, i), <mark key={i} className="bg-sky-700/60 text-white">{q}</mark>)
+    out.push(text.slice(at, i), <mark key={i} className="bg-mustard/50 text-ink">{q}</mark>)
     at = i + q.length
   }
   out.push(text.slice(at))

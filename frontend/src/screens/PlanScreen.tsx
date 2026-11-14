@@ -23,32 +23,28 @@ function PlanView({ replay }: { replay: boolean }) {
     <div className="flex h-full flex-col">
       <Disclaimer>
         {locale && (
-          <span className="text-neutral-300">
+          <span>
             {locale.name}
-            <span className="ml-2 rounded border border-neutral-700 px-1.5 text-[11px] text-neutral-400">
-              {locale.data_tier === 'costar_full' ? 'CoStar full' : 'Public only'}
-            </span>
-            {locale.sources_from && locale.id.startsWith('area-') && (
-              <span className="ml-2 rounded border border-neutral-700 px-1.5 text-[11px] text-neutral-400">recorded live</span>
-            )}
+            <span className="ml-2 text-slate">{locale.data_tier === 'costar_full' ? 'CoStar full' : 'Public only'}</span>
+            {locale.sources_from && locale.id.startsWith('area-') && <span className="ml-2 text-slate">recorded live</span>}
           </span>
         )}
         {optionChips.map((c) => (
-          <span key={c} className="rounded border border-sky-800 px-1.5 text-[11px] text-sky-200">
+          <span key={c} className="text-slate">
             {c}
           </span>
         ))}
-        {replay && <span className="rounded bg-neutral-800 px-1.5 text-[11px] text-neutral-300">recorded run</span>}
+        {replay && <span className="text-slate">recorded run</span>}
         <Link
           to={`/meeting/${state.planId}`}
-          className={`rounded border border-neutral-700 px-2 py-0.5 hover:bg-neutral-800 ${state.basePlan ? '' : 'pointer-events-none opacity-40'}`}
+          className={`border-b border-ink pb-px no-underline ${state.basePlan ? '' : 'pointer-events-none border-rule text-slate'}`}
         >
           Meeting mode
         </Link>
       </Disclaimer>
       <div className="flex min-h-0 flex-1">
-        <aside className="flex w-[640px] shrink-0 flex-col overflow-y-auto border-r border-neutral-800">
-          {state.plan.prompt && <p className="border-b border-neutral-800 px-4 py-2 text-sm text-neutral-400">“{state.plan.prompt}”</p>}
+        <aside className="flex w-[640px] shrink-0 flex-col overflow-y-auto border-r border-rule">
+          {state.plan.prompt && <p className="border-b border-rule px-5 py-2.5 text-[15px] text-slate">“{state.plan.prompt}”</p>}
           <AgentChecklist />
           <AgentCard />
         </aside>

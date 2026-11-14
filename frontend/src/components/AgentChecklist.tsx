@@ -1,19 +1,14 @@
-import { usePlan, type AgentStatus } from '../state/PlanContext'
+import { usePlan } from '../state/PlanContext'
 import { AGENTS, AGENT_LABELS } from '../types'
+import { AgentGlyph } from '../iso/glyphs'
 
-const STATUS_STYLE: Record<AgentStatus, { dot: string; text: string }> = {
-  pending: { dot: 'bg-neutral-700', text: 'text-neutral-500' },
-  running: { dot: 'bg-sky-400 animate-pulse', text: 'text-sky-300' },
-  done: { dot: 'bg-emerald-500', text: 'text-emerald-300' },
-  error: { dot: 'bg-rose-500', text: 'text-rose-300' },
-}
-
+/** Hairline-ruled list of the eight agents, each with a small iso glyph whose colour shows its status. */
 export default function AgentChecklist() {
   const { state, dispatch } = usePlan()
   const coord = state.steps.coordinator
   return (
-    <div className="border-b border-neutral-800">
-      <ol>
+    <div className="border-b border-rule">
+      <ol className="divide-y divide-rule">
         {AGENTS.map((a, i) => {
           const st = state.agentStatus[a]
           const steps = state.steps[a]
@@ -23,20 +18,19 @@ export default function AgentChecklist() {
             <li key={a}>
               <button
                 onClick={() => dispatch({ type: 'select_agent', agent: a })}
-                className={`flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-neutral-900 ${active ? 'bg-neutral-900' : ''}`}
+                aria-current={active ? 'step' : undefined}
+                className={`flex w-full items-center gap-3 px-5 py-2 text-left hover:bg-ink/[0.03] ${active ? 'bg-ink/[0.05]' : ''}`}
               >
-                <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_STYLE[st].dot}`} />
+                <AgentGlyph agent={a} status={st} />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2">
-                    <span className="text-sm font-medium">
-                      {i + 1}. {AGENT_LABELS[a]}
+                    <span className={`text-[15px] ${active ? 'font-bold' : 'font-semibold'}`}>
+                      <span className="tnum text-slate">{String(i + 1).padStart(2, '0')}</span> {AGENT_LABELS[a]}
                     </span>
-                    <span className={`text-[11px] ${STATUS_STYLE[st].text}`}>{st}</span>
+                    <span className={`text-xs ${st === 'error' ? 'text-gap' : 'text-slate'}`}>{st}</span>
                   </span>
                   {(err || steps.length > 0) && (
-                    <span className={`block truncate text-xs ${err ? 'text-rose-400' : 'text-neutral-400'}`}>
-                      {err ?? steps[steps.length - 1]}
-                    </span>
+                    <span className={`block truncate text-[13px] ${err ? 'text-gap' : 'text-slate'}`}>{err ?? steps[steps.length - 1]}</span>
                   )}
                 </span>
               </button>
@@ -44,13 +38,11 @@ export default function AgentChecklist() {
           )
         })}
       </ol>
-      {coord.length > 0 && (
-        <div className="px-4 py-1.5 text-xs text-neutral-500">Coordinator: {coord[coord.length - 1]}</div>
-      )}
+      {coord.length > 0 && <div className="border-t border-rule px-5 py-1.5 text-xs text-slate">Coordinator: {coord[coord.length - 1]}</div>}
       {state.stream === 'failed' && !state.basePlan && !state.loadError && (
-        <div className="px-4 py-1.5 text-xs text-amber-400">Stream unavailable; loading saved plan…</div>
+        <div className="px-5 py-1.5 text-xs text-amber-300">Stream unavailable; loading saved plan…</div>
       )}
-      {state.loadError && <div className="px-4 py-1.5 text-xs text-rose-400">Could not load plan: {state.loadError}</div>}
+      {state.loadError && <div className="px-5 py-1.5 text-xs text-gap">Could not load plan: {state.loadError}</div>}
     </div>
   )
 }

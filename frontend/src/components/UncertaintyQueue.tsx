@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import MapPanel from './MapPanel'
 import { usePlan } from '../state/PlanContext'
 import { useApp } from '../state/AppContext'
 import { fmtNum, geometryCentroid, haversineM, siteNames } from '../format'
@@ -11,7 +12,6 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
   const { factorNumber } = useApp()
   const [busy, setBusy] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
-  const [open, setOpen] = useState(true)
   const t = state.plan.transit
   const sites = state.plan.sites ?? []
   const letters = siteLetters(sites)
@@ -19,12 +19,8 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
   const catchment = factorNumber('stop_catchment_m')
 
   return (
-    <div className={`rounded-md border border-neutral-800 bg-neutral-950/90 text-xs shadow-lg backdrop-blur ${className}`}>
-      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between px-3 py-2 text-left font-semibold">
-        What would make this plan more certain <span className="text-neutral-500">{open ? '▾' : '▸'}</span>
-      </button>
-      {open && (
-        <div className="max-h-[40vh] space-y-2 overflow-y-auto px-3 pb-3">
+    <MapPanel title="What would make this plan more certain" className={className}>
+        <div className="max-h-[40vh] divide-y divide-rule overflow-y-auto">
           {!t ? (
             <p className="text-neutral-500 italic">Waiting for the transit agent…</p>
           ) : t.measurements.length === 0 ? (
@@ -42,7 +38,7 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
                     })
                   : null
               return (
-                <div key={m.target_id + m.what} className="rounded border border-neutral-800 bg-neutral-900 p-2">
+                <div key={m.target_id + m.what} className="py-2">
                   <button
                     className="text-left text-neutral-100 hover:underline"
                     onClick={() => dispatch({ type: 'select', selected: { stopId: m.target_id } })}
@@ -50,7 +46,7 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
                     {m.what}
                   </button>
                   {stop ? (
-                    <div className="mt-1 space-y-0.5 text-neutral-400">
+                    <div className="mt-1 space-y-0.5 text-slate">
                       <div>
                         Current range:{' '}
                         <span className="text-neutral-200 tabular-nums">
@@ -85,9 +81,9 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
                     <div className="mt-1 text-neutral-500">Stop {m.target_id} not in the transit plan.</div>
                   )}
                   {sim ? (
-                    <div className="mt-2 rounded border border-amber-700 bg-amber-950/40 p-1.5">
-                      <span className="mr-1 rounded bg-amber-700 px-1 text-[10px] font-semibold text-white uppercase">{sim.label}</span>
-                      <span className="tabular-nums text-amber-100">
+                    <div className="mt-2 border-l-2 border-mustard pl-2">
+                      <span className="mr-1 text-xs font-semibold">{sim.label}</span>
+                      <span className="tabular-nums">
                         {fmtNum(sim.count_per_day)} riders/day · range {fmtNum(sim.before[0])}–{fmtNum(sim.before[1])} →{' '}
                         {fmtNum(sim.after[0])}–{fmtNum(sim.after[1])}
                       </span>
@@ -106,7 +102,7 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
                           setBusy(null)
                         }
                       }}
-                      className="mt-2 rounded bg-amber-700 px-2 py-0.5 text-white hover:bg-amber-600 disabled:opacity-50"
+                      className="ctl mt-2 px-2 py-0.5 text-xs"
                     >
                       {busy === m.target_id ? 'Simulating…' : 'Simulate count'}
                     </button>
@@ -115,9 +111,8 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
               )
             })
           )}
-          {err && <p className="text-rose-400">Simulation failed: {err}</p>}
+          {err && <p className="text-gap">Simulation failed: {err}</p>}
         </div>
-      )}
-    </div>
+    </MapPanel>
   )
 }

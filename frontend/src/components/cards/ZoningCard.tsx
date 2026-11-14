@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import { usePlan } from '../../state/PlanContext'
+import { useApp } from '../../state/AppContext'
+import { EnvelopeFigures } from './EnvelopeFigures'
 import { fmtNum, fmtValue, humanize, parcelLabel } from '../../format'
 import { CardShell, CiteList, Empty, Section } from './common'
 import { SourcedValue } from '../SourceBadge'
@@ -8,18 +10,18 @@ import type { LegalPath, Plan, ZoningEnvelope } from '../../types'
 function PathColumn({ path, recommended }: { path: LegalPath; recommended: boolean }) {
   const status =
     path.eligible === null
-      ? { text: 'not covered', cls: 'bg-neutral-800 text-neutral-300' }
+      ? { text: 'not covered', cls: 'text-slate' }
       : path.eligible
-        ? { text: 'eligible', cls: 'bg-emerald-900 text-emerald-300' }
-        : { text: 'not eligible', cls: 'bg-rose-950 text-rose-300' }
+        ? { text: 'eligible', cls: 'text-emerald-300' }
+        : { text: 'not eligible', cls: 'text-gap' }
   const missing = Array.isArray(path.allows.missing_inputs) ? (path.allows.missing_inputs as string[]) : []
   const allows = path.eligible ? Object.entries(path.allows) : []
   return (
-    <div className={`rounded border p-3 ${recommended ? 'border-emerald-600' : 'border-neutral-800'} bg-neutral-900`}>
-      <div className="mb-1 font-medium">{path.name}</div>
-      <div className="mb-2 flex flex-wrap items-center gap-1.5">
-        <span className={`rounded px-1.5 py-px text-[11px] ${status.cls}`}>{status.text}</span>
-        {recommended && <span className="rounded bg-emerald-600 px-1.5 py-px text-[11px] text-white">recommended</span>}
+    <div className={`border-t-2 pt-2 ${recommended ? 'border-ink' : 'border-rule'}`}>
+      <div className="mb-1 font-semibold">{path.name}</div>
+      <div className="mb-2 flex flex-wrap items-baseline gap-3 text-xs">
+        <span className={status.cls}>{status.text}</span>
+        {recommended && <span className="font-semibold">recommended</span>}
       </div>
       {path.homes !== undefined && path.homes !== null && (
         <div className="mb-2 text-sm">
@@ -101,6 +103,7 @@ function bothLawExamples(plan: Partial<Plan>): { id: string; label: string; at: 
 export default function ZoningCard() {
   const { state, dispatch } = usePlan()
   const { plan, selected } = state
+  const { factorNumber } = useApp()
   const envelopes = plan.envelopes
   const examples = useMemo(() => bothLawExamples(plan), [plan])
 
@@ -117,6 +120,14 @@ export default function ZoningCard() {
   const parcelId = selected.parcelId
   const env = parcelId ? envelopes?.find((e) => e.parcel_id === parcelId) : undefined
   const parcel = parcelId ? plan.parcels?.find((p) => p.id === parcelId) : undefined
+  // the building an adaptive-reuse path would keep: the largest on the parcel (as the zoning agent picks it)
+  const building = useMemo(
+    () =>
+      (plan.buildings ?? [])
+        .filter((b) => b.parcel_id === parcelId)
+        .sort((a, b) => (b.rentable_area_sqft.value ?? 0) - (a.rentable_area_sqft.value ?? 0))[0],
+    [plan.buildings, parcelId],
+  )
 
   return (
     <CardShell title="Zoning & legislation" note={plan.notes?.zoning_legislation}>
@@ -186,6 +197,7 @@ export default function ZoningCard() {
                 ) : (
                   <>
                     <PickLine env={env} />
+                    <EnvelopeFigures env={env} parcel={parcel} building={building} storyFt={factorNumber('story_height_ft')} />
                     <div className={`grid gap-2 ${env.paths.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                       {env.paths.map((p) => (
                         <PathColumn key={p.name} path={p} recommended={env.recommended_path === p.name} />

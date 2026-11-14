@@ -1,19 +1,14 @@
 import { useMemo, useState } from 'react'
-import { Legend, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from 'recharts'
 import { usePlan } from '../../state/PlanContext'
+import { useApp } from '../../state/AppContext'
 import { buildingLabel, fmtNum, humanize } from '../../format'
 import { CardShell, CiteList, Empty, Section, td, th } from './common'
 import SourceBadge, { SourcedValue } from '../SourceBadge'
 import FactorHover, { FactorText } from '../FactorHover'
+import { MassingFigure, USE_HEX } from './MassingFigure'
 import type { Building, ConversionCandidate, FitName, Sourced, UseType } from '../../types'
 
 const FITS: FitName[] = ['physical', 'legal', 'market', 'financial', 'location']
-const USE_HEX: Record<UseType, string> = {
-  residential: '#3b82f6',
-  hotel: '#a855f7',
-  mixed_use: '#14b8a6',
-  keep_current: '#8c8c8c',
-}
 const SCORE_KEYS = ['reuse_weights', 'reuse_physical_weights', 'reuse_location_weights', 'reuse_keep_margin', 'reuse_feasible_threshold']
 const SHOWN = 60
 
@@ -36,42 +31,60 @@ const ATTRS: { key: SourcedKey; label: string; unit?: string }[] = [
 ]
 
 function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
+  const { factorNumber } = useApp()
   const uses = Object.keys(c.scores_by_use) as UseType[]
   const [use, setUse] = useState<UseType>(c.best_use)
-  const radar = FITS.map((fit) => ({ fit, ...Object.fromEntries(uses.map((u) => [u, c.scores_by_use[u]?.[fit] ?? 0])) }))
   const details = c.details.filter((d) => d.use === use)
+  const fit = c.scores_by_use[c.best_use]
+  const limitKey = c.best_use === 'keep_current' ? null : `reuse_max_floor_depth_ft_${c.best_use}`
   return (
-    <div className="space-y-3 rounded border border-neutral-800 bg-neutral-900 p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium">{buildingLabel(b, c.building_id)}</span>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="wide text-[22.5px] font-bold">{buildingLabel(b, c.building_id)}</span>
         {b && <SourceBadge prov={b.name.prov} />}
-        <span className="rounded px-1.5 py-px text-[11px]" style={{ background: USE_HEX[c.best_use] }}>
-          best: {humanize(c.best_use)}
+        <span className="text-sm">
+          best use <span className="font-semibold" style={{ borderBottom: `2px solid ${USE_HEX[c.best_use]}` }}>{humanize(c.best_use)}</span>
         </span>
-        <span className="text-xs text-neutral-400">confidence {c.confidence}</span>
-        {c.screening_only && <span className="rounded bg-amber-900/70 px-1.5 py-px text-[11px] text-amber-200">screening only</span>}
+        <span className="text-sm text-slate">confidence {c.confidence}</span>
+        {c.screening_only && <span className="text-sm text-amber-300">screening only</span>}
       </div>
-      <div className="h-56">
-        <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={radar} outerRadius="70%">
-            <PolarGrid stroke="#404040" />
-            <PolarAngleAxis dataKey="fit" tick={{ fill: '#d4d4d4', fontSize: 11 }} />
-            <PolarRadiusAxis domain={[0, 1]} tick={{ fill: '#737373', fontSize: 9 }} tickCount={3} />
-            {uses.map((u) => (
-              <Radar
-                key={u}
-                dataKey={u}
-                name={humanize(u)}
-                stroke={USE_HEX[u]}
-                fill={USE_HEX[u]}
-                fillOpacity={u === c.best_use ? 0.35 : 0.04}
-                strokeWidth={u === c.best_use ? 2 : 1}
-              />
+      {b && (
+        <figure className="border border-rule px-3 pt-3 pb-2">
+          <MassingFigure
+            b={b}
+            use={c.best_use}
+            storyFt={factorNumber('story_height_ft')}
+            limitFt={limitKey ? factorNumber(limitKey) : null}
+          />
+          <figcaption className="mt-2 text-[13px] text-slate">
+            {fmtNum(b.stories.value)} stories on a square plate of the typical floor area; floors drawn in the best-use
+            colour change use. On the roof, the dashed square is the{' '}
+            {limitKey ? (
+              <FactorHover keys={[limitKey, 'story_height_ft']}>
+                <span>depth limit</span>
+              </FactorHover>
+            ) : (
+              'depth limit'
+            )}{' '}
+            measured in from the windows; red is floor area between that line and the core, too far from a window.
+          </figcaption>
+        </figure>
+      )}
+      {fit && (
+        <Section title={`Fit scores · ${humanize(c.best_use)}`}>
+          <ul className="space-y-1 text-sm">
+            {FITS.map((f) => (
+              <li key={f} className="grid grid-cols-[6rem_1fr_3rem] items-center gap-3">
+                <span>{f}</span>
+                <span className="h-2 bg-rule">
+                  <span className="block h-full" style={{ width: `${Math.max(0, Math.min(1, fit[f])) * 100}%`, background: USE_HEX[c.best_use] === '#c4c9c1' ? '#5F6778' : USE_HEX[c.best_use] }} />
+                </span>
+                <span className="text-right tabular-nums">{fmtNum(fit[f], 2)}</span>
+              </li>
             ))}
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-          </RadarChart>
-        </ResponsiveContainer>
-      </div>
+          </ul>
+        </Section>
+      )}
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div>
           <FactorHover keys={SCORE_KEYS}>
@@ -124,7 +137,7 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
           <select
             value={use}
             onChange={(e) => setUse(e.target.value as UseType)}
-            className="rounded border border-neutral-700 bg-neutral-950 px-1 text-xs"
+            className="border border-rule bg-paper px-1 text-xs"
           >
             {uses.map((u) => (
               <option key={u} value={u}>
@@ -146,12 +159,12 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
           </thead>
           <tbody>
             {details.map((d, i) => (
-              <tr key={i} className="border-t border-neutral-800">
+              <tr key={i}>
                 <td className={td}>{d.fit}</td>
                 <td className={td}>{humanize(d.name)}</td>
                 <td className={td}>
                   <span className="flex flex-wrap items-center gap-1">
-                    {d.value === null ? <span className="italic text-neutral-500">missing</span> : `${typeof d.value === 'number' ? fmtNum(d.value, 2) : d.value} ${d.unit}`}
+                    {d.value === null ? <span className="italic text-slate">missing</span> : `${typeof d.value === 'number' ? fmtNum(d.value, 2) : d.value} ${d.unit}`}
                     <SourceBadge prov={d.prov} />
                   </span>
                 </td>
@@ -171,7 +184,7 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
               const s = b[key] as Sourced<string | number>
               return (
                 <div key={key} className="flex items-center justify-between gap-2">
-                  <dt className="text-neutral-400">{label}</dt>
+                  <dt className="text-slate">{label}</dt>
                   <dd>
                     <SourcedValue
                       s={s}
@@ -220,7 +233,7 @@ export default function BuildingReuseCard() {
           <Section title={`Ranked candidates (${fmtNum(ranked.length)})`}>
             <div className="max-h-96 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-neutral-950">
+                <thead className="sticky top-0 bg-paper">
                   <tr>
                     <th className={th}>Building</th>
                     <th className={th}>Current</th>
@@ -240,7 +253,7 @@ export default function BuildingReuseCard() {
                         onClick={() =>
                           dispatch({ type: 'select', selected: { buildingId: c.building_id, parcelId: b?.parcel_id } })
                         }
-                        className={`cursor-pointer border-t border-neutral-900 hover:bg-neutral-900 ${selected.buildingId === c.building_id ? 'bg-neutral-900' : ''}`}
+                        className={`cursor-pointer hover:bg-ink/[0.03] ${selected.buildingId === c.building_id ? 'bg-ink/[0.06]' : ''}`}
                       >
                         <td className={td}>
                           <span className="flex items-center gap-1.5">
@@ -251,7 +264,7 @@ export default function BuildingReuseCard() {
                         <td className={td}>{humanize(b?.property_type.value ?? '—')}</td>
                         <td className={td}>
                           <span className="inline-flex items-center gap-1">
-                            <span className="h-2 w-2 rounded-full" style={{ background: USE_HEX[c.best_use] }} />
+                            <span className="h-2.5 w-2.5" style={{ background: USE_HEX[c.best_use] }} />
                             {humanize(c.best_use)}
                           </span>
                         </td>
@@ -263,7 +276,7 @@ export default function BuildingReuseCard() {
                 </tbody>
               </table>
               {ranked.length > SHOWN && (
-                <p className="mt-1 text-xs text-neutral-500">Showing top {SHOWN}; click buildings on the map for the rest.</p>
+                <p className="mt-1 text-xs text-slate">Showing top {SHOWN}; click buildings on the map for the rest.</p>
               )}
             </div>
           </Section>

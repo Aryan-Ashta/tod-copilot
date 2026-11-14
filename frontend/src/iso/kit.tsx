@@ -145,9 +145,10 @@ export const IsoStack = memo(function IsoStack({ x, y, w, d, layers, sw = 1, z0 
 })
 
 /** A flat parcel: a thin slab, no outline by default so rows of tiles read as texture. */
-export const IsoTile = memo(function IsoTile({ x, y, w, d, color, h = 1.5, stroke = false, sw = 1, title }: {
+export const IsoTile = memo(function IsoTile({ x, y, z = 0, w, d, color, h = 1.5, stroke = false, sw = 1, title }: {
   x: number
   y: number
+  z?: number
   w: number
   d: number
   color: string
@@ -156,7 +157,7 @@ export const IsoTile = memo(function IsoTile({ x, y, w, d, color, h = 1.5, strok
   sw?: number
   title?: string
 }) {
-  return <IsoBox x={x} y={y} w={w} d={d} h={h} color={color} stroke={stroke} sw={sw} title={title} />
+  return <IsoBox x={x} y={y} z={z} w={w} d={d} h={h} color={color} stroke={stroke} sw={sw} title={title} />
 })
 
 /** A building as floor slabs: one unstroked slab per floor (colour per floor, so converted floors can differ), a thin

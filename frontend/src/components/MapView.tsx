@@ -146,7 +146,17 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
       getTooltip: (info) => {
         const text = tooltipFor(info)
         return text
-          ? { text, style: { background: '#171717', color: '#f5f5f5', fontSize: large ? '16px' : '12px', whiteSpace: 'pre' } }
+          ? {
+              text,
+              style: {
+                background: '#EDEFEA',
+                color: '#1C2230',
+                border: '1px solid #D3D7D0',
+                fontFamily: 'inherit',
+                fontSize: large ? '16px' : '12px',
+                whiteSpace: 'pre',
+              },
+            }
           : null
       },
     })

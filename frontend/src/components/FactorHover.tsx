@@ -49,18 +49,18 @@ export default function FactorHover({ keys, children }: { keys: string[]; childr
         <span
           ref={pop}
           style={placement(rect, height)}
-          className="z-[200] block rounded-md border border-neutral-700 bg-neutral-900 p-2 text-left text-xs shadow-xl"
+          className="z-[200] block border border-rule bg-paper p-2.5 text-left text-xs leading-snug"
         >
-          <span className="mb-1 block text-[10px] tracking-wide text-neutral-400 uppercase">Factors behind this number</span>
+          <span className="mb-1 block text-xs text-slate">Factors behind this number</span>
           {keys.map((k) => {
             const f = factors[k]
             return (
-              <span key={k} className="block border-t border-neutral-800 py-1 first:border-t-0">
+              <span key={k} className="block border-t border-rule py-1.5 first:border-t-0">
                 {f?.label && <span className="block font-medium text-neutral-100">{f.label}</span>}
                 <span className="flex items-center gap-2">
                   <code className="text-neutral-400">{k}</code>
                   {f && !f.verified && (
-                    <span className="rounded bg-amber-900/60 px-1 text-[10px] text-amber-300">unverified</span>
+                    <span className="text-[11px] text-amber-300">unverified</span>
                   )}
                 </span>
                 {f ? (

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Bar as RBar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar as RBar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { usePlan } from '../../state/PlanContext'
 import { fmtNum, humanize } from '../../format'
 import { CardShell, Empty, Section } from './common'
@@ -64,10 +64,11 @@ export default function InfrastructureCard() {
         <div className="mt-1 h-40">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={histogram} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-              <XAxis dataKey="bin" tick={{ fill: '#a3a3a3', fontSize: 9 }} interval={1} />
-              <YAxis tick={{ fill: '#a3a3a3', fontSize: 10 }} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: '#171717', border: '1px solid #404040' }} cursor={{ fill: '#262626' }} />
-              <RBar dataKey="n" name="targets" fill="#38bdf8" />
+              <CartesianGrid vertical={false} stroke="#D3D7D0" />
+              <XAxis dataKey="bin" tick={{ fill: '#1C2230', fontSize: 10 }} interval={1} axisLine={{ stroke: '#1C2230' }} tickLine={false} />
+              <YAxis tick={{ fill: '#1C2230', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: '#EDEFEA', border: '1px solid #D3D7D0', borderRadius: 0 }} cursor={{ fill: 'rgba(28,34,48,0.06)' }} />
+              <RBar dataKey="n" name="targets" fill="#2F5BD3" />
             </BarChart>
           </ResponsiveContainer>
         </div>

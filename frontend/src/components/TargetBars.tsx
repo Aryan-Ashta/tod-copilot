@@ -1,7 +1,24 @@
+import { memo } from 'react'
 import { usePlan } from '../state/PlanContext'
 import { fmtNum } from '../format'
 import FactorHover from './FactorHover'
+import { IsoBox, IsoGhost, ISO, isoViewBox } from '../iso'
 import type { TargetKey } from '../types'
+
+// One small iso column per target: height 0-30 world units for 0-100% of max(value, base), the base plan as a
+// dashed ghost column. Columns keep each row short enough for the panel (a bar along x would run diagonally).
+const COL = 9
+const COL_H = 30
+const COL_VB = isoViewBox([{ x: 0, y: 0, w: COL, d: COL, h: COL_H }], 2)
+const IsoColumn = memo(function IsoColumn({ pct, basePct, color, label }: { pct: number; basePct: number | null; color: string; label: string }) {
+  return (
+    <svg viewBox={COL_VB} className="block h-11 w-auto shrink-0" role="img" aria-label={label}>
+      <IsoBox x={0} y={0} w={COL} d={COL} h={0.01} color={ISO.rule} stroke={false} shadow={false} />
+      {pct > 0 && <IsoBox x={0} y={0} w={COL} d={COL} h={(Math.max(pct, 2) / 100) * COL_H} color={color} sw={0.5} />}
+      {basePct !== null && basePct !== pct && <IsoGhost x={0} y={0} w={COL} d={COL} h={(Math.max(basePct, 2) / 100) * COL_H} sw={0.5} />}
+    </svg>
+  )
+})
 
 export const TARGET_LABELS: Record<TargetKey, string> = {
   transport_co2: 'Transport CO₂ avoided',
@@ -19,52 +36,50 @@ export function TargetScope({ className = '' }: { className?: string }) {
   const ids = new Set(inPlan.map((s) => s.id))
   const yes = (state.plan.stacks ?? []).filter((x) => ids.has(x.site_id) && x.pencils).length
   return (
-    <p className={`text-amber-200/90 ${className}`}>
+    <p className={`text-amber-200 ${className}`}>
       If all {inPlan.length} candidate sites proceed · {yes} of {inPlan.length} pencil today
     </p>
   )
 }
 
-/** Each target as a bar; the tick marks the base plan's value so edits show their effect. */
+/** Each target as a small iso bar with a direct label; with edits, the base plan shows as a dashed ghost bar. */
 export default function TargetBars({ compact = false }: { compact?: boolean }) {
   const { state } = usePlan()
   const targets = state.plan.targets
   const base = new Map((state.basePlan?.targets ?? []).map((t) => [t.key, t.value]))
-  if (!targets) return <p className="text-sm text-neutral-500 italic">Waiting for the sustainability agent…</p>
+  if (!targets) return <p className="text-sm text-slate italic">Waiting for the sustainability agent…</p>
   return (
     <>
-    <TargetScope className={compact ? 'mb-1.5 text-[11px]' : 'mb-3 text-xs'} />
-    <ul className={compact ? 'space-y-1.5' : 'space-y-3'}>
-      {targets.map((t) => {
-        const b = base.get(t.key) ?? t.value
-        const max = Math.max(Math.abs(t.value), Math.abs(b))
-        const pct = max > 0 ? (Math.abs(t.value) / max) * 100 : 0
-        const basePct = max > 0 ? (Math.abs(b) / max) * 100 : 0
-        const missesTarget = t.target !== null && t.key === 'flood_exposure' && t.value > t.target
-        return (
-          <li key={t.key} className="text-xs">
-            <div className="flex items-baseline justify-between gap-2">
-              <FactorHover keys={t.factor_keys}>
-                <span className="text-neutral-300">{TARGET_LABELS[t.key]}</span>
-              </FactorHover>
-              <span className={`tabular-nums ${missesTarget ? 'text-rose-300' : 'text-neutral-100'}`}>
-                {fmtNum(t.value, 1)} {t.unit}
-                {t.target !== null && <span className="text-neutral-500"> · target {fmtNum(t.target, 1)}</span>}
-              </span>
-            </div>
-            <div className="relative mt-0.5 h-1.5 rounded bg-neutral-800">
-              <div
-                className={`h-full rounded transition-[width] duration-500 ${missesTarget ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                style={{ width: `${pct}%` }}
+      <TargetScope className={compact ? 'mb-2 text-xs' : 'mb-3 text-sm'} />
+      <ul className={`divide-y divide-rule ${compact ? 'text-xs' : 'text-sm'}`}>
+        {targets.map((t) => {
+          const b = base.get(t.key) ?? t.value
+          const max = Math.max(Math.abs(t.value), Math.abs(b))
+          const pct = max > 0 ? (Math.abs(t.value) / max) * 100 : 0
+          const basePct = max > 0 ? (Math.abs(b) / max) * 100 : 0
+          const missesTarget = t.target !== null && t.key === 'flood_exposure' && t.value > t.target
+          const value = `${fmtNum(t.value, 1)} ${t.unit}`
+          return (
+            <li key={t.key} className={`flex items-end gap-3 ${compact ? 'py-1' : 'py-2'}`}>
+              <IsoColumn
+                pct={pct}
+                basePct={state.edits.length > 0 ? basePct : null}
+                color={missesTarget ? ISO.gap : ISO.green}
+                label={`${TARGET_LABELS[t.key]}: ${value}`}
               />
-              {state.edits.length > 0 && (
-                <div className="absolute top-[-2px] h-2.5 w-px bg-white" style={{ left: `${basePct}%` }} title="base plan" />
-              )}
-            </div>
-          </li>
-        )
-      })}
-    </ul>
+              <div className="min-w-0 flex-1 pb-0.5">
+                <FactorHover keys={t.factor_keys}>
+                  <span>{TARGET_LABELS[t.key]}</span>
+                </FactorHover>
+                <div className={`font-semibold tabular-nums ${missesTarget ? 'text-gap' : ''}`}>
+                  {value}
+                  {t.target !== null && <span className="font-normal text-slate"> · target {fmtNum(t.target, 1)}</span>}
+                </div>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
     </>
   )
 }

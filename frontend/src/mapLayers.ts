@@ -50,6 +50,20 @@ export const LAYER_DEFS: { key: LayerKey; label: string; group: 'Base' | 'Infras
   { key: 'new_buildings', label: 'New buildings', group: 'Plan', on: true },
 ]
 
+/** Legend swatch per layer (CSS background), kept next to the colours the layers use. */
+export const LAYER_SWATCH: Partial<Record<LayerKey, string>> = {
+  transit_existing: 'linear-gradient(90deg,#e63946 50%,#8c8c8c 50%)',
+  walk_bike: 'linear-gradient(90deg,#737373 50%,#a3e635 50%)',
+  utilities: 'repeating-linear-gradient(90deg,#3b82f6 0 3px,transparent 3px 5px)',
+  amenities: 'linear-gradient(90deg,#22d3ee,#facc15,#f43f5e,#22c55e,#fb923c)',
+  flood: 'rgba(37,99,235,0.5)',
+  proposed_transit: 'linear-gradient(90deg,#14b8a6 50%,#a855f7 50%)',
+  parcels: '#f59e0b',
+  buildings: 'linear-gradient(90deg,#3b82f6,#a855f7,#14b8a6,#8c8c8c)',
+  sites: '#ffffff',
+  new_buildings: '#60a5fa',
+}
+
 export const UNDERUSED_LAND_USES: Record<string, true> = { surface_parking: true, vacant: true, retail_1story: true }
 
 export const USE_COLORS: Record<UseType, Color> = {

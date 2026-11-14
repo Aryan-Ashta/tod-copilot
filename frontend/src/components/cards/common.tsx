@@ -6,10 +6,10 @@ import type { Citation } from '../../types'
 
 export function CardShell({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
-    <div className="space-y-4 p-4">
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <div className="space-y-6 px-5 pt-5 pb-10">
+      <h2 className="wide border-t-2 border-ink pt-3 text-[28px] leading-tight font-bold">{title}</h2>
       {note && (
-        <p className="rounded border border-neutral-800 bg-neutral-900 p-2 text-sm text-neutral-300">
+        <p className="max-w-[68ch] border-l-2 border-rule pl-4 text-[15px] leading-relaxed">
           <FactorText text={note} />
         </p>
       )}
@@ -21,8 +21,8 @@ export function CardShell({ title, note, children }: { title: string; note?: str
 export function Section({ title, children, right }: { title: string; children: ReactNode; right?: ReactNode }) {
   return (
     <section>
-      <div className="mb-1.5 flex items-center justify-between">
-        <h3 className="text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">{title}</h3>
+      <div className="mb-2 flex items-baseline justify-between border-b border-rule pb-1">
+        <h3 className="text-sm font-semibold text-slate">{title}</h3>
         {right}
       </div>
       {children}
@@ -41,10 +41,10 @@ export function CiteLink({ c }: { c: Citation }) {
     <button
       onClick={() => openCitation(c)}
       title={quotes.join('\n\n')}
-      className="rounded bg-neutral-800 px-1.5 py-px text-[11px] text-sky-300 hover:bg-neutral-700"
+      className="border-b border-rule text-xs text-sky-300 hover:border-sky-300"
     >
       {sectionLabel(c.section)} cited
-      {quotes.length > 1 && <span className="text-neutral-400"> · {quotes.length} provisions</span>}
+      {quotes.length > 1 && <span className="text-slate"> · {quotes.length} provisions</span>}
     </button>
   )
 }
@@ -60,8 +60,8 @@ export function CiteList({ citations, label }: { citations: Citation[]; label?: 
   }
   if (!groups.size) return null
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      {label && <span className="text-[11px] text-neutral-400">{label}</span>}
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      {label && <span className="text-xs text-slate">{label}</span>}
       {[...groups.entries()].map(([k, c]) => (
         <CiteLink key={k} c={c} />
       ))}
@@ -72,11 +72,11 @@ export function CiteList({ citations, label }: { citations: Citation[]; label?: 
 export function Bar({ value, max, color = 'bg-sky-500' }: { value: number; max: number; color?: string }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0
   return (
-    <div className="h-2 w-full overflow-hidden rounded bg-neutral-800">
+    <div className="h-2 w-full overflow-hidden bg-rule">
       <div className={`h-full ${color} transition-[width] duration-500`} style={{ width: `${pct}%` }} />
     </div>
   )
 }
 
-export const th = 'px-2 py-1 text-left text-[11px] font-medium text-neutral-400'
-export const td = 'px-2 py-1 align-top'
+export const th = 'py-1.5 pr-3 text-left text-[13px] font-semibold text-slate border-b border-rule'
+export const td = 'py-1.5 pr-3 align-top border-b border-rule'
