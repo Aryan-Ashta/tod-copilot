@@ -34,6 +34,10 @@ const US_LIMIT: [[number, number], [number, number]] = [
   [-55, 56],
 ]
 const DRAW_STYLE = { fillColor: '#2F5BD3', fillOpacity: 0.1, outlineColor: '#1C2230', outlineWidth: 2 } as const
+// Recorded areas left off this map (no pin, no outline); their poster cards still pick them.
+const NOT_ON_MAP: Record<string, true> = { brevard_cocoa: true }
+// Esri's canvas land colour. The base tiles print country and state names (e.g. "UNITED STATES") through z7.
+const BASE_LAND = '#EFEFEF'
 
 function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.FeatureCollection {
   return {
@@ -91,6 +95,13 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     map.on('load', () => {
       // State lines (US Census cartographic boundaries; scripts/build_us_reference.py), under everything else.
       map.addSource('states', { type: 'geojson', data: '/geo/us-states.geojson', attribution: 'States: US Census Bureau' })
+      // Paints over the base's country and state names with its own land colour; gone once z8 tiles (no names) load.
+      map.addLayer({
+        id: 'states-mask',
+        type: 'fill',
+        source: 'states',
+        paint: { 'fill-color': BASE_LAND, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 1, 8.6, 0] },
+      })
       map.addLayer({
         id: 'states-line',
         type: 'line',
@@ -198,8 +209,9 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    ;(map.getSource('locales') as GeoJSONSource | undefined)?.setData(localeOutlines(locales, selectedLocale))
-    const markers = locales.map((l) => {
+    const shown = locales.filter((l) => !NOT_ON_MAP[l.id])
+    ;(map.getSource('locales') as GeoJSONSource | undefined)?.setData(localeOutlines(shown, selectedLocale))
+    const markers = shown.map((l) => {
       const on = l.id === selectedLocale
       const color = localeColor(l.id)
       const el = document.createElement('button')
