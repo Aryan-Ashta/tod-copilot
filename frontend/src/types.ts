@@ -314,11 +314,13 @@ export interface Plan {
 
 export interface PlanOptions {
   focus: 'all' | 'conversions' | 'new_build'
-  transit_budget: 'default' | 'half' | 'double'
-  affordable: 'default' | 'high'
+  /** × the locale's transit_budget_usd. */
+  transit_budget_multiplier: number
+  /** Share of homes that are affordable; null uses factors.yaml affordable_share. */
+  affordable_share: number | null
 }
 
-export const DEFAULT_PLAN_OPTIONS: PlanOptions = { focus: 'all', transit_budget: 'default', affordable: 'default' }
+export const DEFAULT_PLAN_OPTIONS: PlanOptions = { focus: 'all', transit_budget_multiplier: 1, affordable_share: null }
 
 export interface LlmRun {
   model: string

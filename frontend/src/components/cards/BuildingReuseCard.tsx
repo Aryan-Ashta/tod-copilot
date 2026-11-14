@@ -49,7 +49,7 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
         {c.screening_only && <span className="text-sm text-amber-300">screening only</span>}
       </div>
       {b && (
-        <figure className="border border-rule px-3 pt-3 pb-2">
+        <figure className="rounded-xl border border-rule px-3 pt-3 pb-2">
           <MassingFigure
             b={b}
             use={c.best_use}
@@ -76,7 +76,7 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
             {FITS.map((f) => (
               <li key={f} className="grid grid-cols-[6rem_1fr_3rem] items-center gap-3">
                 <span>{f}</span>
-                <span className="h-2 bg-rule">
+                <span className="h-2 overflow-hidden rounded-full bg-rule">
                   <span className="block h-full" style={{ width: `${Math.max(0, Math.min(1, fit[f])) * 100}%`, background: USE_HEX[c.best_use] === '#c4c9c1' ? '#5F6778' : USE_HEX[c.best_use] }} />
                 </span>
                 <span className="text-right tabular-nums">{fmtNum(fit[f], 2)}</span>
@@ -137,7 +137,7 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
           <select
             value={use}
             onChange={(e) => setUse(e.target.value as UseType)}
-            className="border border-rule bg-paper px-1 text-xs"
+            className="rounded-md border border-rule bg-paper px-1 text-xs"
           >
             {uses.map((u) => (
               <option key={u} value={u}>

@@ -6,7 +6,7 @@ docs' own requirements need are marked "Addition".
 from datetime import datetime
 from typing import Any, Generic, Literal, Optional, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 T = TypeVar("T")
 Confidence = Literal["high", "medium", "low", "missing"]
@@ -257,10 +257,10 @@ AgentName = Literal["infrastructure", "transit_network", "zoning_legislation", "
                     "land_deal", "funding", "sustainability_health", "coordinator"]
 
 
-class PlanOptions(BaseModel):   # Addition: fixed steering options from the prompt
+class PlanOptions(BaseModel):   # Addition: steering options, parsed from the prompt or set with the UI sliders
     focus: Literal["all", "conversions", "new_build"] = "all"
-    transit_budget: Literal["default", "half", "double"] = "default"
-    affordable: Literal["default", "high"] = "default"
+    transit_budget_multiplier: float = Field(1.0, gt=0, le=10)    # × the locale's transit_budget_usd
+    affordable_share: Optional[float] = Field(None, ge=0, le=1)   # None: factors.yaml affordable_share
 
 
 class StockPrompt(BaseModel):   # Addition

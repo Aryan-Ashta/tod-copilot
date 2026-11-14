@@ -57,7 +57,7 @@ export const EnvelopeFigures = memo(function EnvelopeFigures({ env, parcel, buil
         const win = env.recommended_path === p.name
         const ghostH = m.box?.h ?? tallest * 0.5
         return (
-          <figure key={p.name} className={`border p-2 ${win ? 'border-ink' : 'border-rule'}`}>
+          <figure key={p.name} className={`rounded-xl border p-2 ${win ? 'border-ink' : 'border-rule'}`}>
             <svg viewBox={vb} className="block h-auto w-full" role="img" aria-label={`${p.name}: ${m.caption}${win ? ', recommended' : ''}`}>
               <IsoTile x={0} y={0} w={lot} d={lot} color={ISO.block} stroke sw={sw} title={`Lot ${fmtNum(acres, 2)} acres`} />
               {m.box && win ? (

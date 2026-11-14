@@ -57,7 +57,11 @@ export const TileGlyph = memo(function TileGlyph({ kind, ghost = false, classNam
 /** Drag a tile onto a parcel (Homes, Park, Stop) or a building (conversions). */
 export default function TileTray({ disabled }: { disabled: boolean }) {
   return (
-    <div className="flex border border-ink bg-paper" role="toolbar" aria-label="Tiles: drag onto the map">
+    <div
+      className="flex overflow-hidden rounded-[12px] border-[1.5px] border-ink bg-paper shadow-[1.5px_1.5px_0_var(--color-ink),0_8px_24px_rgb(28_34_48/.12)]"
+      role="toolbar"
+      aria-label="Tiles: drag onto the map"
+    >
       {TILES.map((t) => (
         <div
           key={t.kind}
@@ -68,10 +72,10 @@ export default function TileTray({ disabled }: { disabled: boolean }) {
             e.dataTransfer.setData(TILE_MIME, t.kind)
             e.dataTransfer.effectAllowed = 'copy'
           }}
-          className={`flex cursor-grab items-center gap-2 border-l border-rule py-2 pr-5 pl-3 text-lg font-semibold select-none first:border-l-0 hover:bg-ink/[0.04] active:cursor-grabbing ${disabled ? 'opacity-40' : ''}`}
+          className={`group flex cursor-grab items-center gap-1.5 border-l border-rule py-1 pr-3.5 pl-2 text-[15px] font-semibold select-none first:border-l-0 hover:bg-ink/[0.04] active:cursor-grabbing ${disabled ? 'opacity-40' : ''}`}
           title={`Drag onto a ${t.target}`}
         >
-          <TileGlyph kind={t.kind} className="h-12 w-12" />
+          <TileGlyph kind={t.kind} className="h-9 w-9 transition-[translate] duration-150 group-hover:-translate-y-0.5" />
           {t.label}
         </div>
       ))}
