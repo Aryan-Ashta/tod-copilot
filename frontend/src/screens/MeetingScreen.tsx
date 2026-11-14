@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { PlanProvider, usePlan } from '../state/PlanContext'
 import { useApp } from '../state/AppContext'
 import Disclaimer from '../components/Disclaimer'
-import MapView, { type MapHandle } from '../components/MapView'
+import MapView, { type MapHandle, type MapInsets } from '../components/MapView'
 import Scoreboard from '../components/Scoreboard'
 import TileTray, { TILE_MIME, TileGlyph, tileInfo } from '../components/TileTray'
 import FactorHover from '../components/FactorHover'
@@ -12,6 +12,9 @@ import TargetBars from '../components/TargetBars'
 import { GreenSpaceSlider } from '../components/TargetsPanel'
 import { buildingLabel, parcelLabel } from '../format'
 import type { Citation, TileKind } from '../types'
+
+// Tile tray along the bottom of the map; the Changes panel and the scoreboard bar sit outside it.
+const MEETING_MAP_INSETS: MapInsets = { top: 32, right: 32, bottom: 64, left: 32 }
 
 interface Toast {
   text: string
@@ -162,7 +165,7 @@ function Meeting() {
         left={changes}
         right={
           <div className="absolute inset-0" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
-            <MapView handleRef={handleRef} large />
+            <MapView handleRef={handleRef} large insets={MEETING_MAP_INSETS} />
             {toast && (
               <div
                 className="absolute top-4 left-1/2 z-20 w-[min(90%,720px)] -translate-x-1/2 rounded-[12px] border-[1.5px] border-ink border-l-4 border-l-gap bg-paper p-4 text-lg shadow-[0_8px_24px_rgb(28_34_48/.16)]"

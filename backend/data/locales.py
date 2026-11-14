@@ -22,7 +22,10 @@ def get_locale(locale_id: str) -> Locale:
     if not p.exists():
         raise KeyError(f"unknown area {locale_id}")
     raw = yaml.safe_load(p.read_text())
-    return Locale(**{k: v for k, v in raw.items() if k in Locale.model_fields})
+    fields = {k: v for k, v in raw.items() if k in Locale.model_fields}
+    # the licensed extract is git-ignored, so a fresh clone has the tier but not the data (CoStarProvider.covers)
+    fields["costar_loaded"] = (locale_dir(locale_id) / "costar" / "buildings.json").exists()
+    return Locale(**fields)
 
 
 def source_locale(locale_id: str) -> Optional[str]:

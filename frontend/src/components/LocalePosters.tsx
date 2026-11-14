@@ -3,6 +3,7 @@
 import { memo, type ReactNode } from 'react'
 import { IsoBox, IsoFloors, IsoGhost, IsoTile, ISO, Poster, isoViewBox, type BoxGeom } from '../iso'
 import type { Locale } from '../types'
+import { dataTierLabel } from '../format'
 
 const GREY = ISO.block
 
@@ -99,7 +100,7 @@ export const LocalePoster = memo(function LocalePoster({ locale, index }: { loca
   const s = STYLE[locale.id] ?? { color: ISO.blue, title: [locale.name.split(':')[0]], scene: LA }
   const metrics = [
     { label: 'Stations', value: stationsValue(locale) },
-    { label: 'Data', value: locale.data_tier === 'costar_full' ? 'CoStar' : 'Public' },
+    { label: 'Data', value: dataTierLabel(locale, true) },
   ]
   return (
     <Poster

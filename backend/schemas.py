@@ -47,6 +47,7 @@ class Locale(BaseModel):
     boundary: Optional[dict] = None   # Addition: drawn GeoJSON Polygon/MultiPolygon (WGS84)
     aliases: list[str] = []           # Addition: city-search names
     sources_from: Optional[str] = None   # Addition: recorded locale whose county sources a custom area reuses
+    costar_loaded: bool = False   # Addition: CoStar extract present on this machine (data_tier is the intended tier)
 
 
 class Parcel(BaseModel):

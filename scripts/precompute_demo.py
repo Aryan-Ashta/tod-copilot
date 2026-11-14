@@ -1,6 +1,6 @@
 """Build the recorded demo runs for all three locales, then run the locale golden tests (docs/08).
 
-Usage: uv run python scripts/precompute_demo.py [--no-llm]
+Usage: uv run python scripts/precompute_demo.py [--no-llm] [--locale <id> ...]
 Writes cache/plans/demo-<locale>.json and .events.jsonl; exits non-zero if any golden test fails.
 """
 import argparse
@@ -22,8 +22,10 @@ PROMPT = "Plan transit-oriented development around the stations: what to convert
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-llm", action="store_true", help="deterministic driver only (templated notes)")
+    ap.add_argument("--locale", action="append", choices=LOCALE_IDS,
+                    help="rebuild only these locales (repeatable); the others keep their cached plans")
     a = ap.parse_args()
-    for lid in LOCALE_IDS:
+    for lid in a.locale or LOCALE_IDS:
         t = time.time()
         plan = run_plan(lid, PROMPT, f"demo-{lid}", emit=lambda e: None, llm=False if a.no_llm else None)
         errs = f" errors: {plan.agent_errors}" if plan.agent_errors else ""

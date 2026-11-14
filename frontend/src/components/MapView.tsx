@@ -1,18 +1,31 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type RefObject } from 'react'
 import { Map as MlMap, NavigationControl, type IControl, type StyleSpecification } from 'maplibre-gl'
 import { MapboxOverlay } from '@deck.gl/mapbox'
-import { AmbientLight, DirectionalLight, LightingEffect, type PickingInfo } from '@deck.gl/core'
+import { AmbientLight, DirectionalLight, LightingEffect, MapView as DeckMapView, type PickingInfo } from '@deck.gl/core'
 import { GeoJsonLayer } from '@deck.gl/layers'
-import { geometryBounds } from '../geo'
+import { boundaryPoints, outerRing, type BBox } from '../geo'
+import {
+  buildDuration,
+  CLEARED_MS,
+  constructionLayer,
+  progress,
+  REDUCED_MOTION,
+  riseShare,
+  STAGGER_MS,
+  type Build,
+} from '../construction'
 import { usePlan, type PlanAction } from '../state/PlanContext'
 import { useApp } from '../state/AppContext'
 import {
   amenitiesLayer,
   buildingsLayer,
+  demolitionLayer,
   flattenBuildings,
   floodLayer,
+  FT_TO_M,
   newBuildingsLayer,
   parcelsLayer,
+  selectedBuildingLayer,
   selectedParcelLayer,
   proposedTransitLayer,
   pursuedSites,
@@ -23,7 +36,7 @@ import {
   decodePick,
   type Picked,
 } from '../mapLayers'
-import type { Building, ConversionCandidate, DealKind, InfraFeature, Parcel, Route, Site, Station, Stop } from '../types'
+import type { Building, ConversionCandidate, DealKind, Geometry, InfraFeature, Parcel, Route, Site, Station, Stop } from '../types'
 import { fmtNum, humanize } from '../format'
 
 export interface MapHandle {
@@ -63,7 +76,71 @@ export const BASE_STYLE: StyleSpecification = {
 // field of view so verticals stay close to parallel. MapLibre has no orthographic camera; 10° is near enough.
 export const ISO_CAMERA = { bearing: -45, pitch: 60 }
 const ISO_FOV_DEG = 10
-const ISO_ZOOM_IN = 0.75 // zoom levels past the top-down fit (see the fit effect below)
+const FIT_MAX_POINTS = 400 // boundary vertices projected per fit step; plenty to bound a walk-shed outline
+
+/** Pixels of the map covered by overlay panels on each side; the plan is framed in the rest. */
+export interface MapInsets {
+  top: number
+  right: number
+  bottom: number
+  left: number
+}
+const NO_INSETS: MapInsets = { top: 24, right: 24, bottom: 24, left: 24 }
+
+/** Points to frame: the drawn boundary's vertices (thinned), else the locale's bbox corners. */
+function outlinePoints(g: Geometry | null | undefined, bbox: BBox): [number, number][] {
+  const pts = g ? boundaryPoints(g) : []
+  if (!pts.length) {
+    const [a, b, c, d] = bbox
+    return [[a, b], [c, b], [c, d], [a, d]]
+  }
+  const step = Math.ceil(pts.length / FIT_MAX_POINTS)
+  return step > 1 ? pts.filter((_, i) => i % step === 0) : pts
+}
+
+/**
+ * Frame `pts` in the iso camera inside the part of the map the panels leave free. cameraForBounds fits a top-down
+ * view; at 60° pitch the far half compresses and the frame centre drifts, so start there and correct zoom and centre
+ * from the projected extent until it fills the free rectangle (a few steps converge).
+ */
+function fitIso(map: MlMap, pts: [number, number][], insets: MapInsets) {
+  const { clientWidth: w, clientHeight: h } = map.getContainer()
+  const fw = w - insets.left - insets.right
+  const fh = h - insets.top - insets.bottom
+  if (fw <= 0 || fh <= 0) return
+  const lons = pts.map((p) => p[0])
+  const lats = pts.map((p) => p[1])
+  const cam = map.cameraForBounds(
+    [
+      [Math.min(...lons), Math.min(...lats)],
+      [Math.max(...lons), Math.max(...lats)],
+    ],
+    { bearing: ISO_CAMERA.bearing },
+  )
+  if (!cam) return
+  map.jumpTo({ ...cam, ...ISO_CAMERA })
+  const extent = () => {
+    let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity]
+    for (const p of pts) {
+      const s = map.project(p)
+      x0 = Math.min(x0, s.x)
+      y0 = Math.min(y0, s.y)
+      x1 = Math.max(x1, s.x)
+      y1 = Math.max(y1, s.y)
+    }
+    return { x0, y0, x1, y1 }
+  }
+  for (let i = 0; i < 5; i++) {
+    let e = extent()
+    const scale = Math.min(fw / Math.max(e.x1 - e.x0, 1), fh / Math.max(e.y1 - e.y0, 1))
+    map.jumpTo({ zoom: map.getZoom() + Math.log2(scale) })
+    e = extent()
+    const from = map.unproject([(e.x0 + e.x1) / 2, (e.y0 + e.y1) / 2])
+    const to = map.unproject([insets.left + fw / 2, insets.top + fh / 2])
+    const c = map.getCenter()
+    map.jumpTo({ center: [c.lng + from.lng - to.lng, c.lat + from.lat - to.lat] })
+  }
+}
 
 // One key light from the south-south-west and above: tops lightest, south faces (screen-left) mid, east faces
 // (screen-right) darkest, as in the iso figures.
@@ -97,7 +174,7 @@ function tooltipFor(info: PickingInfo): string | null {
       return `Site ${d.letter} · ${humanize(d.site.kind)} · ${fmtNum(d.site.homes)} homes${d.strategy ? ` · ${humanize(d.strategy)}` : ''}`
     }
     case 'new_buildings':
-      return `New building · ${fmtNum(p.site.homes)} homes · ${fmtNum(p.site.height_ft)} ft`
+      return `New building · ${fmtNum(p.site.homes)} homes · ${fmtNum(p.site.height_ft)} ft${p.site.status === 'watch' ? '\non watch: does not pencil yet' : ''}`
     case 'proposed_stops':
       return `${p.stop.name ?? `Stop ${p.stop.id}`}\n${fmtNum(p.stop.riders_per_day_low)}–${fmtNum(p.stop.riders_per_day_high)} riders/day (est.)`
     case 'proposed_routes':
@@ -112,7 +189,7 @@ function tooltipFor(info: PickingInfo): string | null {
   }
 }
 
-function selectFromPick(info: PickingInfo, dispatch: Dispatch<PlanAction>) {
+function selectFromPick(info: PickingInfo | null, dispatch: Dispatch<PlanAction>) {
   const p = decodePick(info)
   switch (p?.layer) {
     case 'parcels':
@@ -131,7 +208,16 @@ function selectFromPick(info: PickingInfo, dispatch: Dispatch<PlanAction>) {
   }
 }
 
-export default function MapView({ handleRef, large = false }: { handleRef?: RefObject<MapHandle | null>; large?: boolean }) {
+export default function MapView({
+  handleRef,
+  large = false,
+  insets = NO_INSETS,
+}: {
+  handleRef?: RefObject<MapHandle | null>
+  large?: boolean
+  /** Room the screen's overlay panels take, so the initial frame keeps the plan uncovered. */
+  insets?: MapInsets
+}) {
   const { state, dispatch } = usePlan()
   const { factorNumber } = useApp()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -155,9 +241,12 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
     map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-left')
     const overlay = new MapboxOverlay({
       interleaved: true,
+      // deck builds its camera from the map's centre/zoom/pitch but assumes MapLibre's default field of view; with
+      // the narrow iso FOV the overlay slid against the base map as it moved. Same FOV, same projection. The id is
+      // the one @deck.gl/mapbox looks up for the base map's view (its props type pins `views` to null; runtime takes it).
+      views: new DeckMapView({ id: 'mapbox', fovy: ISO_FOV_DEG }) as never,
       layers: [],
       effects: [LIGHTING],
-      onClick: (info) => selectFromPick(info, dispatch),
       getTooltip: (info) => {
         const text = tooltipFor(info)
         return text
@@ -177,6 +266,9 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
       },
     })
     map.addControl(overlay as unknown as IControl)
+    // Clicks select through MapLibre's own click event and a deck pick at that point. Deck's interleaved onClick
+    // (its own gesture recognizer on the shared canvas) fired only for the first click after load.
+    map.on('click', (e) => selectFromPick(overlay.pickObject({ x: e.point.x, y: e.point.y, radius: 4 }), dispatch))
     map.on('load', () => setLoaded(true))
     mapRef.current = map
     overlayRef.current = overlay
@@ -202,21 +294,12 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
   }, [handleRef])
 
   const locale = state.locale
+  const { top, right, bottom, left } = insets
   useEffect(() => {
     const map = mapRef.current
     if (!map || !locale) return
-    const [a, b, c, d] = (locale.boundary && geometryBounds(locale.boundary)) || locale.bbox
-    // Fit as if looking straight down (rotated), then tilt and step in: the boundary's corners are walk-shed edges,
-    // and at 60° the far half compresses, so the top-down fit leaves the plan small in the frame.
-    const cam = map.cameraForBounds(
-      [
-        [a, b],
-        [c, d],
-      ],
-      { padding: 40, bearing: ISO_CAMERA.bearing },
-    )
-    if (cam) map.jumpTo({ ...cam, ...ISO_CAMERA, zoom: (cam.zoom ?? map.getZoom()) + ISO_ZOOM_IN })
-  }, [locale, loaded])
+    fitIso(map, outlinePoints(locale.boundary, locale.bbox), { top, right, bottom, left })
+  }, [locale, loaded, top, right, bottom, left])
 
   useEffect(() => {
     const map = mapRef.current
@@ -243,12 +326,100 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
   const buildingData = useMemo(() => flattenBuildings(buildings, conversions), [buildings, conversions])
   const siteData = useMemo(() => pursuedSites(sites, strategyBySite), [sites, strategyBySite])
 
+  // Construction staging (construction.ts): a build starts when it first shows on this map (an agent result in a
+  // live run or replay, a dropped tile, the New buildings layer switched on); the clock ticks only meanwhile.
+  // Buildings on a parcel that gets a new build or a park come down first; what replaces them starts once cleared.
+  const builds = useRef(new Map<string, Build>())
+  const [stage, setStage] = useState<{ builds: ReadonlyMap<string, Build>; clock: number }>({ builds: new Map(), clock: 0 })
+  const raf = useRef(0)
+  const showNew = L.new_buildings
+  const infraAdded = state.infraAdded
+  useEffect(() => {
+    if (!loaded) return
+    const want = new Map<string, Omit<Build, 'start'>>()
+    const byId = new Map(buildings.map((b) => [b.id, b]))
+    const useOf = new Map(conversions.map((c) => [c.building_id, c.best_use]))
+    const heightOf = (b: Building) => (storyHeightFt === null ? 0 : (b.stories.value ?? 0) * storyHeightFt * FT_TO_M)
+    const clearing = new Set<string>()
+    const kept = new Set<string>() // buildings a conversion keeps
+    for (const s of sites) {
+      if (s.status === 'pass') continue
+      if (s.kind === 'new_build' && showNew) {
+        s.parcel_ids.forEach((p) => clearing.add(p))
+        const ring = outerRing(s.geometry)
+        if (ring) want.set(`new:${s.id}`, { kind: 'new', ring, heightM: s.height_ft * FT_TO_M, parcels: s.parcel_ids })
+      } else if (s.kind === 'conversion' && s.building_id) {
+        kept.add(s.building_id)
+        // keyed by the new use, so a Convert tile on a candidate wraps it again
+        const b = byId.get(s.building_id)
+        const use = useOf.get(s.building_id)
+        const ring = b && outerRing(b.footprint)
+        if (b && ring && use && use !== 'keep_current' && storyHeightFt !== null) {
+          want.set(`conv:${b.id}:${use}`, { kind: 'convert', ring, heightM: heightOf(b), parcels: [] })
+        }
+      }
+    }
+    for (const f of infraAdded) {
+      const pid = f.attrs.parcel_id
+      const ring = outerRing(f.geometry)
+      if (f.kind !== 'park' || typeof pid !== 'string' || !ring) continue
+      clearing.add(pid)
+      want.set(`park:${pid}`, { kind: 'park', ring, heightM: 0, parcels: [pid] })
+    }
+    for (const b of buildings) {
+      const ring = outerRing(b.footprint)
+      if (!b.parcel_id || !clearing.has(b.parcel_id) || kept.has(b.id) || !ring) continue
+      want.set(`demo:${b.id}`, { kind: 'demolish', ring, heightM: heightOf(b), parcels: [b.parcel_id] })
+    }
+    const m = builds.current
+    let changed = false
+    for (const k of [...m.keys()]) if (!want.has(k)) changed = m.delete(k)
+    const t0 = performance.now()
+    let demolished = 0
+    let added = 0
+    // demolitions first, so the builds and parks that follow can wait for their plots
+    for (const [k, v] of want) if (v.kind === 'demolish' && !m.has(k)) m.set(k, { ...v, start: t0 + demolished++ * STAGGER_MS })
+    const clearedAt = (parcels: string[]) =>
+      Math.max(t0, ...[...m.values()].filter((d) => d.kind === 'demolish' && d.parcels.some((p) => parcels.includes(p))).map((d) => d.start + CLEARED_MS))
+    for (const [k, v] of want) {
+      if (v.kind !== 'demolish' && !m.has(k)) m.set(k, { ...v, start: Math.max(t0 + added++ * STAGGER_MS, clearedAt(v.parcels)) })
+    }
+    added += demolished
+    if (!added && !changed) return
+    setStage({ builds: new Map(m), clock: t0 })
+    if (!added || REDUCED_MOTION) return
+    cancelAnimationFrame(raf.current)
+    const tick = () => {
+      const now = performance.now()
+      setStage((s) => ({ ...s, clock: now }))
+      if ([...m.values()].some((b) => now < b.start + buildDuration(b.kind))) raf.current = requestAnimationFrame(tick)
+    }
+    raf.current = requestAnimationFrame(tick)
+  }, [loaded, sites, buildings, conversions, infraAdded, showNew, storyHeightFt])
+  useEffect(() => () => cancelAnimationFrame(raf.current), [])
+
+  const demolitions = useMemo(
+    () => new Map([...stage.builds].filter(([k]) => k.startsWith('demo:')).map(([k, b]) => [k.slice('demo:'.length), b])),
+    [stage.builds],
+  )
+  const hidden = useMemo(() => new Set(demolitions.keys()), [demolitions])
+  // proposed parks still being laid out: construction.ts draws them until done, then the amenities layer takes over
+  const pendingKey = [...stage.builds]
+    .filter(([k, b]) => k.startsWith('park:') && progress(b, stage.clock) < 1)
+    .map(([k]) => k.slice('park:'.length))
+    .join('|')
+  const pendingParks = useMemo(() => new Set(pendingKey ? pendingKey.split('|') : []), [pendingKey])
+
   const lTransit = useMemo(() => transitExistingLayer(infra, stations, L.transit_existing), [infra, stations, L.transit_existing])
   const lWalk = useMemo(() => walkBikeLayer(infra, L.walk_bike), [infra, L.walk_bike])
   const lUtil = useMemo(() => utilitiesLayer(infra, L.utilities), [infra, L.utilities])
-  const lAmen = useMemo(() => amenitiesLayer(infra, state.infraAdded, L.amenities), [infra, state.infraAdded, L.amenities])
+  const lAmen = useMemo(
+    () => amenitiesLayer(infra, infraAdded, L.amenities, pendingParks),
+    [infra, infraAdded, L.amenities, pendingParks],
+  )
   const lFlood = useMemo(() => floodLayer(infra, L.flood), [infra, L.flood])
   const boundary = locale?.boundary
+  // Drawn-area outline in ink: the paper base map would swallow a white line.
   const lBoundary = useMemo(
     () =>
       boundary
@@ -257,9 +428,10 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
             data: { type: 'Feature', geometry: boundary, properties: {} } as never,
             stroked: true,
             filled: false,
-            getLineColor: [255, 255, 255, 255],
+            getLineColor: [28, 34, 48, 200],
             getLineWidth: 2,
             lineWidthUnits: 'pixels',
+            parameters: { depthWriteEnabled: false, depthCompare: 'always' },
           })
         : null,
     [boundary],
@@ -275,20 +447,40 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
   useEffect(() => {
     const map = mapRef.current
     if (!map || !loaded || !flyTo) return
-    map.flyTo({ center: flyTo, zoom: Math.max(map.getZoom(), 16), duration: 1200 })
-  }, [flyTo, loaded])
+    // land the target in the middle of the part the panels leave free, not under them
+    const offset: [number, number] = [(left - right) / 2, (top - bottom) / 2]
+    map.flyTo({ center: flyTo, offset, zoom: Math.max(map.getZoom(), 16), duration: 1200 })
+  }, [flyTo, loaded, top, right, bottom, left])
   const lBuildings = useMemo(
-    () => buildingsLayer(buildingData, storyHeightFt, L.buildings || large, sel.buildingId),
-    [buildingData, storyHeightFt, L.buildings, large, sel.buildingId],
+    () => buildingsLayer(buildingData, storyHeightFt, L.buildings || large, hidden),
+    [buildingData, storyHeightFt, L.buildings, large, hidden],
+  )
+  const lDemo = useMemo(
+    () => demolitionLayer(buildingData, storyHeightFt, demolitions, stage.clock),
+    [buildingData, storyHeightFt, demolitions, stage.clock],
+  )
+  const lSelBuilding = useMemo(
+    () => selectedBuildingLayer(buildingData, storyHeightFt, sel.buildingId),
+    [buildingData, storyHeightFt, sel.buildingId],
   )
   const lSites = useMemo(() => sitesLayer(siteData, L.sites), [siteData, L.sites])
-  const lNew = useMemo(() => newBuildingsLayer(sites, L.new_buildings), [sites, L.new_buildings])
+  const lNew = useMemo(() => {
+    const rise = (siteId: string) => {
+      const b = stage.builds.get(`new:${siteId}`)
+      return b ? riseShare(b, stage.clock) : 1
+    }
+    return newBuildingsLayer(sites, showNew, rise, stage.clock)
+  }, [sites, showNew, stage])
+  const lBuild = useMemo(() => constructionLayer(stage.builds.values(), stage.clock), [stage])
 
   useEffect(() => {
     overlayRef.current?.setProps({
-      layers: [...lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, ...lProp, lParcels, lSelParcel, lBuildings, ...lSites, lNew],
+      layers: [
+        ...lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, ...lProp, lParcels, lSelParcel,
+        lBuildings, lDemo, lSelBuilding, ...lSites, lNew, ...lBuild,
+      ],
     })
-  }, [lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, lProp, lParcels, lSelParcel, lBuildings, lSites, lNew, large])
+  }, [lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, lProp, lParcels, lSelParcel, lBuildings, lDemo, lSelBuilding, lSites, lNew, lBuild, large])
 
   // maplibre's own CSS sets `.maplibregl-map { position: relative }`, so the map gets a sized inner box.
   return (

@@ -41,7 +41,7 @@ export function GreenSpaceSlider() {
   )
 }
 
-/** Bottom-right panel: target bars plus the homes ↔ green-space slider. */
+/** Strip along the bottom of the plan map: target bars side by side plus the homes ↔ green-space slider. Left offset clears the map's zoom control. */
 export default function TargetsPanel() {
   const { state } = usePlan()
   return (
@@ -49,9 +49,9 @@ export default function TargetsPanel() {
       title="Targets"
       defaultOpen
       right={state.rescoring ? <span>updating…</span> : null}
-      className="absolute right-3 bottom-8 z-10 w-80"
+      className="absolute right-3 bottom-8 left-14 z-10"
     >
-      <TargetBars compact />
+      <TargetBars row />
       <div className="mt-2 border-t border-rule pt-2">
         <GreenSpaceSlider />
       </div>
