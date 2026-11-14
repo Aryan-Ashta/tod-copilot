@@ -75,7 +75,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
   const mapRef = useRef<MlMap | null>(null)
   const drawRef = useRef<TerraDraw | null>(null)
   const [ready, setReady] = useState(false)
-  const [mode, setMode] = useState<DrawMode | null>(null)
+  const [mode, setMode] = useState<DrawMode | null>('freehand')
   // Latest callbacks for the long-lived map/draw listeners.
   const onBoundaryRef = useRef(onBoundary)
   const onLocaleRef = useRef(onLocale)
@@ -167,6 +167,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
         ],
       })
       draw.start()
+      draw.setMode('freehand-linestring') // freehand is on from the start (the mode state starts as 'freehand')
       draw.on('finish', (id) => {
         const snapshot = draw.getSnapshot()
         const others = snapshot.filter((f) => f.id !== id).map((f) => f.id as string)
@@ -196,7 +197,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     // the click that finishes a drawing also reaches this handler and must not clear the new boundary.
     map.on('click', 'locales-fill', (e) => {
       const draw = drawRef.current
-      if (!draw || draw.getMode() !== 'static' || draw.getSnapshot().length > 0) return
+      if (!draw || draw.getSnapshot().length > 0) return
       const id = e.features?.[0]?.properties?.id
       if (typeof id === 'string') onLocaleRef.current(id)
     })
@@ -240,7 +241,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       el.addEventListener('click', (ev) => {
         ev.stopPropagation()
         const draw = drawRef.current
-        if (!draw || draw.getMode() !== 'static' || draw.getSnapshot().length > 0) return
+        if (!draw || draw.getSnapshot().length > 0) return
         onLocaleRef.current(l.id)
       })
       const [w, s, e, n] = l.bbox
@@ -266,21 +267,24 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     if (!boundary && ready) drawRef.current?.clear()
   }, [boundary, ready])
 
+  // Pressing the active mode's button turns it off, so the map pans again.
   const startMode = (m: DrawMode) => {
-    drawRef.current?.setMode(m === 'freehand' ? 'freehand-linestring' : m)
-    setMode(m)
+    const next = m === mode ? null : m
+    drawRef.current?.setMode(next === null ? 'static' : next === 'freehand' ? 'freehand-linestring' : next)
+    setMode(next)
   }
+  // Clear goes back to the default: nothing drawn, freehand on.
   const clear = () => {
     drawRef.current?.clear()
-    drawRef.current?.setMode('static')
-    setMode(null)
+    drawRef.current?.setMode('freehand-linestring')
+    setMode('freehand')
     onBoundary(null)
   }
 
   const btn = 'ctl px-3 py-1 text-[13px]'
   const hint =
     mode === 'freehand'
-      ? 'Press and drag around the area; release to close it'
+      ? 'Press and drag around the area; release to close it. Turn freehand off to pan'
       : mode === 'polygon'
         ? 'Click to add corners; click the first corner to finish'
         : mode === 'rectangle'
