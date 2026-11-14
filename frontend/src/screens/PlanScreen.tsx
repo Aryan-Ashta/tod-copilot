@@ -3,10 +3,14 @@ import { PlanProvider, usePlan } from '../state/PlanContext'
 import Disclaimer from '../components/Disclaimer'
 import AgentChecklist from '../components/AgentChecklist'
 import AgentCard from '../components/cards/AgentCard'
-import MapView from '../components/MapView'
+import MapView, { type MapInsets } from '../components/MapView'
 import LayerPanel from '../components/LayerPanel'
 import TargetsPanel from '../components/TargetsPanel'
 import UncertaintyQueue from '../components/UncertaintyQueue'
+import { dataTierLabel } from '../format'
+
+// Layers and "more certain" bars along the top; the Targets strip (TargetsPanel) along the bottom.
+const PLAN_MAP_INSETS: MapInsets = { top: 64, right: 24, bottom: 224, left: 24 }
 
 function PlanView({ replay }: { replay: boolean }) {
   const { state } = usePlan()
@@ -25,7 +29,7 @@ function PlanView({ replay }: { replay: boolean }) {
         {locale && (
           <span>
             {locale.name}
-            <span className="ml-2 text-slate">{locale.data_tier === 'costar_full' ? 'CoStar full' : 'Public only'}</span>
+            <span className="ml-2 text-slate">{dataTierLabel(locale)}</span>
             {locale.sources_from && locale.id.startsWith('area-') && <span className="ml-2 text-slate">recorded live</span>}
           </span>
         )}
@@ -49,7 +53,7 @@ function PlanView({ replay }: { replay: boolean }) {
           <AgentCard />
         </aside>
         <main className="relative min-w-0 flex-1">
-          <MapView />
+          <MapView insets={PLAN_MAP_INSETS} />
           <LayerPanel />
           <UncertaintyQueue className="absolute top-3 right-3 z-10 w-96" />
           <TargetsPanel />

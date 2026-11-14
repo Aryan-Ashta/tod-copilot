@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { usePlan } from '../../state/PlanContext'
 import { useApp } from '../../state/AppContext'
-import { buildingLabel, fmtNum, humanize } from '../../format'
+import { buildingLabel, fmtNum, geometryCentroid, humanize } from '../../format'
 import { CardShell, CiteList, Empty, Section, td, th } from './common'
 import SourceBadge, { SourcedValue } from '../SourceBadge'
 import FactorHover, { FactorText } from '../FactorHover'
@@ -251,19 +251,26 @@ export default function BuildingReuseCard() {
                       <tr
                         key={c.building_id}
                         onClick={() =>
-                          dispatch({ type: 'select', selected: { buildingId: c.building_id, parcelId: b?.parcel_id } })
+                          dispatch({
+                            type: 'select',
+                            selected: {
+                              buildingId: c.building_id,
+                              parcelId: b?.parcel_id,
+                              flyTo: geometryCentroid(b?.footprint) ?? undefined,
+                            },
+                          })
                         }
                         className={`cursor-pointer hover:bg-ink/[0.03] ${selected.buildingId === c.building_id ? 'bg-ink/[0.06]' : ''}`}
                       >
                         <td className={td}>
-                          <span className="flex items-center gap-1.5">
-                            <span className="truncate">{buildingLabel(b, c.building_id)}</span>
+                          <span className="flex flex-col items-start gap-0.5">
+                            <span>{buildingLabel(b, c.building_id)}</span>
                             {b && <SourceBadge prov={b.property_type.prov} />}
                           </span>
                         </td>
                         <td className={td}>{humanize(b?.property_type.value ?? '—')}</td>
                         <td className={td}>
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap">
                             <span className="h-2.5 w-2.5" style={{ background: USE_HEX[c.best_use] }} />
                             {humanize(c.best_use)}
                           </span>

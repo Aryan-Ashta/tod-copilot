@@ -3,12 +3,15 @@ import { Link, useParams } from 'react-router-dom'
 import { PlanProvider, usePlan } from '../state/PlanContext'
 import { useApp } from '../state/AppContext'
 import Disclaimer from '../components/Disclaimer'
-import MapView, { type MapHandle } from '../components/MapView'
+import MapView, { type MapHandle, type MapInsets } from '../components/MapView'
 import Scoreboard from '../components/Scoreboard'
 import TileTray, { TILE_MIME, TileGlyph, tileInfo } from '../components/TileTray'
 import FactorHover from '../components/FactorHover'
 import { buildingLabel, parcelLabel } from '../format'
 import type { Citation, TileKind } from '../types'
+
+// Scoreboard across the top, tile tray along the bottom; the Changes panel sits over the lower right corner.
+const MEETING_MAP_INSETS: MapInsets = { top: 200, right: 32, bottom: 110, left: 32 }
 
 interface Toast {
   text: string
@@ -114,7 +117,7 @@ function Meeting() {
         </Link>
       </Disclaimer>
       <div className="relative flex-1" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
-        <MapView handleRef={handleRef} large />
+        <MapView handleRef={handleRef} large insets={MEETING_MAP_INSETS} />
         <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center px-3">
           <div className="pointer-events-auto w-full max-w-5xl">
             <Scoreboard />

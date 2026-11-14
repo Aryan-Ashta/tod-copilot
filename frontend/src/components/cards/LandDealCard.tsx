@@ -1,5 +1,5 @@
 import { usePlan } from '../../state/PlanContext'
-import { humanize, siteNames } from '../../format'
+import { geometryCentroid, humanize, siteNames } from '../../format'
 import { siteLetters, STRATEGY_COLORS } from '../../mapLayers'
 import { CardShell, Empty } from './common'
 import FactorHover from '../FactorHover'
@@ -35,7 +35,15 @@ export default function LandDealCard() {
                   <button
                     className="font-medium hover:underline"
                     onClick={() =>
-                      s && dispatch({ type: 'select', selected: { parcelId: s.parcel_ids[0], buildingId: s.building_id ?? undefined } })
+                      s &&
+                      dispatch({
+                        type: 'select',
+                        selected: {
+                          parcelId: s.parcel_ids[0],
+                          buildingId: s.building_id ?? undefined,
+                          flyTo: geometryCentroid(s.geometry) ?? undefined,
+                        },
+                      })
                     }
                   >
                     {title}

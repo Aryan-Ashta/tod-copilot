@@ -11,18 +11,12 @@ function polygons(g: Geometry): Ring[][] {
   return []
 }
 
-export function geometryBounds(g: Geometry): BBox | null {
-  let w = Infinity
-  let s = Infinity
-  let e = -Infinity
-  let n = -Infinity
-  for (const poly of polygons(g))
-    for (const ring of poly)
-      for (const [x, y] of ring) {
-        w = Math.min(w, x)
-        s = Math.min(s, y)
-        e = Math.max(e, x)
-        n = Math.max(n, y)
-      }
-  return Number.isFinite(w) ? [w, s, e, n] : null
+/** Outer-ring vertices of every polygon (holes lie inside them), for framing a boundary on screen. */
+export function boundaryPoints(g: Geometry): Ring {
+  return polygons(g).flatMap((poly) => poly[0] ?? [])
+}
+
+/** The first polygon's outer ring (a footprint's outline), or null for non-polygons. */
+export function outerRing(g: Geometry): Ring | null {
+  return polygons(g)[0]?.[0] ?? null
 }

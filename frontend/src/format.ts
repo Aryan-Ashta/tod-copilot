@@ -1,5 +1,5 @@
 // Display formatting only. No computation of plan numbers happens here.
-import type { Geometry, LonLat, Parcel, Building, Plan } from './types'
+import type { Geometry, LonLat, Parcel, Building, Plan, Locale } from './types'
 
 export function fmtNum(v: number | null | undefined, digits = 0): string {
   if (v === null || v === undefined || Number.isNaN(v)) return '—'
@@ -103,6 +103,13 @@ export function parcelLabel(p: Parcel | undefined, id: string): string {
 
 export function buildingLabel(b: Building | undefined, id: string): string {
   return b?.name.value || `building ${id}`
+}
+
+/** The data a locale actually ran on: a CoStar-tier locale without the (git-ignored) extract runs on public data. */
+export function dataTierLabel(l: Locale, short = false): string {
+  if (l.data_tier === 'public_only') return short ? 'Public' : 'Public only'
+  if (l.costar_loaded) return short ? 'CoStar' : 'CoStar full'
+  return short ? 'Public' : 'Public data · CoStar extract not loaded'
 }
 
 /** Display name per site id: the building's name for a conversion, else the first parcel's address, else
