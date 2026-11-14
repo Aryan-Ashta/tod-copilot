@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { areaCheck, createPlan, geocode, getLocales, parsePrompt, stockPrompts } from '../api'
 import Disclaimer from '../components/Disclaimer'
 import AreaPicker, { type PolygonGeometry } from '../components/AreaPicker'
+import { LocalePoster } from '../components/LocalePosters'
 import type { BBox } from '../geo'
 import {
   DEFAULT_PLAN_OPTIONS,
@@ -23,7 +24,15 @@ function metroLocaleId(label: string | null): string | null {
   return null
 }
 
-const SELECT = 'rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100'
+const OPTION_GROUPS: { key: keyof PlanOptions; legend: string; choices: [string, string][] }[] = [
+  { key: 'focus', legend: 'Focus', choices: [['all', 'All'], ['conversions', 'Conversions only'], ['new_build', 'New construction only']] },
+  { key: 'transit_budget', legend: 'Transit budget', choices: [['default', 'Default'], ['half', 'Half'], ['double', 'Double']] },
+  { key: 'affordable', legend: 'Affordable homes', choices: [['default', 'Default'], ['high', 'High']] },
+]
+
+function SectionHead({ children }: { children: ReactNode }) {
+  return <h2 className="wide mt-16 mb-5 border-t-2 border-ink pt-4 text-[22.5px] leading-tight font-bold">{children}</h2>
+}
 
 export default function PromptScreen() {
   const navigate = useNavigate()
@@ -178,187 +187,162 @@ export default function PromptScreen() {
   return (
     <div className="flex h-full flex-col">
       <Disclaimer />
-      <div className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-6 py-10">
-        <h1 className="mb-1 text-3xl font-semibold tracking-tight">Plan transit and the homes around it</h1>
-        <p className="mb-6 text-neutral-400">
-          One prompt: existing transit and infrastructure, buildings that can be converted, land that can be built on, what
-          the law allows, how to get the land and pay for it, and how the plan scores on carbon and health.
-        </p>
-        {error && <div className="mb-4 rounded border border-rose-900 bg-rose-950/50 p-3 text-sm text-rose-300">{error}</div>}
+      <div className="flex-1 overflow-y-auto">
+        <main className="mx-auto w-full max-w-[1080px] px-6 pt-10 pb-24">
+          <h1 className="wide mb-4 text-[44px] leading-[1.15] font-bold tracking-[-0.005em]">Plan transit and the homes around it</h1>
+          <p className="mb-12 max-w-[68ch] text-[22.5px] leading-[1.45]">
+            One prompt: existing transit and infrastructure, buildings that can be converted, land that can be built on, what
+            the law allows, how to get the land and pay for it, and how the plan scores on carbon and health.
+          </p>
+          {error && <p className="mb-6 border-l-2 border-gap pl-4 text-gap">{error}</p>}
 
-        <form
-          className="relative mb-3 flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault()
-            void search()
-          }}
-        >
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search Houston or Los Angeles"
-            className="flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder:text-neutral-600 focus:border-sky-600 focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={searching || !query.trim()}
-            className="rounded-lg border border-neutral-700 px-4 py-2 text-sm hover:bg-neutral-800 disabled:opacity-40"
-          >
-            {searching ? 'Searching…' : 'Search'}
-          </button>
-          {results && (
-            <ul className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl">
-              {results.length === 0 && (
-                <li className="px-3 py-2 text-sm text-neutral-500">No matches in Harris County or Los Angeles County</li>
-              )}
-              {results.map((r, i) => (
-                <li key={`${r.label}-${i}`}>
-                  <button
-                    type="button"
-                    onClick={() => pickResult(r)}
-                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-neutral-800"
-                  >
-                    <span>{r.label}</span>
-                    {r.recorded_locale_id ? (
-                      <span className="rounded bg-sky-900 px-1.5 text-[11px] text-sky-200">recorded</span>
-                    ) : (
-                      r.metro && <span className="rounded border border-neutral-700 px-1.5 text-[11px] text-neutral-400">{r.metro}</span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </form>
-
-        <AreaPicker
-          locales={locales ?? []}
-          selectedLocale={selected}
-          boundary={boundary}
-          onBoundary={onBoundary}
-          onLocale={pickLocale}
-          flyTo={flyTo}
-        />
-
-        <p className="mt-2 mb-6 text-sm">
-          {!boundary && !wholeLocale && <span className="text-neutral-500">Pick a recorded area or draw a boundary</span>}
-          {wholeLocale && <span className="text-neutral-300">Whole recorded area: {wholeLocale.name}</span>}
-          {boundary && !check && <span className="text-neutral-500">Checking the drawn area…</span>}
-          {check?.error && <span className="text-rose-400">{check.error}</span>}
-          {check && !check.error && check.kind === 'subarea' && (
-            <span className="text-sky-300">
-              {check.label} · recorded data · {check.area_km2?.toFixed(1)} km²
-            </span>
-          )}
-          {check && !check.error && check.kind === 'metro' && (
-            <span className="text-amber-300">
-              {check.label} · recorded live from county, CoStar and imagery sources (a few minutes) · {check.area_km2?.toFixed(1)} km²
-            </span>
-          )}
-        </p>
-
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          {!locales && !error && <p className="text-neutral-500">Loading locales…</p>}
-          {locales?.map((l) => (
-            <button
-              key={l.id}
-              onClick={() => pickLocale(l.id)}
-              className={`rounded-lg border p-4 text-left transition-colors ${
-                areaLocaleId === l.id ? 'border-sky-500 bg-sky-950/40' : 'border-neutral-800 bg-neutral-900 hover:border-neutral-600'
-              }`}
-            >
-              <div className="mb-2 flex items-start justify-between gap-2">
-                <span className="font-semibold">{l.name}</span>
-                <span
-                  className={`shrink-0 rounded px-1.5 py-px text-[11px] ${
-                    l.data_tier === 'costar_full' ? 'bg-sky-900 text-sky-200' : 'bg-amber-900 text-amber-200'
-                  }`}
+          <div className="grid grid-cols-1 gap-12 md:grid-cols-3">
+            {!locales && !error && <p className="text-slate">Loading locales…</p>}
+            {locales?.map((l, i) => {
+              const on = areaLocaleId === l.id
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => pickLocale(l.id)}
+                  aria-pressed={on}
+                  className="group flex flex-col justify-start text-left"
                 >
-                  {l.data_tier === 'costar_full' ? 'CoStar full' : 'Public only'}
-                </span>
-              </div>
-              <p className="text-sm text-neutral-400">{l.purpose}</p>
-              <p className="mt-2 text-xs text-neutral-500">{l.transit_agency}</p>
-            </button>
-          ))}
-        </div>
+                  <LocalePoster locale={l} index={i} />
+                  <span className={`mt-3 block border-b pb-2 text-sm ${on ? 'border-ink' : 'border-transparent group-hover:border-rule'}`}>
+                    <span className="font-semibold">{l.name}</span>
+                    <span className="mt-0.5 block text-slate">{l.purpose}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
 
-        {visibleStock.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {visibleStock.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => pickStock(p)}
-                title={p.prompt}
-                className={`rounded-full border px-3 py-1 text-xs ${
-                  p.locale_id ? 'border-sky-800 text-sky-200 hover:bg-sky-950' : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'
-                }`}
-              >
-                {p.title}
-              </button>
+          <SectionHead>Or search and draw an area</SectionHead>
+          <form
+            className="relative mb-4 flex items-end gap-4"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void search()
+            }}
+          >
+            <label className="flex-1">
+              <span className="block text-sm text-slate">Place in Harris County or Los Angeles County</span>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search Houston or Los Angeles"
+                className="w-full border-0 border-b border-ink bg-transparent py-1.5 text-[18px] placeholder:text-slate/70 focus:outline-none focus-visible:outline-2"
+              />
+            </label>
+            <button type="submit" disabled={searching || !query.trim()} className="ctl">
+              {searching ? 'Searching…' : 'Search'}
+            </button>
+            {results && (
+              <ul className="absolute top-full right-0 left-0 z-20 mt-1 border border-rule bg-paper">
+                {results.length === 0 && <li className="px-3 py-2 text-sm text-slate">No matches in Harris County or Los Angeles County</li>}
+                {results.map((r, i) => (
+                  <li key={`${r.label}-${i}`} className="border-b border-rule last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => pickResult(r)}
+                      className="flex w-full items-baseline justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-ink/5"
+                    >
+                      <span>{r.label}</span>
+                      <span className="text-slate">{r.recorded_locale_id ? 'recorded' : r.metro}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </form>
+
+          <div className="border border-rule">
+            <AreaPicker
+              locales={locales ?? []}
+              selectedLocale={selected}
+              boundary={boundary}
+              onBoundary={onBoundary}
+              onLocale={pickLocale}
+              flyTo={flyTo}
+            />
+          </div>
+          <p className="mt-2 text-sm">
+            {!boundary && !wholeLocale && <span className="text-slate">Pick a recorded area or draw a boundary</span>}
+            {wholeLocale && <span>Whole recorded area: {wholeLocale.name}</span>}
+            {boundary && !check && <span className="text-slate">Checking the drawn area…</span>}
+            {check?.error && <span className="text-gap">{check.error}</span>}
+            {check && !check.error && check.kind === 'subarea' && (
+              <span>
+                {check.label} · recorded data · {check.area_km2?.toFixed(1)} km²
+              </span>
+            )}
+            {check && !check.error && check.kind === 'metro' && (
+              <span>
+                {check.label} · recorded live from county, CoStar and imagery sources (a few minutes) · {check.area_km2?.toFixed(1)} km²
+              </span>
+            )}
+          </p>
+
+          <SectionHead>Prompt</SectionHead>
+          {visibleStock.length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              {visibleStock.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => pickStock(p)}
+                  title={p.prompt}
+                  className="border-b border-rule pb-px text-left hover:border-ink"
+                >
+                  {p.title}
+                </button>
+              ))}
+            </div>
+          )}
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            rows={3}
+            aria-label="Prompt"
+            placeholder="e.g. Plan transit-oriented development around the rail stations"
+            className="mb-6 w-full border border-rule bg-transparent p-3 text-[18px] placeholder:text-slate/70 focus:border-ink focus:outline-none"
+          />
+
+          <div className="mb-8 flex flex-wrap gap-x-12 gap-y-4">
+            {OPTION_GROUPS.map((g) => (
+              <fieldset key={g.key}>
+                <legend className="mb-1 text-sm text-slate">{g.legend}</legend>
+                <div className="flex flex-wrap gap-x-4 text-[15px]">
+                  {g.choices.map(([v, label]) => (
+                    <label key={v} className="flex cursor-pointer items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name={g.key}
+                        value={v}
+                        checked={options[g.key] === v}
+                        onChange={() => setOption(g.key, v as PlanOptions[typeof g.key])}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
             ))}
           </div>
-        )}
 
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          rows={3}
-          placeholder="e.g. Plan transit-oriented development around the rail stations"
-          className="mb-3 w-full rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-neutral-100 placeholder:text-neutral-600 focus:border-sky-600 focus:outline-none"
-        />
-
-        <div className="mb-4 flex flex-wrap items-center gap-4 text-sm text-neutral-300">
-          <label className="flex items-center gap-2">
-            Focus
-            <select value={options.focus} onChange={(e) => setOption('focus', e.target.value as PlanOptions['focus'])} className={SELECT}>
-              <option value="all">All</option>
-              <option value="conversions">Conversions only</option>
-              <option value="new_build">New construction only</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2">
-            Transit budget
-            <select
-              value={options.transit_budget}
-              onChange={(e) => setOption('transit_budget', e.target.value as PlanOptions['transit_budget'])}
-              className={SELECT}
+          <div className="flex flex-wrap items-center gap-4 border-t border-rule pt-5">
+            <label
+              className={`flex items-center gap-2 text-[15px] ${replayAllowed ? 'cursor-pointer' : 'text-slate'}`}
+              title={replayAllowed ? undefined : REPLAY_HINT}
             >
-              <option value="default">Default</option>
-              <option value="half">Half</option>
-              <option value="double">Double</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2">
-            Affordable homes
-            <select
-              value={options.affordable}
-              onChange={(e) => setOption('affordable', e.target.value as PlanOptions['affordable'])}
-              className={SELECT}
-            >
-              <option value="default">Default</option>
-              <option value="high">High</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <label
-            className={`flex items-center gap-2 text-sm ${replayAllowed ? 'cursor-pointer text-neutral-300' : 'text-neutral-600'}`}
-            title={replayAllowed ? undefined : REPLAY_HINT}
-          >
-            <input type="checkbox" checked={replayOn} disabled={!replayAllowed} onChange={(e) => setReplay(e.target.checked)} />
-            Replay recorded run
-          </label>
-          {!replayAllowed && <span className="text-xs text-neutral-500">{REPLAY_HINT}</span>}
-          <button
-            onClick={submit}
-            disabled={!canSubmit}
-            className="ml-auto rounded-lg bg-sky-600 px-6 py-2 font-semibold text-white hover:bg-sky-500 disabled:opacity-40"
-          >
-            {submitting ? 'Starting…' : 'Plan it'}
-          </button>
-        </div>
+              <input type="checkbox" checked={replayOn} disabled={!replayAllowed} onChange={(e) => setReplay(e.target.checked)} />
+              Replay recorded run
+            </label>
+            {!replayAllowed && <span className="text-sm text-slate">{REPLAY_HINT}</span>}
+            <button onClick={submit} disabled={!canSubmit} data-selected="true" className="ctl ml-auto px-8 py-2 text-[16px]">
+              {submitting ? 'Starting…' : 'Plan it'}
+            </button>
+          </div>
+        </main>
       </div>
     </div>
   )

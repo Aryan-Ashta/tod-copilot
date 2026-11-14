@@ -32,7 +32,9 @@ export const Poster = memo(function Poster({
   ink?: boolean
   label: string
 }) {
-  const fg = ink ? ISO.ink : ISO.paper
+  // White (not paper) on green/blue and no faded labels: paper on the site's green is 4.3:1 and its 72% labels ~3:1,
+  // below the 4.5:1 this app keeps. Ink on mustard is 8.2:1.
+  const fg = ink ? ISO.ink : '#FFFFFF'
   const titleTop = 1082 // first title line; further lines every 82 (the site's posters)
   return (
     <svg viewBox="0 0 1000 1414" role="img" aria-label={label} className="block h-auto w-full">
@@ -41,7 +43,7 @@ export const Poster = memo(function Poster({
         <text x={72} y={108} fontWeight={600}>
           {number}
         </text>
-        <text x={928} y={108} textAnchor="end" opacity={0.8}>
+        <text x={928} y={108} textAnchor="end">
           {year}
         </text>
       </g>
@@ -59,7 +61,7 @@ export const Poster = memo(function Poster({
       <g fontFamily="inherit" fontSize={27} style={{ fontVariantNumeric: 'tabular-nums' }}>
         {metrics.slice(0, 2).map((m, i) => (
           <g key={m.label}>
-            <text x={72 + i * 380} y={1336} fill={fg} opacity={0.72}>
+            <text x={72 + i * 380} y={1336} fill={fg}>
               {m.label}
             </text>
             <text x={72 + i * 380 + Math.max(124, 15 * m.label.length + 24)} y={1336} fill={fg} fontWeight={700}>

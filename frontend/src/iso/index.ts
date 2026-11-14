@@ -1,4 +1,4 @@
-export { project, IsoBox, IsoGhost, IsoStack, IsoTile, IsoLabel, isoViewBox, byDepth } from './kit'
+export { project, IsoBox, IsoGhost, IsoStack, IsoTile, IsoFloors, IsoLabel, isoViewBox, byDepth } from './kit'
 export type { BoxGeom, StackLayer, Pt } from './kit'
 export { shade, lighten, ISO } from './shade'
 export type { Faces } from './shade'

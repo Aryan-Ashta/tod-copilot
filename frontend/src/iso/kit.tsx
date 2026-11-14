@@ -34,10 +34,12 @@ interface BoxProps extends BoxGeom {
   shadow?: boolean
   opacity?: number
   title?: string
+  /** Edges only (no faces): frames a block whose faces are drawn by unstroked sub-blocks (floors, units). */
+  outline?: boolean
 }
 
 function corners({ x, y, z = 0, w, d, h }: BoxGeom) {
-  const P = (a: number, b: number, c: number) => project(a, b, c)
+  const P = project
   return {
     ground: [P(x, y, z), P(x + w, y, z), P(x + w, y + d, z), P(x, y + d, z)] as Pt[],
     top: [P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)] as Pt[],
@@ -47,20 +49,21 @@ function corners({ x, y, z = 0, w, d, h }: BoxGeom) {
 }
 
 /** A solid block: contact shadow, left face, right face, top face. */
-export const IsoBox = memo(function IsoBox({ color, stroke = true, sw = 1, shadow = true, opacity, title, ...g }: BoxProps) {
+export const IsoBox = memo(function IsoBox({ color, stroke = true, sw = 1, shadow = true, opacity, title, outline, ...g }: BoxProps) {
   const f = shade(color)
   const c = corners(g)
-  const line = stroke ? { stroke: ISO.ink, strokeWidth: sw, strokeLinejoin: 'round' as const } : {}
+  const line = stroke || outline ? { stroke: ISO.ink, strokeWidth: sw, strokeLinejoin: 'round' as const } : {}
+  const fill = (tone: string) => (outline ? 'none' : tone)
   const off = 1.32 * sw
   return (
     <g opacity={opacity}>
       {title && <title>{title}</title>}
-      {shadow && (g.z ?? 0) === 0 && (
+      {shadow && !outline && (g.z ?? 0) === 0 && (
         <polygon points={pts(c.ground.map(([a, b]) => [a + off, b + off]))} fill={ISO.ink} opacity={0.12} />
       )}
-      {g.h > 0 && <polygon points={pts(c.left)} fill={f.left} {...line} />}
-      {g.h > 0 && <polygon points={pts(c.right)} fill={f.right} {...line} />}
-      <polygon points={pts(c.top)} fill={f.top} {...line} />
+      {g.h > 0 && <polygon points={pts(c.left)} fill={fill(f.left)} {...line} />}
+      {g.h > 0 && <polygon points={pts(c.right)} fill={fill(f.right)} {...line} />}
+      <polygon points={pts(c.top)} fill={fill(f.top)} {...line} />
     </g>
   )
 })
@@ -154,6 +157,31 @@ export const IsoTile = memo(function IsoTile({ x, y, w, d, color, h = 1.5, strok
   title?: string
 }) {
   return <IsoBox x={x} y={y} w={w} d={d} h={h} color={color} stroke={stroke} sw={sw} title={title} />
+})
+
+/** A building as floor slabs: one unstroked slab per floor (colour per floor, so converted floors can differ), a thin
+ *  gap between slabs so floors read as texture, and one ink outline around the whole mass. */
+export const IsoFloors = memo(function IsoFloors({ x, y, w, d, floorH, colors, sw = 1, title }: {
+  x: number
+  y: number
+  w: number
+  d: number
+  floorH: number
+  /** Bottom floor first. */
+  colors: string[]
+  sw?: number
+  title?: string
+}) {
+  const gap = Math.min(floorH * 0.12, 1.2)
+  return (
+    <g>
+      {title && <title>{title}</title>}
+      {colors.map((c, i) => (
+        <IsoBox key={i} x={x} y={y} z={i * floorH} w={w} d={d} h={floorH - gap} color={c} stroke={false} shadow={i === 0} />
+      ))}
+      <IsoBox x={x} y={y} w={w} d={d} h={colors.length * floorH - gap} color={ISO.ink} outline sw={sw} />
+    </g>
+  )
 })
 
 /** viewBox string that frames the given boxes with `pad` world units of margin. */

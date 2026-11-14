@@ -194,25 +194,25 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     onBoundary(null)
   }
 
-  const btn = (active: boolean) =>
-    `rounded border px-2.5 py-1 text-xs ${active ? 'border-sky-500 bg-sky-900 text-sky-100' : 'border-neutral-700 bg-neutral-900/90 text-neutral-200 hover:bg-neutral-800'}`
+  // the site's .ctl button; aria-pressed fills it ink while a drawing mode is on
+  const btn = 'ctl bg-paper px-2.5 py-1 text-xs'
 
   return (
-    <div className="relative h-[420px] overflow-hidden rounded-lg border border-neutral-800">
+    <div className="relative h-[420px] overflow-hidden">
       <div ref={containerRef} className="h-full w-full" />
-      <div className="absolute top-2 left-2 z-10 flex gap-1.5">
-        <button type="button" disabled={!ready} onClick={() => startMode('polygon')} className={btn(mode === 'polygon')}>
+      <div className="absolute top-3 left-3 z-10 flex gap-2">
+        <button type="button" disabled={!ready} onClick={() => startMode('polygon')} className={btn} aria-pressed={mode === 'polygon'}>
           Draw polygon
         </button>
-        <button type="button" disabled={!ready} onClick={() => startMode('rectangle')} className={btn(mode === 'rectangle')}>
+        <button type="button" disabled={!ready} onClick={() => startMode('rectangle')} className={btn} aria-pressed={mode === 'rectangle'}>
           Draw rectangle
         </button>
-        <button type="button" disabled={!ready} onClick={clear} className={btn(false)}>
+        <button type="button" disabled={!ready} onClick={clear} className={btn}>
           Clear
         </button>
       </div>
       {mode && (
-        <div className="absolute right-2 bottom-2 z-10 rounded bg-neutral-900/90 px-2 py-1 text-[11px] text-neutral-300">
+        <div className="absolute right-3 bottom-3 z-10 border border-rule bg-paper px-2 py-1 text-xs text-slate">
           {mode === 'polygon' ? 'Click to add corners; click the first corner to finish' : 'Click two opposite corners'}
         </div>
       )}

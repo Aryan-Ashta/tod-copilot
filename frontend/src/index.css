@@ -134,7 +134,9 @@ textarea:focus-visible,
   outline-offset: 3px;
 }
 
-/* the site's button: hairline ink border, square, filled when pressed */
+/* the site's button: hairline ink border, square, filled when pressed. In the components layer so utilities
+   (bg-paper, padding, text size) can override it. */
+@layer components {
 .ctl {
   background: none;
   border: 1px solid var(--color-ink);
@@ -157,6 +159,7 @@ textarea:focus-visible,
 .ctl[data-selected="true"]:not(:disabled) {
   background: var(--color-ink);
   color: var(--color-paper);
+}
 }
 
 input[type="radio"],
