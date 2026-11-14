@@ -1,0 +1,365 @@
+{
+ "h3_res": 8,
+ "cells": [
+  {
+   "h3": "8844a94a25fffff",
+   "total_bsl": 6,
+   "served_bsl": 6,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b55fffff",
+   "total_bsl": 58,
+   "served_bsl": 57,
+   "underserved_bsl": 1,
+   "unserved_bsl": 0,
+   "served_share": 0.9828
+  },
+  {
+   "h3": "8844a94b5dfffff",
+   "total_bsl": 20,
+   "served_bsl": 19,
+   "underserved_bsl": 0,
+   "unserved_bsl": 1,
+   "served_share": 0.95
+  },
+  {
+   "h3": "8844a94b49fffff",
+   "total_bsl": 282,
+   "served_bsl": 282,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b09fffff",
+   "total_bsl": 95,
+   "served_bsl": 95,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844ab969dfffff",
+   "total_bsl": 9,
+   "served_bsl": 9,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844ab969bfffff",
+   "total_bsl": 227,
+   "served_bsl": 227,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b4bfffff",
+   "total_bsl": 339,
+   "served_bsl": 339,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b53fffff",
+   "total_bsl": 2,
+   "served_bsl": 1,
+   "underserved_bsl": 0,
+   "unserved_bsl": 1,
+   "served_share": 0.5
+  },
+  {
+   "h3": "8844a94a6dfffff",
+   "total_bsl": 249,
+   "served_bsl": 249,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b43fffff",
+   "total_bsl": 116,
+   "served_bsl": 116,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959abfffff",
+   "total_bsl": 193,
+   "served_bsl": 193,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b19fffff",
+   "total_bsl": 108,
+   "served_bsl": 108,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b1dfffff",
+   "total_bsl": 84,
+   "served_bsl": 84,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b45fffff",
+   "total_bsl": 87,
+   "served_bsl": 87,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959bdfffff",
+   "total_bsl": 44,
+   "served_bsl": 44,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959b1fffff",
+   "total_bsl": 20,
+   "served_bsl": 20,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959b9fffff",
+   "total_bsl": 88,
+   "served_bsl": 87,
+   "underserved_bsl": 0,
+   "unserved_bsl": 1,
+   "served_share": 0.9886
+  },
+  {
+   "h3": "8844a959a5fffff",
+   "total_bsl": 446,
+   "served_bsl": 446,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94a67fffff",
+   "total_bsl": 5,
+   "served_bsl": 4,
+   "underserved_bsl": 1,
+   "unserved_bsl": 0,
+   "served_share": 0.8
+  },
+  {
+   "h3": "8844a94a2dfffff",
+   "total_bsl": 1,
+   "served_bsl": 1,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b0bfffff",
+   "total_bsl": 152,
+   "served_bsl": 152,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b63fffff",
+   "total_bsl": 1,
+   "served_bsl": 0,
+   "underserved_bsl": 0,
+   "unserved_bsl": 1,
+   "served_share": 0.0
+  },
+  {
+   "h3": "8844a94b51fffff",
+   "total_bsl": 37,
+   "served_bsl": 35,
+   "underserved_bsl": 0,
+   "unserved_bsl": 2,
+   "served_share": 0.9459
+  },
+  {
+   "h3": "8844a95987fffff",
+   "total_bsl": 189,
+   "served_bsl": 189,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b41fffff",
+   "total_bsl": 147,
+   "served_bsl": 147,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959bbfffff",
+   "total_bsl": 50,
+   "served_bsl": 50,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959b5fffff",
+   "total_bsl": 177,
+   "served_bsl": 177,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959a1fffff",
+   "total_bsl": 249,
+   "served_bsl": 249,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844ab9693fffff",
+   "total_bsl": 40,
+   "served_bsl": 40,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94a65fffff",
+   "total_bsl": 288,
+   "served_bsl": 288,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844ab9691fffff",
+   "total_bsl": 33,
+   "served_bsl": 33,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959b3fffff",
+   "total_bsl": 230,
+   "served_bsl": 230,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b4dfffff",
+   "total_bsl": 91,
+   "served_bsl": 91,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a95983fffff",
+   "total_bsl": 15,
+   "served_bsl": 9,
+   "underserved_bsl": 3,
+   "unserved_bsl": 3,
+   "served_share": 0.6
+  },
+  {
+   "h3": "8844a94b5bfffff",
+   "total_bsl": 20,
+   "served_bsl": 20,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959b7fffff",
+   "total_bsl": 69,
+   "served_bsl": 69,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b47fffff",
+   "total_bsl": 100,
+   "served_bsl": 100,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b6dfffff",
+   "total_bsl": 4,
+   "served_bsl": 4,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844ab9699fffff",
+   "total_bsl": 168,
+   "served_bsl": 168,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959a3fffff",
+   "total_bsl": 237,
+   "served_bsl": 237,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b67fffff",
+   "total_bsl": 17,
+   "served_bsl": 17,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b57fffff",
+   "total_bsl": 145,
+   "served_bsl": 145,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a94b59fffff",
+   "total_bsl": 266,
+   "served_bsl": 266,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  },
+  {
+   "h3": "8844a959a7fffff",
+   "total_bsl": 433,
+   "served_bsl": 433,
+   "underserved_bsl": 0,
+   "unserved_bsl": 0,
+   "served_share": 1.0
+  }
+ ]
+}

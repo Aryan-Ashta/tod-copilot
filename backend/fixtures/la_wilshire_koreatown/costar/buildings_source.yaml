@@ -15,12 +15,18 @@
     stories: {value: 13, source_url: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/, note: "a 13-story office conversion"}
     rentable_area_sqft: {value: 233000, source_url: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/, note: "The 233,000-square-foot building at 3325 Wilshire Boulevard (building total, reported as building SF)"}
     parking_spaces: {value: 450, source_url: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/, note: "over 450 underground parking spaces (Urbanize: retaining parking for 450 vehicles)"}
+    year_built: {value: 1955, source_url: "https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0/query?where=AIN%3D%275502027010%27&outFields=AIN,SitusFullAddress,YearBuilt1,EffectiveYear1,SQFTmain1,UseDescription&returnGeometry=false&f=json", note: "LA County Assessor parcel layer, AIN 5502027010: YearBuilt1 1955, EffectiveYear1 1956"}
+    year_renovated: {value: 2001, source_url: https://www.loopnet.com/Listing/3325-Wilshire-Blvd-Los-Angeles-CA/4021363, note: "LoopNet office listing (last updated 7/17/2023, pre-conversion): Renovated 2001"}
+    typical_floor_sqft: {value: 17390, source_url: https://www.loopnet.com/Listing/3325-Wilshire-Blvd-Los-Angeles-CA/4021363, note: "LoopNet office listing: Typical Floor Size: 17,390 SF"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/3325-Wilshire-Blvd-Los-Angeles-CA/4021363, note: "LoopNet office listing: Building Class: A"}
   parcel_fields:
     owner: {value: Jamison Properties (with Arc Capital Partners), source_url: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/, note: "Jamison, in partnership with Los Angeles-based investor Arc Capital Partners"}
   extra:
-    built_decade: {value: 1950s, source_url: https://la.urbanize.city/post/adaptive-reuse-k-town-offices-3325-wilshire-boulevard-create-236-apartments, note: "A 1950s office building in Koreatown (no exact year published, so year_built omitted)"}
+    built_decade: {value: 1950s, source_url: https://la.urbanize.city/post/adaptive-reuse-k-town-offices-3325-wilshire-boulevard-create-236-apartments, note: "A 1950s office building in Koreatown (exact year_built 1955 from LA County Assessor)"}
     planned_units: {value: 236, source_url: https://la.urbanize.city/post/adaptive-reuse-k-town-offices-3325-wilshire-boulevard-create-236-apartments, note: "into 236 studio, one-, and two-bedroom apartments atop 15,000 square feet of ground-floor retail space"}
     status: {value: "converted; Mason now open and leasing (Aug 2026)", source_url: https://thelalocal.org/housing/jamison-property-office-conversions-into-housing-august-2026-koreatown-westlake/, note: "Mason is also now open and leasing, with 236 apartments inside a former 13-story office building"}
+    unfinished_ceiling_height_ft: {value: 11, source_url: https://www.loopnet.com/Listing/3325-Wilshire-Blvd-Los-Angeles-CA/4021363, note: "LoopNet office listing: Unfinished Ceiling Height: 11’"}
+    rentable_area_sqft_alt: {value: 226165, source_url: https://www.loopnet.com/Listing/3325-Wilshire-Blvd-Los-Angeles-CA/4021363, note: "LoopNet office listing: Building Size: 226,165 SF (press: 233,000 SF)"}
 
 - name: Former IBM Los Angeles headquarters
   address: 3424 Wilshire Blvd, Los Angeles, CA 90010
@@ -32,12 +38,17 @@
     year_built: {value: 1958, source_url: https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing, note: "The 13-story, approximately 250,000-square-foot building was completed in 1958"}
     stories: {value: 13, source_url: https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing, note: "The 13-story, approximately 250,000-square-foot building"}
     rentable_area_sqft: {value: 250000, source_url: https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing, note: "approximately 250,000-square-foot building"}
+    year_renovated: {value: 1982, source_url: https://www.loopnet.com/Listing/3424-Wilshire-Blvd-Los-Angeles-CA/4021381, note: "LoopNet (last updated 8/19/2024): Renovated 1982"}
+    typical_floor_sqft: {value: 18263, source_url: https://www.loopnet.com/Listing/3424-Wilshire-Blvd-Los-Angeles-CA/4021381, note: "LoopNet: Typical Floor Size: 18,263 SF"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/3424-Wilshire-Blvd-Los-Angeles-CA/4021381, note: "LoopNet: Building Class: A"}
   parcel_fields:
     owner: {value: Jamison Services, source_url: https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing, note: "the Archdiocese of Los Angeles, which sold the property to Jamison Services in 2008"}
     last_sale_year: {value: 2008, source_url: https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing, note: "sold the property to Jamison Services in 2008"}
   extra:
     planned_units: {value: 260, source_url: https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing, note: "set to be converted into 260 apartments while retaining 13,000 square feet of existing retail space"}
     status: {value: "conversion underway (Aug 2026)", source_url: https://thelalocal.org/housing/jamison-property-office-conversions-into-housing-august-2026-koreatown-westlake/, note: "Work is underway at 3424 Wilshire Blvd."}
+    unfinished_ceiling_height_ft: {value: 11, source_url: https://www.loopnet.com/Listing/3424-Wilshire-Blvd-Los-Angeles-CA/4021381, note: "LoopNet: Unfinished Ceiling Height: 11’"}
+    rentable_area_sqft_alt: {value: 237427, source_url: https://www.loopnet.com/Listing/3424-Wilshire-Blvd-Los-Angeles-CA/4021381, note: "LoopNet: Building Size: 237,427 SF (Urbanize: approximately 250,000)"}
 
 - name: 3550 Wilshire Boulevard
   address: 3550 Wilshire Blvd, Los Angeles, CA 90010
@@ -46,10 +57,11 @@
   fields:
     property_type: {value: office, source_url: https://thelalocal.org/housing/jamison-property-office-conversions-into-housing-august-2026-koreatown-westlake/, note: "a 20-story office tower is being turned into 507 apartments"}
     stories: {value: 20, source_url: https://la.urbanize.city/post/adaptive-reuse-create-495-apartments-3550-wilshire-blvd-koreatown, note: "the conversion of a 20-story towers into 495 apartments"}
+    year_built: {value: 1969, source_url: "https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0/query?where=AIN%3D%275093026039%27&outFields=AIN,SitusFullAddress,YearBuilt1,EffectiveYear1,SQFTmain1,UseDescription&returnGeometry=false&f=json", note: "LA County Assessor parcel layer, AIN 5093026039: YearBuilt1 1969"}
   parcel_fields:
     owner: {value: Jamison Services, source_url: https://la.urbanize.city/post/adaptive-reuse-create-495-apartments-3550-wilshire-blvd-koreatown, note: "The project at 3550 Wilshire Boulevard, which is being developed by Jamison Services"}
   extra:
-    built_decade: {value: late 1960s, source_url: https://la.urbanize.city/post/adaptive-reuse-create-495-apartments-3550-wilshire-blvd-koreatown, note: "a seismic retrofit of the late 1960s building (no exact year, so year_built omitted)"}
+    built_decade: {value: late 1960s, source_url: https://la.urbanize.city/post/adaptive-reuse-create-495-apartments-3550-wilshire-blvd-koreatown, note: "a seismic retrofit of the late 1960s building (exact year_built 1969 from LA County Assessor)"}
     planned_units: {value: 507, source_url: https://thelalocal.org/housing/jamison-property-office-conversions-into-housing-august-2026-koreatown-westlake/, note: "a 20-story office tower is being turned into 507 apartments"}
     status: {value: "conversion under construction (Aug 2026)", source_url: https://thelalocal.org/housing/jamison-property-office-conversions-into-housing-august-2026-koreatown-westlake/, note: "Construction is still underway at Walker"}
 
@@ -62,12 +74,17 @@
     property_type: {value: office, source_url: https://planning.lacity.gov/StaffRpt/CHC/2017/12-7-2017/9_Beneficial%20Plaza%20Liberty%20Park_FINAL.pdf, note: "Beneficial Plaza and Liberty Park is comprised of an 11-story office tower"}
     year_built: {value: 1967, source_url: https://planning.lacity.gov/StaffRpt/CHC/2017/12-7-2017/9_Beneficial%20Plaza%20Liberty%20Park_FINAL.pdf, note: "Completed in 1967, the Late-Modern architectural style office tower"}
     stories: {value: 11, source_url: https://planning.lacity.gov/StaffRpt/CHC/2017/12-7-2017/9_Beneficial%20Plaza%20Liberty%20Park_FINAL.pdf, note: "an 11-story office tower with a three-level underground parking"}
+    rentable_area_sqft: {value: 312548, source_url: https://www.loopnet.com/Listing/3700-Wilshire-Blvd-Los-Angeles-CA/4021444, note: "LoopNet (last updated 3/30/2026): Building Size: 312,548 SF"}
+    year_renovated: {value: 2005, source_url: https://www.loopnet.com/Listing/3700-Wilshire-Blvd-Los-Angeles-CA/4021444, note: "LoopNet: Renovated 2005"}
+    typical_floor_sqft: {value: 28413, source_url: https://www.loopnet.com/Listing/3700-Wilshire-Blvd-Los-Angeles-CA/4021444, note: "LoopNet: Typical Floor Size: 28,413 SF"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/3700-Wilshire-Blvd-Los-Angeles-CA/4021444, note: "LoopNet: Building Class: B"}
   parcel_fields:
     owner: {value: Jamison Services, source_url: https://la.urbanize.city/post/koreatown-offices-3700-wilshire-blvd-be-converted-housing, note: "Jamison Services, owner of the Wilshire Park Place office complex at 3700 Wilshire Boulevard"}
   extra:
     historic_designation: {value: "Historic-Cultural Monument (2018)", source_url: https://thelalocal.org/housing/jamison-property-office-conversions-into-housing-august-2026-koreatown-westlake/, note: "The park and office building were designated a Los Angeles Historic-Cultural Monument in 2018"}
     planned_units: {value: 370, source_url: https://la.urbanize.city/post/koreatown-offices-3700-wilshire-blvd-be-converted-housing, note: "seeking permits to convert the existing 11-story high-rise into 370 live/work apartments"}
     status: {value: "conversion proposed (permits sought, 2026)", source_url: https://thelalocal.org/housing/jamison-property-office-conversions-into-housing-august-2026-koreatown-westlake/, note: "Jamison has filed plans for three more office conversions, but none could be confirmed as under construction"}
+    unfinished_ceiling_height_ft: {value: 12, source_url: https://www.loopnet.com/Listing/3700-Wilshire-Blvd-Los-Angeles-CA/4021444, note: "LoopNet: Unfinished Ceiling Height: 12’"}
 
 - name: Pierce National Life Building
   address: 3807 Wilshire Blvd, Los Angeles, CA 90010
@@ -77,10 +94,15 @@
     name: {value: Pierce National Life Building, source_url: https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/, note: "convert offices at the former Pierce National Life Building into 210 apartments"}
     property_type: {value: office, source_url: https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/, note: "convert the blighted 13-story building at 3807-3815 Wilshire Boulevard"}
     stories: {value: 13, source_url: https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/, note: "the blighted 13-story building at 3807-3815 Wilshire Boulevard"}
+    year_built: {value: 1967, source_url: "https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0/query?where=AIN%3D%275503031020%27&outFields=AIN,SitusFullAddress,YearBuilt1,EffectiveYear1,SQFTmain1,UseDescription&returnGeometry=false&f=json", note: "LA County Assessor parcel layer, AIN 5503031020: YearBuilt1 1967, EffectiveYear1 1969 (designed 1965)"}
+    rentable_area_sqft: {value: 247672, source_url: https://www.loopnet.com/Listing/3807-Wilshire-Blvd-Los-Angeles-CA/4021455, note: "LoopNet (last updated 9/14/2026): Building Size: 247,672 SF"}
+    typical_floor_sqft: {value: 12997, source_url: https://www.loopnet.com/Listing/3807-Wilshire-Blvd-Los-Angeles-CA/4021455, note: "LoopNet: Typical Floor Size: 12,997 SF"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/3807-Wilshire-Blvd-Los-Angeles-CA/4021455, note: "LoopNet: Building Class: B"}
+    vacancy_pct: {value: 100, source_url: https://www.costar.com/article/633654063/office-building-near-downtown-la-slated-for-residential-conversion, note: "CoStar News property tag: Wilshire CT Fin Ctr-VACANT/OFF THE MARKET 3807 Wilshire Blvd"}
   parcel_fields:
     owner: {value: Jamison Properties, source_url: https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/, note: "Jamison, its landlord"}
   extra:
-    design_year: {value: 1965, source_url: https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/, note: "designed by Welton Becket in 1965 (design year, not completion year, so year_built omitted)"}
+    design_year: {value: 1965, source_url: https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/, note: "designed by Welton Becket in 1965 (design year; year_built 1967 from LA County Assessor)"}
     planned_units: {value: 210, source_url: https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/, note: "It later upped the proposal to 210 units"}
 
 - name: Equitable Plaza
@@ -94,9 +116,15 @@
     stories: {value: 34, source_url: https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf, note: "SurveyLA p.29: the thirty-four story Equitable Building"}
     rentable_area_sqft: {value: 688000, source_url: https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/, note: "Occupancy dwindled at the 688,000-square-foot building"}
     vacancy_pct: {value: 43, source_url: https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/, note: "occupancy falling from 67 percent in 2021 to 57 percent today (Nov 2024; vacancy = 100 - 57)"}
+    year_renovated: {value: 1993, source_url: https://www.loopnet.com/Listing/3435-Wilshire-Blvd-Los-Angeles-CA/4021384, note: "LoopNet (last updated 10/27/2026): Renovated 1993"}
+    typical_floor_sqft: {value: 22870, source_url: https://www.loopnet.com/Listing/3435-Wilshire-Blvd-Los-Angeles-CA/4021384, note: "LoopNet: Typical Floor Size: 22,870 SF"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/3435-Wilshire-Blvd-Los-Angeles-CA/4021384, note: "LoopNet: Building Class: A"}
   parcel_fields:
     owner: {value: Jamison Properties, source_url: https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/, note: "Lee's firm acquired the 55-year-old office building in the 1990s; LNR poised to begin a UCC foreclosure (Oct 2024)"}
     lease_expiry_year: {value: 2024, source_url: https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/, note: "the two biggest tenants ... will both expire before the end of this year (2024)"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 11, source_url: https://www.loopnet.com/Listing/3435-Wilshire-Blvd-Los-Angeles-CA/4021384, note: "LoopNet: Unfinished Ceiling Height: 11’"}
+    rentable_area_sqft_alt: {value: 777581, source_url: https://www.loopnet.com/Listing/3435-Wilshire-Blvd-Los-Angeles-CA/4021384, note: "LoopNet: Building Size: 777,581 SF (TRD: 688,000)"}
 
 - name: Travelers Building
   address: 3600 Wilshire Blvd, Los Angeles, CA 90010
@@ -107,6 +135,13 @@
     property_type: {value: office, source_url: https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf, note: "SurveyLA p.27: made it the tallest office building in the city"}
     year_built: {value: 1961, source_url: https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf, note: "SurveyLA p.27: Completed in 1961, it was designed by Welton Becket"}
     stories: {value: 22, source_url: https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf, note: "SurveyLA p.27: its twenty-two stories and three-hundred-foot height"}
+    rentable_area_sqft: {value: 421768, source_url: https://www.loopnet.com/Listing/3600-Wilshire-Blvd-Los-Angeles-CA/34160150, note: "LoopNet (last updated 10/27/2026): Building Size: 421,768 SF"}
+    year_renovated: {value: 1998, source_url: https://www.loopnet.com/Listing/3600-Wilshire-Blvd-Los-Angeles-CA/34160150, note: "LoopNet: Renovated 1998"}
+    typical_floor_sqft: {value: 20084, source_url: https://www.loopnet.com/Listing/3600-Wilshire-Blvd-Los-Angeles-CA/34160150, note: "LoopNet: Typical Floor Size: 20,084 SF"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/3600-Wilshire-Blvd-Los-Angeles-CA/34160150, note: "LoopNet: Building Class: B"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 11, source_url: https://www.loopnet.com/Listing/3600-Wilshire-Blvd-Los-Angeles-CA/34160150, note: "LoopNet: Unfinished Ceiling Height: 11’"}
+    stories_alt: {value: 21, source_url: https://www.loopnet.com/Listing/3600-Wilshire-Blvd-Los-Angeles-CA/34160150, note: "LoopNet: Building Height: 21 Stories (SurveyLA: twenty-two stories)"}
 
 - name: One Park Plaza
   address: 3250 Wilshire Blvd, Los Angeles, CA 90010

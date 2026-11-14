@@ -1,0 +1,15 @@
+{
+ "source": "city_open_data",
+ "urls": [
+  "https://geohwp.houstontx.gov/arcgis/rest/services/01_BaseData_Infrastructure/Sewer_Network/FeatureServer/11",
+  "https://geogimsms.houstontx.gov/arcgis/rest/services/HW/OutsideWater_gx/MapServer/37"
+ ],
+ "retrieved_at": "2026-11-14T06:29:57.296390+00:00",
+ "layers": {
+  "sewer_main": "City of Houston Public Works public gravity sewer mains",
+  "water_main": "City of Houston Public Works water distribution and transmission mains"
+ },
+ "filters": {
+  "water_main": "SUBTYPECD IN (1,2) AND LIFECYCLESTATUS = 'E' AND WATERTYPE = 'POT' AND (PIPETYPE IS NULL OR PIPETYPE NOT IN ('PSC','NOTAP'))"
+ }
+}

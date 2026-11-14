@@ -15,7 +15,8 @@ RULES = [
 
 def test_apply_rules_tier_todo_and_missing_attr():
     a, b = apply_rules({"station_mode": "heavy_rail", "distance_to_stop_mi": 0.3, "property_type": None}, RULES, ["A", "B"])
-    assert a.eligible is True and a.allows == {"max_units_per_acre": 100, "max_far": 2}  # TODO not covered
+    assert a.eligible is True and a.allows == {"max_units_per_acre": 100, "max_far": 2,
+                                               "not_covered": ["approval_steps"]}  # TODO is flagged, never defaulted
     assert b.eligible is None and b.allows == {}  # property_type missing -> not covered, never a default
 
 
@@ -32,3 +33,12 @@ def test_recommend_ties_go_to_fewer_steps():
     a, b = apply_rules({"station_mode": "heavy_rail", "distance_to_stop_mi": 0.3, "property_type": "office"}, RULES, ["A", "B"])
     assert recommend([a, b], {"A": 40, "B": 40}) == "B"
     assert recommend([a, b], {"A": 41, "B": 40}) == "A"
+
+
+def test_density_rule_with_todo_value_blocks_homes():
+    rules = [{"path": "L", "rule": "eligible", "applies_if": {"zoning_code": {"eq": "C-G"}}, "value": True, "cite": C},
+             {"path": "L", "rule": "max_units_per_acre", "applies_if": {"zoning_code": {"eq": "C-G"}}, "value": "TODO",
+              "cite": C}]
+    p = apply_rules({"zoning_code": "C-G"}, rules, ["L"])[0]
+    assert p.eligible is True and p.allows["not_covered"] == ["max_units_per_acre"]
+    assert homes_for(2.0, p, F) is None  # never fall back to assumed stories when the law sets an uncited cap

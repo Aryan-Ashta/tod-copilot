@@ -54,15 +54,18 @@
     section: Gov. Code § 65912.156
     quote: "“Housing development project” has the same meaning as defined in Section 65589.5, but does not include a project of which any portion is designated for use as a hotel, motel, bed and breakfast inn, or other transient lodging."
 
-# Ministerial approval is available; the number of approval steps is not stated.
+# SB 79 projects use the Gov. Code 65913.4 streamlined, ministerial process (65912.159), whose subdivision (c)
+# names one approval: the local government approves the development once the planning director finds it
+# consistent with the objective standards. (A notice of intent / tribal scoping consultation precedes the
+# application; it is not an approval.)
 - path: SB 79 new construction
   rule: approval_steps
   applies_if: {}
-  value: TODO
+  value: 1
   cite:
-    doc_id: ca_sb79_2025
-    section: Gov. Code § 65912.159
-    quote: "A housing development project proposed pursuant to Section 65912.157 shall be eligible for streamlined ministerial approval pursuant to Section 65913.4 in accordance with all of the following:"
+    doc_id: ca_gov_code_65913_4
+    section: Gov. Code § 65913.4(c)
+    quote: "(c) (1) Notwithstanding any local law, if a local government’s planning director or equivalent position determines that a development submitted pursuant to this section is consistent with the objective planning standards specified in subdivision (a) and pursuant to paragraph (3) of this subdivision, the local government shall approve the development."
 
 - path: SB 79 new construction
   rule: discretionary
@@ -183,16 +186,17 @@
     section: Gov. Code § 65912.157
     quote: "A local government shall not enforce any other local development standard or combination of standards that would physically preclude achieving a residential floor area ratio of up to 2.5."
 
-# Parking ratios come from Gov. Code 65915(p) (bedroom-dependent; no single per-unit value) and
-# Gov. Code 65863.2, which is not in the corpus.
+# Gov. Code 65863.2(a): no minimum parking within one-half mile of public transit ("major transit stop",
+# PRC 21155, which includes a rail station). Distance is to the locale's rail stations. 65863.2(b) lets a city
+# impose minimums only on written findings, which (c) bars for projects with 20% affordable units or < 20 units.
 - path: SB 79 new construction
   rule: parking_min_per_unit
-  applies_if: {}
-  value: TODO
+  applies_if: {distance_to_stop_mi: {lte: 0.5}}
+  value: 0
   cite:
-    doc_id: ca_gov_code_65915
-    section: Gov. Code § 65915(p)
-    quote: "(A) Zero to one bedroom: one onsite parking space."
+    doc_id: ca_gov_code_65863_2
+    section: Gov. Code § 65863.2
+    quote: "(a) A public agency shall not impose or enforce any minimum automobile parking requirement on a residential, commercial, or other development project if the project is located within one-half mile of public transit."
 
 - path: SB 79 new construction
   rule: note
@@ -291,15 +295,17 @@
     section: Sec. 12.22 A.26.(f)
     quote: "(1) Building Permit Review. For purposes of this section, the following Adaptive Reuse Projects that seek incentives described in Section 12.22 A.26.(h) shall be issued building permits if they comply with this subdivision and all other applicable requirements under the Code:"
 
-# Buildings 5 to <15 years old: Zoning Administrator Class 1 CUP; total step count not stated.
+# Buildings 5 to <15 years old: two approvals, the Zoning Administrator's Class 1 Conditional Use
+# (LAMC 12.24 X.1, the initial decision; the Area Planning Commission hears appeals) and then the
+# building permit (12.22 A.26.(f)).
 - path: LA Citywide Adaptive Reuse
   rule: approval_steps
   applies_if: {building_age_years: {gte: 5, lte: 14.99}}
-  value: TODO
+  value: 2
   cite:
-    doc_id: la_adaptive_reuse_2026
-    section: Sec. 12.22 A.26.(f)
-    quote: "(i) Adaptive Reuse Projects involving building(s) for which at least five years and less than 15 years have elapsed since the date of permitted and completed construction;"
+    doc_id: la_lamc_12_24_x1
+    section: Sec. 12.24 X.1.
+    quote: "The following uses and activities may be allowed in any zone, unless otherwise restricted to certain zones or locations, if approved by the Zoning Administrator as the initial decision maker or the Area Planning Commission as the appellate body."
 
 - path: LA Citywide Adaptive Reuse
   rule: discretionary
@@ -310,7 +316,17 @@
     section: Sec. 12.22 A.26.(f)
     quote: "The Zoning Administrator shall review and approve the following Adaptive Reuse Projects pursuant to Section 12.24 X.1. and Section 13B.2.1. (Class 1 Conditional Use Permit) of Chapter 1A of this Code:"
 
-# Required parking equals the spaces that physically exist today: not a per-unit ratio.
+# Within one-half mile of a rail station, Gov. Code 65863.2(a) bars any minimum parking requirement.
+- path: LA Citywide Adaptive Reuse
+  rule: parking_min_per_unit
+  applies_if: {distance_to_stop_mi: {lte: 0.5}}
+  value: 0
+  cite:
+    doc_id: ca_gov_code_65863_2
+    section: Gov. Code § 65863.2
+    quote: "(a) A public agency shall not impose or enforce any minimum automobile parking requirement on a residential, commercial, or other development project if the project is located within one-half mile of public transit."
+
+# Farther out, required parking equals the spaces that physically exist today: not a per-unit ratio.
 - path: LA Citywide Adaptive Reuse
   rule: parking_min_per_unit
   applies_if: {}

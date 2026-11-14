@@ -47,6 +47,15 @@ COCOA_ZONING = ("https://services1.arcgis.com/Tex1uhbqnOZPx6qT/arcgis/rest/servi
                 "Public_View_Cocoa_Zoning_with_Split_Lots_June_2023_view/FeatureServer/1")
 COCOA_SEWER_AREA = "https://gis.brevardfl.gov/gissrv/rest/services/Utility_Services/Other_Service_Area_WKID2881/MapServer/0"
 COCOA_WATER_AREA = "https://gis.brevardfl.gov/gissrv/rest/services/Utility_Services/Other_Service_Area_WKID2881/MapServer/1"
+# City of Houston Public Works, public (no token) ArcGIS services
+HOUSTON_SEWER_MAINS = ("https://geohwp.houstontx.gov/arcgis/rest/services/01_BaseData_Infrastructure/"
+                       "Sewer_Network/FeatureServer/11")  # Public Gravity Mains
+HOUSTON_WATER_MAINS = ("https://geogimsms.houstontx.gov/arcgis/rest/services/HW/OutsideWater_gx/"
+                       "MapServer/37")  # Pump Pressure Main (By Type)
+# Esri Living Atlas summary of the FCC Broadband Data Collection (BDC), H3 resolution 8 layer
+FCC_BDC_ITEM = "https://www.arcgis.com/home/item.html?id=e1343efcefc344709057260ee57290a0"
+FCC_BDC_H3 = ("https://services8.arcgis.com/peDZJliSvYims39Q/arcgis/rest/services/"
+              "FCC_Broadband_Data_Collection_December_2024_View/FeatureServer/5")
 FEMA = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28"
 TIGER = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer"
 ACS_VEHICLES = "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/ACS_Vehicle_Availability_Boundaries/FeatureServer/2"
@@ -289,7 +298,9 @@ def record_county(lid: str) -> None:
     elif lid == "brevard_cocoa":
         city, n_city = zoning_lookup(COCOA_ZONING, "Zoning", bbox)
         county, n_county = zoning_lookup(BREVARD_ZONING, "ZONING", bbox)
-        zoning = lambda g: city(g) or county(g)  # noqa: E731  City of Cocoa governs inside the city
+        # City of Cocoa governs inside the city. County district names overlap Cocoa's (RU-1-7, RU-2-15), so
+        # county codes carry a prefix and never match Cocoa rules; County Ch. 62 is not in the corpus.
+        zoning = lambda g: city(g) or (f"Brevard County {c}" if (c := county(g)) else None)  # noqa: E731
         urls += [COCOA_ZONING, BREVARD_ZONING]
         zoning_note = (f"City of Cocoa zoning layer, field Zoning ({n_city} polygons), then Brevard County zoning "
                        f"layer, field ZONING ({n_county} polygons) for unincorporated parcels")
@@ -729,28 +740,93 @@ def record_pvwatts(lid: str) -> None:
 
 
 # ---------------------------------------------------------------- utilities
+UTILITY_LAYERS = {
+    "houston_downtown": [
+        ("sewer_main", HOUSTON_SEWER_MAINS, "City of Houston Public Works public gravity sewer mains",
+         "1=1"),
+        # existing potable distribution (1) and transmission (2) mains; drops private service connections
+        # and "do not tap" mains, which cannot serve a building
+        ("water_main", HOUSTON_WATER_MAINS, "City of Houston Public Works water distribution and transmission mains",
+         "SUBTYPECD IN (1,2) AND LIFECYCLESTATUS = 'E' AND WATERTYPE = 'POT' "
+         "AND (PIPETYPE IS NULL OR PIPETYPE NOT IN ('PSC','NOTAP'))")],
+    "la_wilshire_koreatown": [("sewer_main", LA_SEWER, "LA Sanitation sewer pipes", "1=1")],
+    "brevard_cocoa": [("sewer_main", COCOA_SEWER_AREA, "City of Cocoa sewer service area", "1=1"),
+                      ("water_main", COCOA_WATER_AREA, "City of Cocoa water service area", "1=1")]}
+
+
+def write_notes(lid: str) -> None:
+    """Regenerate backend/fixtures/<lid>/_notes.md from what the utilities and fcc steps recorded."""
+    um, fm = settings.FIXTURES_DIR / lid / "utilities" / "_meta.json", settings.FIXTURES_DIR / lid / "fcc" / "_meta.json"
+    layers = json.loads(um.read_text()).get("layers", {}) if um.exists() else {}
+    lines = ["# Data notes", ""]
+    for kind in ("water_main", "sewer_main"):
+        if kind in layers:
+            lines.append(f"- {kind}: {layers[kind]} (utilities/{kind}.geojson; source in utilities/_meta.json).")
+        else:
+            lines.append(f"- TODO(kickoff): no public {kind.replace('_', ' ')} layer recorded; treated as missing.")
+    lines.append("- power_substation: not recorded. The national HIFLD Electric Substations dataset is listed on "
+                 "data.gov with accessLevel \"restricted public\" (https://catalog.data.gov/dataset/electric-substations-c633a); "
+                 "only unofficial partial mirrors are public, and no city/utility substation layer was found. Power is "
+                 "missing and is not part of the served check.")
+    if not layers:
+        lines.append("- Utilities are missing; the infrastructure agent reports \"utility data not public here; "
+                     "confirm with the utility\".")
+    if fm.exists():
+        m = json.loads(fm.read_text())
+        lines.append(f"- broadband: {m['note']} (fcc/broadband.json).")
+    else:
+        lines.append("- TODO(kickoff): broadband (FCC BDC) not recorded; missing.")
+    (settings.FIXTURES_DIR / lid / "_notes.md").write_text("\n".join(lines) + "\n")
+
+
 def record_utilities(lid: str) -> None:
     b = tuple(load_locale_yaml(lid)["bbox"])
-    notes = settings.FIXTURES_DIR / lid / "_notes.md"
-    layers = {"la_wilshire_koreatown": [("sewer_main", LA_SEWER, "LA Sanitation sewer pipes")],
-              "brevard_cocoa": [("sewer_main", COCOA_SEWER_AREA, "City of Cocoa sewer service area"),
-                                ("water_main", COCOA_WATER_AREA, "City of Cocoa water service area")]}.get(lid, [])
-    if not layers:
-        notes.write_text("# Data notes\n\n- TODO(kickoff): no public water, sewer or power layer found for this locale "
-                         "(searched City of Houston and Harris County ArcGIS directories). Utilities are missing; the "
-                         "infrastructure agent reports \"utility data not public here; confirm with the utility\".\n")
-        print("utilities: none public; noted")
-        return
+    layers = UTILITY_LAYERS[lid]
     d = fixture_dir(lid, "utilities")
-    for kind, url, label in layers:
-        feats = arcgis_query(url, b, out_fields="OBJECTID")
+    for kind, url, label, where in layers:
+        feats = arcgis_query(url, b, where=where, out_fields="OBJECTID")
         out = [{"type": "Feature", "properties": {"kind": kind, "layer": label},
                 "geometry": f["geometry"]} for f in feats if f.get("geometry")]
         write_geojson(d / f"{kind}.geojson", out)
         print(f"utilities: {kind} {len(out)} features ({label})")
-    write_meta(d, "city_open_data", [u for _, u, _ in layers], layers={k: lbl for k, _, lbl in layers})
-    notes.write_text("# Data notes\n\n- No power layer is public here; power is treated as missing.\n"
-                     "- TODO(kickoff): broadband (FCC National Broadband Map) needs an account token; missing.\n")
+    write_meta(d, "city_open_data", [u for _, u, _, _ in layers], layers={k: lbl for k, _, lbl, _ in layers},
+               filters={k: w for k, _, _, w in layers if w != "1=1"})
+    write_notes(lid)
+
+
+# ---------------------------------------------------------------- FCC broadband
+def record_fcc(lid: str) -> None:
+    """FCC Broadband Data Collection availability per H3 resolution-8 cell covering the locale bbox.
+
+    The FCC's own location-level files and API need a sign-in/token; the Esri Living Atlas layer summarizing
+    the same BDC release by H3-8 cell is public. Per cell it gives Broadband Serviceable Location (BSL) counts
+    by tier: served = >= 100/20 Mbps low-latency wired or licensed fixed wireless."""
+    b = tuple(load_locale_yaml(lid)["bbox"])
+    item = cached_get("https://www.arcgis.com/sharing/rest/content/items/e1343efcefc344709057260ee57290a0",
+                      {"f": "json"})
+    feats = arcgis_query(FCC_BDC_H3, b, out_fields="GEOID,TotalBSLs,ServedBSLs,UnderservedBSLs,UnservedBSLs",
+                         geometry=False)
+    cells = []
+    for f in feats:
+        p = f["properties"]
+        if not p.get("TotalBSLs"):
+            continue
+        cells.append({"h3": p["GEOID"], "total_bsl": p["TotalBSLs"], "served_bsl": p["ServedBSLs"],
+                      "underserved_bsl": p["UnderservedBSLs"], "unserved_bsl": p["UnservedBSLs"],
+                      "served_share": round(p["ServedBSLs"] / p["TotalBSLs"], 4)})
+    if not cells:
+        print("fcc: no H3 cells with BSLs in bbox; nothing written")
+        return
+    d = fixture_dir(lid, "fcc")
+    (d / "broadband.json").write_text(json.dumps({"h3_res": 8, "cells": cells}, indent=1))
+    title = item.get("title", "")
+    write_meta(d, "fcc_bdc_esri_living_atlas", [FCC_BDC_H3, FCC_BDC_ITEM],
+               note=f"FCC Broadband Data Collection, availability as of December 31, 2025, summarized per H3-8 "
+                    f"cell by Esri Living Atlas (\"{title}\"); served = BSLs with >= 100/20 Mbps low-latency "
+                    f"wired or licensed fixed wireless; a cell counts as served at 100/20 when served_share exceeds "
+                    f"factor broadband_served_share_min (applied in backend/data/providers/fcc.py)")
+    print(f"fcc: {len(cells)} H3-8 cells")
+    write_notes(lid)
 
 
 # ---------------------------------------------------------------- CoStar-shaped fixtures (hand-entered)
@@ -806,7 +882,7 @@ def record_costar(lid: str) -> None:
 
 STEPS = {"station": record_station, "county": record_county, "osm": record_osm, "gtfs": record_gtfs,
          "demand": record_demand, "fema": record_fema, "afdc": record_afdc, "pvwatts": record_pvwatts,
-         "utilities": record_utilities, "costar": record_costar}
+         "utilities": record_utilities, "fcc": record_fcc, "costar": record_costar}
 
 
 def main() -> None:

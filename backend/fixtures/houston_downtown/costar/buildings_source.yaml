@@ -24,6 +24,7 @@
     vacancy_pct: {value: 72, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: VACANT / AVAILABLE: 72% / 93% (2023)"}
     asking_rent_usd_sqft_yr: {value: 18.06, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: CURRENT RENTS: $18.06 PSF (2023)"}
     parking_spaces: {value: 1300, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: PARKING: 1,300 spaces between 2 decks"}
+    building_class: {value: A, source_url: https://www.capcommercialrealestate.com/listings/1021-main-street/, note: "Capital Realty Group listing (2015): Building Class: Class A"}
   parcel_fields:
     owner: {value: 3L Real Estate, source_url: https://traded.co/deals/texas/office/sale/1021-main-street-1/, note: "Joseph Slezak Of 3L Real Estate Purchases Office Building From Accesso Partners For $24.62M"}
     last_sale_usd: {value: 24620000, source_url: https://traded.co/deals/texas/office/sale/1021-main-street-1/, note: "1021 Main Street ... sold on 03-27-2025 for $24,620,000"}
@@ -32,6 +33,7 @@
     min_floorplate_dimension_ft: {value: 90, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.81: MINIMUM FLOORPLATE DEPTH: 90 feet (whole-plate minimum dimension, not core-to-window)"}
     planned_units: {value: 553, source_url: https://www.connectcre.com/stories/3l-provides-update-on-conversion-of-houston-highrise/, note: "includes the construction of 553 apartment units, some of which would be for short-term use"}
     status: {value: "conversion planned (TDLR filing Aug 2025; construction start targeted Feb 2026)", source_url: https://propmodo.com/playbook/one-city-centres-second-life-as-downtown-houston-housing/, note: "schedule in the Aug. 12 filing targets a construction start in February 2026 and completion by December 2027"}
+    vacancy_pct_alt: {value: 91, source_url: https://therealdeal.com/texas/2026/06/17/zhukovskyi-development-buys-downtown-houston-office-building, note: "At the time (2025 purchase), the 608,000-square-foot building was 9 percent occupied (vacancy = 100 - 9; newer than AECOM 72%, kept as alt)"}
 
 - name: 708 Main
   address: 708 Main St, Houston, TX 77002
@@ -47,11 +49,14 @@
     vacancy_pct: {value: 88, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: VACANT / AVAILABLE: 88% / 88% (2023)"}
     asking_rent_usd_sqft_yr: {value: 24, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: CURRENT RENTS: $24 PSF (2023)"}
     parking_spaces: {value: 0, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: PARKING: None on-site"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/708-Main-St-Houston-TX/33471713, note: "LoopNet (last updated 10/29/2026): Building Class: B"}
   parcel_fields:
     owner: {value: Lionstone Partners, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: OWNER: Lionstone Partners (2023)"}
     last_sale_year: {value: 2015, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: LAST SALE: Not Disclosed, January 2015"}
   extra:
     min_floorplate_dimension_ft: {value: 45, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.68: MINIMUM FLOORPLATE DEPTH: 45 feet"}
+    unfinished_ceiling_height_ft: {value: 10, source_url: https://www.loopnet.com/Listing/708-Main-St-Houston-TX/33471713, note: "LoopNet: Unfinished Ceiling Height: 10’ (not a finished ceiling height)"}
+    typical_floor_sqft_alt: {value: 9500, source_url: https://www.loopnet.com/Listing/708-Main-St-Houston-TX/33471713, note: "LoopNet: Typical Floor Size: 9,500 SF (conflicts with AECOM 8,600 SF)"}
 
 - name: Wedge International Tower
   address: 1415 Louisiana St, Houston, TX 77002
@@ -67,11 +72,16 @@
     vacancy_pct: {value: 43, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: VACANT / AVAILABLE: 43% / 44% (2023)"}
     asking_rent_usd_sqft_yr: {value: 19.55, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: CURRENT RENTS: $19.55 PSF (2023)"}
     parking_spaces: {value: 1604, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: PARKING: 1,604 spaces (3.1 spaces per 1,000 SF)"}
+    typical_floor_sqft: {value: 12000, source_url: https://www.loopnet.com/Listing/1415-Louisiana-St-Houston-TX/39180572, note: "LoopNet sale listing (last updated 10/26/2026): Typical Floor Size: 12,000 SF (Capital Realty 2015: 18,000; AECOM range 12,000-18,000)"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/1415-Louisiana-St-Houston-TX/39180572, note: "LoopNet sale listing: Building Class: A"}
   parcel_fields:
     owner: {value: Wedge Commercial Properties, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: OWNER: Wedge Commercial Properties (2023)"}
   extra:
     min_floorplate_dimension_ft: {value: 90, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: MINIMUM FLOORPLATE DEPTH: 90 feet"}
     typical_floor_sqft_range: {value: [12000, 18000], source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.73: TYPICAL FLOOR SIZE: 12,000 - 18,000 SF (range, so not entered as typical_floor_sqft)"}
+    floor_to_floor_ft: {value: 12, source_url: https://www.loopnet.com/Listing/1415-Louisiana-St-Houston-TX/39180572, note: "LoopNet sale listing: Slab To Slab: 12’"}
+    year_renovated_alt: {value: 2023, source_url: https://www.loopnet.com/Listing/1415-Louisiana-St-Houston-TX/39180572, note: "LoopNet sale listing: Year Built/Renovated: 1983/2023 (AECOM: 2022)"}
+    vacancy_pct_alt: {value: 39, source_url: https://www.loopnet.com/Listing/1415-Louisiana-St-Houston-TX/39180572, note: "LoopNet sale listing 2026: 61% Leased (leased, not occupied; vacancy = 100 - 61; AECOM 2023: 43%)"}
 
 - name: 800 Bell (former Humble Oil / Exxon Building)
   address: 800 Bell St, Houston, TX 77002
@@ -84,11 +94,17 @@
     stories: {value: 45, source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "The 45-story former headquarters of Humble Oil"}
     rentable_area_sqft: {value: 1314350, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 800 Bell St, Built 1962, RBA 1,314,350"}
     vacancy_pct: {value: 100, source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "has been empty since the oil company relocated (as of Jan 2023)"}
+    year_renovated: {value: 2010, source_url: https://www.loopnet.com/Listing/800-Bell-St-Houston-TX/39852932, note: "LoopNet sale listing (last updated 11/10/2026): Year Built/Renovated: 1962/2010"}
+    typical_floor_sqft: {value: 29068, source_url: https://www.loopnet.com/Listing/800-Bell-St-Houston-TX/39852932, note: "LoopNet sale listing: Typical Floor Size: 29,068 SF (Capital Realty 2015: 30,085)"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/800-Bell-St-Houston-TX/39852932, note: "LoopNet sale listing: Building Class: B"}
+    parking_spaces: {value: 1834, source_url: https://www.loopnet.com/Listing/800-Bell-St-Houston-TX/39852932, note: "LoopNet sale listing: Parking: 1834 Spaces (0.9 Spaces per 1,000 SF Leased)"}
   parcel_fields:
     owner: {value: New York investment group affiliated with CMI Developers, source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "The buyer, a New York investment group affiliated with CMI Developers"}
     last_sale_year: {value: 2022, source_url: https://realtynewsreport.com/exxon-skyscraper-sold-for-apartment-conversion/, note: "The sale closed at the-end of 2022 (price not determined)"}
   extra:
     min_floorplate_dimension_ft: {value: 130, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.53 benchmarking: 800 Bell, 45 stories, Min. Depth 130"}
+    floor_to_floor_ft: {value: 11, source_url: https://www.loopnet.com/Listing/800-Bell-St-Houston-TX/39852932, note: "LoopNet sale listing: Slab To Slab: 11’"}
+    stories_alt: {value: 46, source_url: https://www.loopnet.com/Listing/800-Bell-St-Houston-TX/39852932, note: "LoopNet sale listing: Building Height: 46 Stories (Realty News Report: 45-story)"}
 
 - name: Esperson Buildings
   address: 808 Travis St, Houston, TX 77002
@@ -100,8 +116,16 @@
     year_built: {value: 1941, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 808 Travis St Built 1941 (p.53 lists 1927/41 for the pair)"}
     stories: {value: 27, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.53: Esperson Buildings # of Stories 27"}
     rentable_area_sqft: {value: 599107, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 599,107"}
+    year_renovated: {value: 2014, source_url: https://www.loopnet.com/Listing/808-Travis-St-Houston-TX/3940397, note: "LoopNet (last updated 11/13/2026): Renovated 2014"}
+    typical_floor_sqft: {value: 22189, source_url: https://www.loopnet.com/Listing/808-Travis-St-Houston-TX/3940397, note: "LoopNet: Typical Floor Size: 22,189 SF"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/808-Travis-St-Houston-TX/3940397, note: "LoopNet: Building Class: B"}
+    vacancy_pct: {value: 50, source_url: https://www.houstonchronicle.com/business/real-estate/article/houston-office-foreclosure-downtown-esperson-19624000.php, note: "The Esperson complex is about 50% leased, Cameron said (2024; leased share, vacancy = 100 - 50)"}
+    asking_rent_usd_sqft_yr: {value: 18.0, source_url: https://www.loopnet.com/Listing/808-Travis-St-Houston-TX/3940397, note: "LoopNet: From $18.00 /SF/YR (lowest listed rate; every displayed space $18.00)"}
   extra:
     min_floorplate_dimension_ft: {value: 60, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.53: Esperson Buildings Min. Depth 60"}
+    unfinished_ceiling_height_ft: {value: 11, source_url: https://www.loopnet.com/Listing/808-Travis-St-Houston-TX/3940397, note: "LoopNet: Unfinished Ceiling Height: 11’"}
+    typical_floor_sqft_alt: {value: 31000, source_url: https://www.capcommercialrealestate.com/listings/808-travis-street/, note: "Capital Realty Group listing (2015): TYP Floor: 31,000"}
+    year_renovated_alt: {value: 1999, source_url: https://www.capcommercialrealestate.com/listings/808-travis-street/, note: "Capital Realty Group listing (2015): Year Built: 1941, Renovated in 1999"}
 
 - name: 919 Milam
   address: 919 Milam St, Houston, TX 77002
@@ -111,6 +135,14 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 25"}
     year_built: {value: 1956, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 919 Milam St, Built 1956"}
     rentable_area_sqft: {value: 542078, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 542,078"}
+    year_renovated: {value: 2023, source_url: https://www.loopnet.com/Listing/919-Milam-St-Houston-TX/30130433, note: "LoopNet (last updated 2/10/2026): Renovated 2023; TRD 2026: last renovated in 2023"}
+    stories: {value: 24, source_url: https://www.loopnet.com/Listing/919-Milam-St-Houston-TX/30130433, note: "LoopNet: Building Height: 24 Stories"}
+    typical_floor_sqft: {value: 22500, source_url: https://www.loopnet.com/Listing/919-Milam-St-Houston-TX/30130433, note: "LoopNet: Typical Floor Size: 22,500 SF"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/919-Milam-St-Houston-TX/30130433, note: "LoopNet: Building Class: A (Capital Realty 2015: Class B)"}
+    vacancy_pct: {value: 80, source_url: https://realtynewsreport.com/downtown-tower-sold-for-possible-residential-conversion, note: "The 919 Milam building is about 20% occupied (June 2026; vacancy = 100 - 20)"}
+    parking_spaces: {value: 364, source_url: https://invest.jll.com/us/en/listings/office/919-milam, note: "The Property is currently 19.8% leased with 364 parking spaces in its spacious garage (JLL listing text via search index; page 404 on 2026-11-14)"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 10, source_url: https://www.loopnet.com/Listing/919-Milam-St-Houston-TX/30130433, note: "LoopNet: Unfinished Ceiling Height: 10’"}
 
 - name: 700 Milam
   address: 700 Milam St, Houston, TX 77002
@@ -120,6 +152,11 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 22"}
     year_built: {value: 1975, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 700 Milam St, Built 1975"}
     rentable_area_sqft: {value: 694021, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 694,021"}
+    stories: {value: 36, source_url: https://www.capcommercialrealestate.com/listings/700-milam-street/, note: "Capital Realty Group listing (2015): Stories: 36"}
+    typical_floor_sqft: {value: 20523, source_url: https://www.capcommercialrealestate.com/listings/700-milam-street/, note: "Capital Realty Group listing (2015): TYP Floor: 20,523 (JLL 2025 flyer: 20,500 SF typical for Pennzoil Place)"}
+    building_class: {value: A, source_url: https://www.capcommercialrealestate.com/listings/700-milam-street/, note: "Capital Realty Group listing (2015): Building Class: Class A"}
+  extra:
+    complex_vacancy_pct: {value: 45.2, source_url: https://res.cloudinary.com/jll-global-cmg/image/upload/v1746131035/Prod/DealX/Doc/ff9e58d0-d1c2-45b0-984a-5677179a58d6/Pennzoil_Place_Flyer.pdf, note: "JLL Pennzoil Place flyer (2025): 54.8% OCCUPANCY across both towers (700 Milam + 711 Louisiana), so not building-level; vacancy = 100 - 54.8"}
 
 - name: 1001 Texas
   address: 1001 Texas Ave, Houston, TX 77002
@@ -129,6 +166,14 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 21"}
     year_built: {value: 1982, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1001 Texas Ave, Built 1982"}
     rentable_area_sqft: {value: 119436, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 119,436"}
+    stories: {value: 14, source_url: https://www.loopnet.com/Listing/1001-Texas-Ave-Houston-TX/4351224, note: "LoopNet (last updated 2/19/2019): Building Height: 14 Stories"}
+    typical_floor_sqft: {value: 9187, source_url: https://www.loopnet.com/Listing/1001-Texas-Ave-Houston-TX/4351224, note: "LoopNet: Typical Floor Size: 9,187 SF"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/1001-Texas-Ave-Houston-TX/4351224, note: "LoopNet: Building Class: B"}
+    year_renovated: {value: 1998, source_url: https://www.loopnet.com/Listing/1001-Texas-Ave-Houston-TX/4351224, note: "LoopNet: Renovated 1998 (Capital Realty: Year Built: 1982, Renovated in 1998)"}
+    parking_spaces: {value: 457, source_url: https://www.capcommercialrealestate.com/listings/1001-texas-street/, note: "Capital Realty Group listing (2015): 457 covered spaces are available"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 14, source_url: https://www.loopnet.com/Listing/1001-Texas-Ave-Houston-TX/4351224, note: "LoopNet: Unfinished Ceiling Height: 14’"}
+    stories_alt: {value: 13, source_url: https://www.capcommercialrealestate.com/listings/1001-texas-street/, note: "Capital Realty Group listing (2015): Stories: 13"}
 
 - name: 1010 Lamar
   address: 1010 Lamar St, Houston, TX 77002
@@ -138,6 +183,11 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 21"}
     year_built: {value: 1981, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1010 Lamar St, Built 1981"}
     rentable_area_sqft: {value: 277991, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 277,991"}
+    stories: {value: 20, source_url: https://www.loopnet.com/Listing/1010-Lamar-St-Houston-TX/22088766, note: "LoopNet (last updated 4/4/2024): Building Height: 20 Stories"}
+    typical_floor_sqft: {value: 12939, source_url: https://www.loopnet.com/Listing/1010-Lamar-St-Houston-TX/22088766, note: "LoopNet: Typical Floor Size: 12,939 SF"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/1010-Lamar-St-Houston-TX/22088766, note: "LoopNet: Building Class: B"}
+    vacancy_pct: {value: 80, source_url: https://www.bisnow.com/houston/news/office/harris-county-buys-20-story-downtown-office-building-for-26m-122258, note: "the building was 20% occupied at the time of sale (Harris County purchase, Jan 2024; vacancy = 100 - 20)"}
+    parking_spaces: {value: 490, source_url: https://www.loopnet.com/Listing/1010-Lamar-St-Houston-TX/13433585, note: "LoopNet sale listing (2018): Parking: 490 Spaces (1.89 Spaces per 1,000 SF Leased)"}
 
 - name: 1600 Smith
   address: 1600 Smith St, Houston, TX 77002
@@ -147,6 +197,12 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 21"}
     year_built: {value: 1984, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1600 Smith St, Built 1984"}
     rentable_area_sqft: {value: 1098399, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 1,098,399"}
+    stories: {value: 51, source_url: https://www.loopnet.com/Listing/1600-Smith-St-Houston-TX/21644392, note: "LoopNet (last updated 1/25/2023): Building Height: 51 Stories"}
+    typical_floor_sqft: {value: 23000, source_url: https://www.loopnet.com/Listing/1600-Smith-St-Houston-TX/21644392, note: "LoopNet: Typical Floor Size: 23,000 SF"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/1600-Smith-St-Houston-TX/21644392, note: "LoopNet: Building Class: A"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 13, source_url: https://www.loopnet.com/Listing/1600-Smith-St-Houston-TX/21644392, note: "LoopNet: Unfinished Ceiling Height: 13’"}
+    stories_alt: {value: 55, source_url: https://www.skyscrapercenter.com/building/1600-smith-street/1208, note: "CTBUH Skyscraper Center: Floors 55 (counting differs from LoopNet 51)"}
 
 - name: 1001 McKinney
   address: 1001 McKinney St, Houston, TX 77002
@@ -156,6 +212,14 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 20"}
     year_built: {value: 1947, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1001 McKinney St, Built 1947"}
     rentable_area_sqft: {value: 375440, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 375,440"}
+    stories: {value: 23, source_url: https://www.loopnet.com/Listing/1001-McKinney-St-Houston-TX/38708470, note: "LoopNet (last updated 11/10/2026): Building Height: 23 Stories"}
+    typical_floor_sqft: {value: 16323, source_url: https://www.loopnet.com/Listing/1001-McKinney-St-Houston-TX/38708470, note: "LoopNet: Typical Floor Size: 16,323 SF"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/1001-McKinney-St-Houston-TX/38708470, note: "LoopNet: Building Class: A"}
+    year_renovated: {value: 2020, source_url: https://www.loopnet.com/Listing/1001-McKinney-St-Houston-TX/38708470, note: "LoopNet: Renovated 2020"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 11, source_url: https://www.loopnet.com/Listing/1001-McKinney-St-Houston-TX/38708470, note: "LoopNet: Unfinished Ceiling Height: 11’"}
+    typical_floor_sqft_alt: {value: 20001, source_url: https://www.capcommercialrealestate.com/listings/1001-mckinney-street/, note: "Capital Realty Group listing (2015): TYP Floor: 20,001"}
+    building_class_alt: {value: B, source_url: https://www.capcommercialrealestate.com/listings/1001-mckinney-street/, note: "Capital Realty Group listing (2015): Building Class: Class B"}
 
 - name: 440 Louisiana
   address: 440 Louisiana St, Houston, TX 77002
@@ -165,6 +229,13 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 20"}
     year_built: {value: 1983, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 440 Louisiana St, Built 1983"}
     rentable_area_sqft: {value: 379382, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 379,382"}
+    stories: {value: 26, source_url: https://www.loopnet.com/Listing/440-Louisiana-St-Houston-TX/22934646, note: "LoopNet (last updated 10/20/2026): Building Height: 26 Stories"}
+    typical_floor_sqft: {value: 15750, source_url: https://www.loopnet.com/Listing/440-Louisiana-St-Houston-TX/22934646, note: "LoopNet: Typical Floor Size: 15,750 SF (Capital Realty 2015: 15,500)"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/440-Louisiana-St-Houston-TX/22934646, note: "LoopNet: Building Class: A (Capital Realty 2015: Class B)"}
+    year_renovated: {value: 2016, source_url: https://www.loopnet.com/Listing/440-Louisiana-St-Houston-TX/22934646, note: "LoopNet: Renovated 2016"}
+    parking_spaces: {value: 297, source_url: https://www.lyrictower.com/, note: "297 tenant parking spaces below the building (plus 600 in the separate Lyric Garage)"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 10, source_url: https://www.loopnet.com/Listing/440-Louisiana-St-Houston-TX/22934646, note: "LoopNet: Unfinished Ceiling Height: 10’"}
 
 - name: 1331 Lamar
   address: 1331 Lamar St, Houston, TX 77010
@@ -174,6 +245,12 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 20"}
     year_built: {value: 1983, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1331 Lamar St, Built 1983"}
     rentable_area_sqft: {value: 985896, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 985,896"}
+    stories: {value: 16, source_url: https://www.loopnet.com/Listing/1331-Lamar-St-Houston-TX/16761778, note: "LoopNet (last updated 6/13/2022): Building Height: 16 Stories (brochure: 16 above grade; 2 below grade)"}
+    typical_floor_sqft: {value: 56660, source_url: https://www.loopnet.com/Listing/1331-Lamar-St-Houston-TX/16761778, note: "LoopNet: Typical Floor Size: 56,660 SF (Brookfield brochure: Average Floor Size 56,600)"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/1331-Lamar-St-Houston-TX/16761778, note: "LoopNet: Building Class: B"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 10, source_url: https://www.loopnet.com/Listing/1331-Lamar-St-Houston-TX/16761778, note: "LoopNet: Unfinished Ceiling Height: 10’"}
+    building_class_alt: {value: A, source_url: https://images1.showcase.com/d2/G3f45eCrgrqcTi0rsFqaIrj-FqmAlQ3gf_WK8NLg6eo/document.pdf, note: "Brookfield building information sheet: Building Class Class “A”"}
 
 - name: 1315 St Joseph Pkwy
   address: 1315 St Joseph Pkwy, Houston, TX 77002
@@ -183,6 +260,14 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 19"}
     year_built: {value: 1984, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1315 St Joseph Pky, Built 1984"}
     rentable_area_sqft: {value: 170554, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 170,554"}
+    stories: {value: 18, source_url: https://www.loopnet.com/Listing/1315-St-Joseph-Pky-Houston-TX/3940460, note: "LoopNet (last updated 11/12/2026): Building Height: 18 Stories"}
+    typical_floor_sqft: {value: 15000, source_url: https://www.loopnet.com/Listing/1315-St-Joseph-Pky-Houston-TX/3940460, note: "LoopNet: Typical Floor Size: 15,000 SF"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/1315-St-Joseph-Pky-Houston-TX/3940460, note: "LoopNet: Building Class: B"}
+    year_renovated: {value: 2022, source_url: https://www.loopnet.com/Listing/1315-St-Joseph-Pky-Houston-TX/3940460, note: "LoopNet: Renovated 2022"}
+    parking_spaces: {value: 800, source_url: https://www.capcommercialrealestate.com/listings/1315-st-joseph-parkway/, note: "Capital Realty Group listing (2015): 800 covered spaces @ $55.00/mo."}
+  extra:
+    unfinished_ceiling_height_ft: {value: 12, source_url: https://www.loopnet.com/Listing/1315-St-Joseph-Pky-Houston-TX/3940460, note: "LoopNet: Unfinished Ceiling Height: 12’"}
+    typical_floor_sqft_alt: {value: 11370, source_url: https://www.capcommercialrealestate.com/listings/1315-st-joseph-parkway/, note: "Capital Realty Group listing (2015): TYP Floor: 11,370"}
 
 - name: KBR Tower
   address: 601 Jefferson St, Houston, TX 77002
@@ -193,6 +278,14 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 19"}
     year_built: {value: 1973, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 601 Jefferson St, Built 1973"}
     rentable_area_sqft: {value: 1047748, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 1,047,748"}
+    stories: {value: 40, source_url: https://www.loopnet.com/Listing/601-Jefferson-St-Houston-TX/3940383, note: "LoopNet (last updated 11/11/2026): Building Height: 40 Stories"}
+    typical_floor_sqft: {value: 24946, source_url: https://www.loopnet.com/Listing/601-Jefferson-St-Houston-TX/3940383, note: "LoopNet: Typical Floor Size: 24,946 SF"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/601-Jefferson-St-Houston-TX/3940383, note: "LoopNet: Building Class: B"}
+    year_renovated: {value: 1989, source_url: https://www.loopnet.com/Listing/601-Jefferson-St-Houston-TX/3940383, note: "LoopNet: Renovated 1989 (Capital Realty 2015: Renovated in 1991)"}
+    asking_rent_usd_sqft_yr: {value: 17.5, source_url: https://www.loopnet.com/Listing/601-Jefferson-St-Houston-TX/3940383, note: "LoopNet: $17.50 /SF/YR (both listed spaces)"}
+    parking_spaces: {value: 1589, source_url: https://www.capcommercialrealestate.com/listings/601-jefferson-street/, note: "Capital Realty Group listing (2015): 1,589 Covered spaces @ $155.00/mo."}
+  extra:
+    unfinished_ceiling_height_ft: {value: 14, source_url: https://www.loopnet.com/Listing/601-Jefferson-St-Houston-TX/3940383, note: "LoopNet: Unfinished Ceiling Height: 14’"}
 
 - name: 711 Louisiana
   address: 711 Louisiana St, Houston, TX 77002
@@ -202,6 +295,13 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 19"}
     year_built: {value: 1975, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 711 Louisiana St, Built 1975"}
     rentable_area_sqft: {value: 666762, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 666,762"}
+    stories: {value: 34, source_url: https://www.loopnet.com/Listing/711-Louisiana-St-Houston-TX/7451029, note: "LoopNet (last updated 11/9/2026): Building Height: 34 Stories"}
+    typical_floor_sqft: {value: 20000, source_url: https://www.loopnet.com/Listing/711-Louisiana-St-Houston-TX/7451029, note: "LoopNet: Typical Floor Size: 20,000 SF"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/711-Louisiana-St-Houston-TX/7451029, note: "LoopNet: Building Class: A"}
+    year_renovated: {value: 2014, source_url: https://www.loopnet.com/Listing/711-Louisiana-St-Houston-TX/7451029, note: "LoopNet: Renovated 2014"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 10, source_url: https://www.loopnet.com/Listing/711-Louisiana-St-Houston-TX/7451029, note: "LoopNet: Unfinished Ceiling Height: 10’"}
+    complex_vacancy_pct: {value: 45.2, source_url: https://res.cloudinary.com/jll-global-cmg/image/upload/v1746131035/Prod/DealX/Doc/ff9e58d0-d1c2-45b0-984a-5677179a58d6/Pennzoil_Place_Flyer.pdf, note: "JLL Pennzoil Place flyer (2025): 54.8% OCCUPANCY across both towers (700 Milam + 711 Louisiana), so not building-level; vacancy = 100 - 54.8"}
 
 - name: 801 Louisiana
   address: 801 Louisiana St, Houston, TX 77002
@@ -211,6 +311,13 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 19"}
     year_built: {value: 1978, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 801 Louisiana St, Built 1978"}
     rentable_area_sqft: {value: 105145, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 105,145"}
+    stories: {value: 8, source_url: https://www.loopnet.com/Listing/801-Louisiana-St-Houston-TX/14546966, note: "LoopNet (last updated 11/12/2026): Building Height: 8 Stories"}
+    typical_floor_sqft: {value: 12245, source_url: https://www.loopnet.com/Listing/801-Louisiana-St-Houston-TX/14546966, note: "LoopNet: Typical Floor Size: 12,245 SF"}
+    building_class: {value: B, source_url: https://www.loopnet.com/Listing/801-Louisiana-St-Houston-TX/14546966, note: "LoopNet: Building Class: B"}
+    year_renovated: {value: 2009, source_url: https://www.loopnet.com/Listing/801-Louisiana-St-Houston-TX/14546966, note: "LoopNet: Renovated 2009 (Capital Realty: Renovated in April 2009)"}
+    asking_rent_usd_sqft_yr: {value: 16.5, source_url: https://www.loopnet.com/Listing/801-Louisiana-St-Houston-TX/14546966, note: "LoopNet: $16.50 /SF/YR (all listed spaces)"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 11, source_url: https://www.loopnet.com/Listing/801-Louisiana-St-Houston-TX/14546966, note: "LoopNet: Unfinished Ceiling Height: 11’"}
 
 - name: Kinder Morgan Building
   address: 1001 Louisiana St, Houston, TX 77002
@@ -221,6 +328,13 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 18"}
     year_built: {value: 1962, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1001 Louisiana St, Built 1962"}
     rentable_area_sqft: {value: 937003, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 937,003"}
+    stories: {value: 32, source_url: https://www.loopnet.com/Listing/1001-Louisiana-St-Houston-TX/23828218, note: "LoopNet (last updated 10/29/2026): Building Height: 32 Stories"}
+    typical_floor_sqft: {value: 28510, source_url: https://www.loopnet.com/Listing/1001-Louisiana-St-Houston-TX/23828218, note: "LoopNet: Typical Floor Size: 28,510 SF"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/1001-Louisiana-St-Houston-TX/23828218, note: "LoopNet: Building Class: A"}
+    year_renovated: {value: 2012, source_url: https://www.loopnet.com/Listing/1001-Louisiana-St-Houston-TX/23828218, note: "LoopNet: Renovated 2012 (Capital Realty: completely renovated from 2008-2012)"}
+    parking_spaces: {value: 1250, source_url: https://www.capcommercialrealestate.com/listings/1001-louisiana-street/, note: "Capital Realty Group listing (2015): tunnel-connected full city block garage with 1,250 parking spaces"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 10, source_url: https://www.loopnet.com/Listing/1001-Louisiana-St-Houston-TX/23828218, note: "LoopNet: Unfinished Ceiling Height: 10’"}
 
 - name: 1221 McKinney
   address: 1221 McKinney St, Houston, TX 77002
@@ -230,3 +344,10 @@
     property_type: {value: office, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: office building conversion score 18"}
     year_built: {value: 1977, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: 1221 McKinney St, Built 1977"}
     rentable_area_sqft: {value: 1065215, source_url: https://ctycms.com/tx-houston/docs/downtown-houston-office-conversion-study-optimized-11302023.pdf, note: "AECOM p.65: RBA 1,065,215"}
+    stories: {value: 46, source_url: https://www.loopnet.com/Listing/1221-McKinney-St-Houston-TX/35691379, note: "LoopNet (last updated 10/26/2026): Building Height: 46 Stories"}
+    typical_floor_sqft: {value: 23615, source_url: https://www.loopnet.com/Listing/1221-McKinney-St-Houston-TX/35691379, note: "LoopNet: Typical Floor Size: 23,615 SF"}
+    building_class: {value: A, source_url: https://www.loopnet.com/Listing/1221-McKinney-St-Houston-TX/35691379, note: "LoopNet: Building Class: A"}
+    year_renovated: {value: 2022, source_url: https://www.loopnet.com/Listing/1221-McKinney-St-Houston-TX/35691379, note: "LoopNet: Renovated 2022"}
+    asking_rent_usd_sqft_yr: {value: 28.0, source_url: https://www.loopnet.com/Listing/1221-McKinney-St-Houston-TX/35691379, note: "LoopNet: $28.00 /SF/YR (headline asking rate)"}
+  extra:
+    unfinished_ceiling_height_ft: {value: 10, source_url: https://www.loopnet.com/Listing/1221-McKinney-St-Houston-TX/35691379, note: "LoopNet: Unfinished Ceiling Height: 10’"}

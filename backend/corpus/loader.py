@@ -15,7 +15,7 @@ from rank_bm25 import BM25Okapi
 from backend.settings import CORPUS_DIR
 
 # Jurisdictions whose search also covers another jurisdiction's documents (state law applies locally).
-_SEARCH_ALSO = {"los_angeles": ("california",)}
+_SEARCH_ALSO = {"los_angeles": ("california",), "brevard": ("florida",)}
 
 
 def _tokens(text: str) -> list[str]:
@@ -81,7 +81,8 @@ def _bm25(jurisdiction: str) -> tuple[BM25Okapi | None, tuple[dict, ...], tuple[
 def search_corpus(jurisdiction: str, query: str, k: int = 5) -> list[dict]:
     """Top-k section chunks by BM25 for `query`: [{doc_id, section, text}].
 
-    Only chunks sharing at least one query token are returned. `los_angeles` also searches `california`.
+    Only chunks sharing at least one query token are returned. `los_angeles` also searches `california`;
+    `brevard` also searches `florida`.
     """
     bm25, chunks, token_sets = _bm25(jurisdiction)
     q = _tokens(query)

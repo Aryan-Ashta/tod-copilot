@@ -62,11 +62,17 @@ def apply_rules(target_attrs: dict, rules: list[dict], path_names: list[str],
         allows: dict = {}
         cites: list[Citation] = []
         seen_kinds: set[str] = set()
+        todo_kinds: list[str] = []
         for r in rules:
             if r["path"] != name or r["rule"] == "stop_tier":
                 continue
             kind = r["rule"]
-            if kind in seen_kinds or evaluate(r, attrs) != "match":
+            if kind in seen_kinds:
+                continue
+            res = evaluate(r, attrs)
+            if res == "uncovered" and r.get("value") == "TODO" and evaluate({**r, "value": None}, attrs) == "match":
+                todo_kinds.append(kind)  # the rule applies here but its value is not in the corpus
+            if res != "match":
                 continue
             seen_kinds.add(kind)
             if kind == "eligible":
@@ -74,6 +80,9 @@ def apply_rules(target_attrs: dict, rules: list[dict], path_names: list[str],
             elif kind in ALLOW_KINDS:
                 allows[kind] = r["value"]
             cites.append(citation(r, urls))
+        nc = [k for k in dict.fromkeys(todo_kinds) if k not in seen_kinds and k != "eligible"]
+        if nc:
+            allows["not_covered"] = nc
         if eligible is not True:  # what a path allows only matters where it applies
             allows = {k: v for k, v in allows.items() if k == "note"}
         if attrs.get("stop_tier") is not None:
@@ -86,10 +95,13 @@ def apply_rules(target_attrs: dict, rules: list[dict], path_names: list[str],
 
 
 def homes_for(area_acres: Optional[float], path: LegalPath, f: dict) -> Optional[int]:
-    """min(units allowed by density, floor area / avg unit size). None unless the path is eligible."""
+    """min(units allowed by density, floor area / avg unit size). None unless the path is eligible, and None when
+    the path has a density/height/FAR limit here whose value the corpus does not cover (never assume one)."""
     if path.eligible is not True or not area_acres:
         return None
     a = path.allows
+    if any(k in a.get("not_covered", []) for k in ("max_units_per_acre", "max_height_ft", "max_far")):
+        return None
     cap = a["max_units_per_acre"] * area_acres if a.get("max_units_per_acre") is not None else math.inf
     area_sqft = area_acres * SQFT_PER_ACRE
     if a.get("max_far") is not None:

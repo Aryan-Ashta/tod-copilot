@@ -30,7 +30,9 @@
     quote: "Where deed restrictions provide for a greater building line or setback, the deed restrictions shall control over the provisions of this chapter."
 
 # The text names site plan review as "one of the steps" of the building permit process but never
-# states the total number of approval steps.
+# states the total number of approval steps. The Houston Permitting Center's "Commercial Permitting 101"
+# deck (2025) lists process phases (platting "may be required", plan review, permits), not a fixed count
+# of approvals, and Chapter 42 platting depends on whether the tract is already platted.
 - path: Houston development rules
   rule: approval_steps
   applies_if: {}
@@ -42,7 +44,8 @@
 
 # Sec. 26-492 sets apartment ratios by bedroom count (no single per-unit value), and Division 2
 # does not apply inside the market-based parking area (downtown); parcel membership in that area
-# is not an attribute the zoning agent supplies, so no per-unit minimum can be stated.
+# is not an attribute the zoning agent supplies, and the locale bbox reaches past the central business
+# district (west of I-45, south of US 59), so membership must be checked per parcel; no locale-wide value.
 - path: Houston development rules
   rule: parking_min_per_unit
   applies_if: {}

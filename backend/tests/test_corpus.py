@@ -17,7 +17,7 @@ OPS = {"in", "lte", "gte", "eq"}
 EXPECTED_PATHS = {
     "houston": {"Houston development rules"},
     "los_angeles": {"SB 79 new construction", "LA Citywide Adaptive Reuse"},
-    "brevard": {"City of Cocoa land development code"},
+    "brevard": {"City of Cocoa land development code", "Florida Live Local Act"},
 }
 
 
@@ -72,6 +72,7 @@ def test_no_houston_quote_says_zoning_district():
     ("los_angeles", "adaptive reuse eligible buildings 15 years", "la_adaptive_reuse_2026"),
     ("los_angeles", "tier 1 transit-oriented development stop height limit", "ca_sb79_2025"),
     ("brevard", "multiple-family dwellings units per acre", "cocoa_zoning_code"),
+    ("brevard", "multifamily mixed-use residential zoned commercial industrial", "fl_stat_166_04151"),
 ])
 def test_search_corpus(jurisdiction, query, doc_id):
     hits = search_corpus(jurisdiction, query, k=5)

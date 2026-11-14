@@ -5,7 +5,7 @@
   "https://services1.arcgis.com/Tex1uhbqnOZPx6qT/arcgis/rest/services/Public_View_Cocoa_Zoning_with_Split_Lots_June_2023_view/FeatureServer/1",
   "https://gis.brevardfl.gov/gissrv/rest/services/Planning_Development/Zoning_WKID2881/MapServer/0"
  ],
- "retrieved_at": "2026-11-14T05:40:45.939055+00:00",
+ "retrieved_at": "2026-11-14T06:34:08.947936+00:00",
  "where": "1=1",
  "zoning": "City of Cocoa zoning layer, field Zoning (3754 polygons), then Brevard County zoning layer, field ZONING (212 polygons) for unincorporated parcels",
  "houston_zoning": null

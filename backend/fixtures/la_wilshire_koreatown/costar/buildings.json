@@ -23,6 +23,26 @@
     "source_url": "https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/",
     "note": "over 450 underground parking spaces (Urbanize: retaining parking for 450 vehicles)"
    },
+   "year_built": {
+    "value": 1955,
+    "source_url": "https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0/query?where=AIN%3D%275502027010%27&outFields=AIN,SitusFullAddress,YearBuilt1,EffectiveYear1,SQFTmain1,UseDescription&returnGeometry=false&f=json",
+    "note": "LA County Assessor parcel layer, AIN 5502027010: YearBuilt1 1955, EffectiveYear1 1956"
+   },
+   "year_renovated": {
+    "value": 2001,
+    "source_url": "https://www.loopnet.com/Listing/3325-Wilshire-Blvd-Los-Angeles-CA/4021363",
+    "note": "LoopNet office listing (last updated 7/17/2023, pre-conversion): Renovated 2001"
+   },
+   "typical_floor_sqft": {
+    "value": 17390,
+    "source_url": "https://www.loopnet.com/Listing/3325-Wilshire-Blvd-Los-Angeles-CA/4021363",
+    "note": "LoopNet office listing: Typical Floor Size: 17,390 SF"
+   },
+   "building_class": {
+    "value": "A",
+    "source_url": "https://www.loopnet.com/Listing/3325-Wilshire-Blvd-Los-Angeles-CA/4021363",
+    "note": "LoopNet office listing: Building Class: A"
+   },
    "name": {
     "value": "3325 Wilshire Boulevard",
     "source_url": "https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/",
@@ -64,6 +84,21 @@
     "source_url": "https://la.urbanize.city/post/former-ibm-offices-3424-wilshire-become-housing",
     "note": "approximately 250,000-square-foot building"
    },
+   "year_renovated": {
+    "value": 1982,
+    "source_url": "https://www.loopnet.com/Listing/3424-Wilshire-Blvd-Los-Angeles-CA/4021381",
+    "note": "LoopNet (last updated 8/19/2024): Renovated 1982"
+   },
+   "typical_floor_sqft": {
+    "value": 18263,
+    "source_url": "https://www.loopnet.com/Listing/3424-Wilshire-Blvd-Los-Angeles-CA/4021381",
+    "note": "LoopNet: Typical Floor Size: 18,263 SF"
+   },
+   "building_class": {
+    "value": "A",
+    "source_url": "https://www.loopnet.com/Listing/3424-Wilshire-Blvd-Los-Angeles-CA/4021381",
+    "note": "LoopNet: Building Class: A"
+   },
    "address": {
     "value": "3424 Wilshire Blvd, Los Angeles, CA 90010",
     "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3424+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
@@ -84,6 +119,11 @@
     "value": 20,
     "source_url": "https://la.urbanize.city/post/adaptive-reuse-create-495-apartments-3550-wilshire-blvd-koreatown",
     "note": "the conversion of a 20-story towers into 495 apartments"
+   },
+   "year_built": {
+    "value": 1969,
+    "source_url": "https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0/query?where=AIN%3D%275093026039%27&outFields=AIN,SitusFullAddress,YearBuilt1,EffectiveYear1,SQFTmain1,UseDescription&returnGeometry=false&f=json",
+    "note": "LA County Assessor parcel layer, AIN 5093026039: YearBuilt1 1969"
    },
    "name": {
     "value": "3550 Wilshire Boulevard",
@@ -121,6 +161,26 @@
     "source_url": "https://planning.lacity.gov/StaffRpt/CHC/2017/12-7-2017/9_Beneficial%20Plaza%20Liberty%20Park_FINAL.pdf",
     "note": "an 11-story office tower with a three-level underground parking"
    },
+   "rentable_area_sqft": {
+    "value": 312548,
+    "source_url": "https://www.loopnet.com/Listing/3700-Wilshire-Blvd-Los-Angeles-CA/4021444",
+    "note": "LoopNet (last updated 3/30/2026): Building Size: 312,548 SF"
+   },
+   "year_renovated": {
+    "value": 2005,
+    "source_url": "https://www.loopnet.com/Listing/3700-Wilshire-Blvd-Los-Angeles-CA/4021444",
+    "note": "LoopNet: Renovated 2005"
+   },
+   "typical_floor_sqft": {
+    "value": 28413,
+    "source_url": "https://www.loopnet.com/Listing/3700-Wilshire-Blvd-Los-Angeles-CA/4021444",
+    "note": "LoopNet: Typical Floor Size: 28,413 SF"
+   },
+   "building_class": {
+    "value": "B",
+    "source_url": "https://www.loopnet.com/Listing/3700-Wilshire-Blvd-Los-Angeles-CA/4021444",
+    "note": "LoopNet: Building Class: B"
+   },
    "address": {
     "value": "3700 Wilshire Blvd, Los Angeles, CA 90010",
     "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3700+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
@@ -146,6 +206,31 @@
     "value": 13,
     "source_url": "https://therealdeal.com/la/2025/03/27/jamison-lands-60m-loan-for-resi-conversion-of-k-town-office/",
     "note": "the blighted 13-story building at 3807-3815 Wilshire Boulevard"
+   },
+   "year_built": {
+    "value": 1967,
+    "source_url": "https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0/query?where=AIN%3D%275503031020%27&outFields=AIN,SitusFullAddress,YearBuilt1,EffectiveYear1,SQFTmain1,UseDescription&returnGeometry=false&f=json",
+    "note": "LA County Assessor parcel layer, AIN 5503031020: YearBuilt1 1967, EffectiveYear1 1969 (designed 1965)"
+   },
+   "rentable_area_sqft": {
+    "value": 247672,
+    "source_url": "https://www.loopnet.com/Listing/3807-Wilshire-Blvd-Los-Angeles-CA/4021455",
+    "note": "LoopNet (last updated 9/14/2026): Building Size: 247,672 SF"
+   },
+   "typical_floor_sqft": {
+    "value": 12997,
+    "source_url": "https://www.loopnet.com/Listing/3807-Wilshire-Blvd-Los-Angeles-CA/4021455",
+    "note": "LoopNet: Typical Floor Size: 12,997 SF"
+   },
+   "building_class": {
+    "value": "B",
+    "source_url": "https://www.loopnet.com/Listing/3807-Wilshire-Blvd-Los-Angeles-CA/4021455",
+    "note": "LoopNet: Building Class: B"
+   },
+   "vacancy_pct": {
+    "value": 100,
+    "source_url": "https://www.costar.com/article/633654063/office-building-near-downtown-la-slated-for-residential-conversion",
+    "note": "CoStar News property tag: Wilshire CT Fin Ctr-VACANT/OFF THE MARKET 3807 Wilshire Blvd"
    },
    "address": {
     "value": "3807 Wilshire Blvd, Los Angeles, CA 90010",
@@ -188,6 +273,21 @@
     "source_url": "https://therealdeal.com/la/2024/11/05/jamison-defaults-on-85m-loan-for-ktowns-equitable-plaza/",
     "note": "occupancy falling from 67 percent in 2021 to 57 percent today (Nov 2024; vacancy = 100 - 57)"
    },
+   "year_renovated": {
+    "value": 1993,
+    "source_url": "https://www.loopnet.com/Listing/3435-Wilshire-Blvd-Los-Angeles-CA/4021384",
+    "note": "LoopNet (last updated 10/27/2026): Renovated 1993"
+   },
+   "typical_floor_sqft": {
+    "value": 22870,
+    "source_url": "https://www.loopnet.com/Listing/3435-Wilshire-Blvd-Los-Angeles-CA/4021384",
+    "note": "LoopNet: Typical Floor Size: 22,870 SF"
+   },
+   "building_class": {
+    "value": "A",
+    "source_url": "https://www.loopnet.com/Listing/3435-Wilshire-Blvd-Los-Angeles-CA/4021384",
+    "note": "LoopNet: Building Class: A"
+   },
    "address": {
     "value": "3435 Wilshire Blvd, Los Angeles, CA 90010",
     "source_url": "https://nominatim.openstreetmap.org/search?format=jsonv2&q=3435+Wilshire+Blvd%2C+Los+Angeles%2C+CA+90010&addressdetails=1&limit=1",
@@ -218,6 +318,26 @@
     "value": 22,
     "source_url": "https://planning.lacity.gov/odocument/2d44c916-ff01-4080-9349-80f05b873590/High-RiseCorporateOfficeBuildings_1945-1975.pdf",
     "note": "SurveyLA p.27: its twenty-two stories and three-hundred-foot height"
+   },
+   "rentable_area_sqft": {
+    "value": 421768,
+    "source_url": "https://www.loopnet.com/Listing/3600-Wilshire-Blvd-Los-Angeles-CA/34160150",
+    "note": "LoopNet (last updated 10/27/2026): Building Size: 421,768 SF"
+   },
+   "year_renovated": {
+    "value": 1998,
+    "source_url": "https://www.loopnet.com/Listing/3600-Wilshire-Blvd-Los-Angeles-CA/34160150",
+    "note": "LoopNet: Renovated 1998"
+   },
+   "typical_floor_sqft": {
+    "value": 20084,
+    "source_url": "https://www.loopnet.com/Listing/3600-Wilshire-Blvd-Los-Angeles-CA/34160150",
+    "note": "LoopNet: Typical Floor Size: 20,084 SF"
+   },
+   "building_class": {
+    "value": "B",
+    "source_url": "https://www.loopnet.com/Listing/3600-Wilshire-Blvd-Los-Angeles-CA/34160150",
+    "note": "LoopNet: Building Class: B"
    },
    "address": {
     "value": "3600 Wilshire Blvd, Los Angeles, CA 90010",

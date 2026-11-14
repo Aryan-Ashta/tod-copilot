@@ -1,0 +1,9 @@
+{
+ "source": "fcc_bdc_esri_living_atlas",
+ "urls": [
+  "https://services8.arcgis.com/peDZJliSvYims39Q/arcgis/rest/services/FCC_Broadband_Data_Collection_December_2024_View/FeatureServer/5",
+  "https://www.arcgis.com/home/item.html?id=e1343efcefc344709057260ee57290a0"
+ ],
+ "retrieved_at": "2026-11-14T06:37:12.597297+00:00",
+ "note": "FCC Broadband Data Collection, availability as of December 31, 2025, summarized per H3-8 cell by Esri Living Atlas (\"FCC Broadband Data Collection December 2025 (Latest)\"); served = BSLs with >= 100/20 Mbps low-latency wired or licensed fixed wireless; a cell counts as served at 100/20 when served_share exceeds factor broadband_served_share_min (applied in backend/data/providers/fcc.py)"
+}

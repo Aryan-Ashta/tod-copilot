@@ -3,8 +3,9 @@
  "urls": [
   "https://maps.lacity.org/lahub/rest/services/Sewer_Information/MapServer/9"
  ],
- "retrieved_at": "2026-11-14T05:03:35.924846+00:00",
+ "retrieved_at": "2026-11-14T06:29:57.566419+00:00",
  "layers": {
   "sewer_main": "LA Sanitation sewer pipes"
- }
+ },
+ "filters": {}
 }

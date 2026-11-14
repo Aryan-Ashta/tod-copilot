@@ -5,6 +5,7 @@ from shapely.strtree import STRtree
 from backend.agents import common
 from backend.agents.context import RunContext
 from backend.data.geo import lonlat_to_utm, to_utm
+from backend.data.providers.fcc import served_at
 from backend.data.resolver import Capability
 from backend.models import geo_graph
 from backend.models.infrastructure import readiness as readiness_model
@@ -172,8 +173,11 @@ def tools(ctx: RunContext):
         bikes = [to_utm(b["geometry"], epsg) for b in (layers[Capability.STREETS].value or {}).get("bike_lanes", [])]
         btree = STRtree(bikes) if bikes else None
         util = layers[Capability.UTILITIES].value
-        ugeoms = [to_utm(u["geometry"], epsg) for fs in (util or {}).values() for u in fs]
+        # served = a water/sewer main or service area within 30 m; substations (points) would only be map
+        # features, never part of this check
+        ugeoms = [to_utm(u["geometry"], epsg) for k, fs in (util or {}).items() if k != "power_substation" for u in fs]
         utree = STRtree(ugeoms) if ugeoms else None
+        bb = layers[Capability.BROADBAND].value
 
         rtargets = [(p.id, p.geometry) for p in cand_p] + [(b.id, b.footprint) for b in cand_b]
         ctx.step(NAME, f"Scoring readiness of {len(cand_p)} underused parcels and {len(cand_b)} buildings")
@@ -200,11 +204,12 @@ def tools(ctx: RunContext):
             else:
                 u = utree is not None and len(utree.query(g.buffer(30), predicate="intersects")) > 0
             w = walk_m.get(tid, {})
+            # FCC BDC: served at 100/20 in the H3 cell containing the target centroid; None when no cell covers it
+            broadband = None if bb is None else served_at(bb, *(cents.get(tid) or pt_of(geom)))
             measures.append({"id": tid, "dist_m": {"transit": w.get("frequent_stop"), **{k: w.get(k) for k in
                                                                                           ("grocery", "clinic", "school", "park", "ev")}},
                              "sidewalk": {"frontages": front, "with": with_sw, "known": known}, "bike_m": bike_m,
-                             "utilities": u, "broadband": None if layers[Capability.BROADBAND].value is None else True,
-                             "flood_zone": zone_of.get(tid)})
+                             "utilities": u, "broadband": broadband, "flood_zone": zone_of.get(tid)})
         rd = readiness_model(measures, f)
         ctx.plan_parts["readiness"] = rd
         ctx.pre.update(walk_m={t: {k: w[k] for k in WALK_KINDS} for t, w in walk_m.items()}, in_flood=in_flood,

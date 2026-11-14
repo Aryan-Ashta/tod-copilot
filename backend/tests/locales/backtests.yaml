@@ -15,6 +15,8 @@ houston_1801_smith:
   min_floorplate_dimension_ft: 95
   floor_to_floor_ft_min: 13
   acquisition_usd_estimate: 20600000
+  typical_floor_sqft: 21000
+  vacancy_pct: 100
   source_urls:
     stories: https://realtynewsreport.com/downtown-office-tower-converted-to-luxe-living/
     rentable_area_sqft: https://realtynewsreport.com/downtown-office-tower-converted-to-luxe-living/
@@ -24,6 +26,8 @@ houston_1801_smith:
     floor_to_floor_ft_min: https://realtynewsreport.com/downtown-office-tower-converted-to-luxe-living/
     acquisition_usd_estimate: https://realtynewsreport.com/downtown-office-tower-converted-to-luxe-living/
     property_type: https://realtynewsreport.com/new-office-conversion-study-by-downtown-houston/
+    typical_floor_sqft: https://www.capcommercialrealestate.com/listings/600-jefferson-street/
+    vacancy_pct: https://www.houstonchronicle.com/business/real-estate/article/office-conversion-apartments-challenges-houston-18652223.php
   notes:
     - "RNR 2024-02-01: 'At 20 stories, 1801 Smith is a 458,000-square-foot tower with parking.'"
     - "RNR 2024-02-01: 'the 1971 building – previously known as 600 Jefferson – features 372 swank units'. Year conflicts: RNR 2023-12-20 says ''60s vintage'; AECOM 2023 p.53 lists Year Built 1972."
@@ -31,7 +35,8 @@ houston_1801_smith:
     - "AECOM 2023 p.53 benchmarking: 1801 Smith Street, 20 stories, Min. Depth 95, 450,000 total GSF, 372 units (rentable area uses the 458,000 SF press figure)."
     - "RNR 2024-02-01: 'the distance between floor plates was a generous 13-plus feet' (floor-to-floor, not clear ceiling height)."
     - "RNR 2024-02-01: 'DeBartolo purchased the foreclosed property for an estimated $20.6 million'."
-    - "typical_floor_sqft: no public source found; omitted."
+    - "Capital Realty Group listing for 600 Jefferson St (pre-conversion, page dated 2015): 'TYP Floor: 21,000', 'Stories: 20', 'Year Built: 1971, Renovated in 1998'."
+    - "Houston Chronicle 2024: 'Quinlan first moved out the remaining tenants and sold the tower to DeBartolo vacant' (acquired in 2021 'when it was less than 30% occupied'); vacancy_pct 100 = state at DeBartolo's 2022 purchase."
 
 la_jamison_wilshire:
   name: 3325 Wilshire Boulevard (Jamison; now 'Mason')
@@ -45,6 +50,8 @@ la_jamison_wilshire:
   actual_units: 236
   parking_spaces: 450
   retained_retail_sqft: 15000
+  year_built: 1955
+  typical_floor_sqft: 17390
   source_urls:
     address: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/
     stories: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/
@@ -54,8 +61,12 @@ la_jamison_wilshire:
     retained_retail_sqft: https://la.urbanize.city/post/adaptive-reuse-k-town-offices-3325-wilshire-boulevard-create-236-apartments
     property_type: https://www.multifamilydive.com/news/jamison-starts-tenth-office-conversion-in-las-koreatown/733010/
     announcement: https://bisnow.com/los-angeles/news/architecture-design/adaptive-reuse-los-angeles-ordinance-citywide-128323
+    year_built: "https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0/query?where=AIN%3D%275502027010%27&outFields=AIN,SitusFullAddress,YearBuilt1,EffectiveYear1,SQFTmain1,UseDescription&returnGeometry=false&f=json"
+    typical_floor_sqft: https://www.loopnet.com/Listing/3325-Wilshire-Blvd-Los-Angeles-CA/4021363
   notes:
     - "Multifamily Dive 2024-11-21: 'The 233,000-square-foot building at 3325 Wilshire Boulevard ... is set to become a mixed-use property with 236 apartments and 15,000 square feet of retail'."
     - "LA Local 2026-08-18: 'Mason is also now open and leasing, with 236 apartments inside a former 13-story office building.'"
-    - "year_built: only 'A 1950s office building' (Urbanize LA 2024-11-01); no exact year found, omitted."
+    - "year_built: LA County Assessor parcel layer, AIN 5502027010: YearBuilt1 1955 (EffectiveYear1 1956); consistent with Urbanize LA 'A 1950s office building'."
+    - "LoopNet office listing (last updated 2023-07-17, pre-conversion): 'Typical Floor Size: 17,390 SF', 'Building Size: 226,165 SF', 'Building Class: A', 'Unfinished Ceiling Height: 11’'."
+    - "vacancy_pct: no pre-conversion figure published (Yield PRO only says 'Converting existing office vacancy'); omitted."
     - "233,000 SF is the reported building total (includes ground-floor retail); no separate rentable figure published."

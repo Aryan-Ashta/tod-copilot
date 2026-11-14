@@ -43,8 +43,10 @@ def backtest_candidate(key: str, plan, paths, acquisition_usd, year=2026, same_b
         id=key, parcel_id="backtest", footprint={}, property_type=_s(bt["property_type"], url=urls.get("property_type")),
         building_class=_s(None), year_built=_s(bt.get("year_built"), url=urls.get("year_built")), year_renovated=_s(None),
         stories=_s(stories, url=urls.get("stories")), rentable_area_sqft=_s(rentable, url=urls.get("rentable_area_sqft")),
-        typical_floor_sqft=_s(round(rentable / stories), "derived", note="rentable / stories", conf="low"),
-        vacancy_pct=_s(None), asking_rent_usd_sqft_yr=_s(None), parking_spaces=_s(bt.get("parking_spaces")),
+        typical_floor_sqft=(_s(bt["typical_floor_sqft"], url=urls.get("typical_floor_sqft")) if bt.get("typical_floor_sqft")
+                            else _s(round(rentable / stories), "derived", note="rentable / stories", conf="low")),
+        vacancy_pct=_s(bt.get("vacancy_pct"), url=urls.get("vacancy_pct")), asking_rent_usd_sqft_yr=_s(None),
+        parking_spaces=_s(bt.get("parking_spaces")),
         floor_depth_ft=_s(depth, "derived", note="min floorplate dimension / 2 - core", conf="low"),
         ceiling_height_ft=_s(None), window_wall_pct=_s(None), roof_area_sqft=_s(None), name=_s(bt["name"]))
     if same_building is not None:

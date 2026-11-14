@@ -2,11 +2,22 @@
 # Governing code: City of Cocoa Code of Ordinances, Appendix A (Zoning). 713 of 781 county parcels within
 # 0.5 mi of the planned Brightline station report CITY = COCOA, and the station-area parcels (Brightline,
 # Walmart, city land) are mapped in the City of Cocoa zoning layer. Unincorporated pockets (Brevard
-# County zoning RU-1-13, EU, EU-2, RU-1-9, RU-1-11, GML, TU-1) and Cocoa single-family districts are not
-# covered: those parcels get eligible = None.
+# County zoning RU-1-13, EU, EU-2, RU-1-9, RU-1-11, GML, TU-1) are not covered: those parcels get eligible = None.
+# Cocoa single-family districts (RE, RR-1, RU-1-7, RU-1-7a) permit "One single-family dwelling" per lot and state
+# minimum lot areas but no units-per-acre density, and PUD density is set per PUD by City Council: their
+# eligibility stays not covered (None) and they carry a note rule instead.
 # zoning_code values are the `Zoning` field of the City of Cocoa zoning layer:
 # https://services1.arcgis.com/Tex1uhbqnOZPx6qT/arcgis/rest/services/Public_View_Cocoa_Zoning_with_Split_Lots_June_2023_view/FeatureServer/1
-# No adopted Brightline station-area overlay was found (layer fields FurtherRestrictions/RestrictionURL are empty there).
+# No adopted Brightline station-area overlay was found (layer fields FurtherRestrictions/RestrictionURL are empty there;
+# the Four Corners Overlay District at SR 520 / US 1, Ord. 02-2025, had only a first reading on 2026-11-10 and is
+# not at the station). The city's two CRAs (Diamond Square: Pineda St, School St, FEC railroad, Rosa L. Jones Dr;
+# Cocoa CRA: Mitchell St to Rosa L. Jones Dr east of the FEC, per https://www.cocoafl.gov/1726 and the 2025 CRA
+# annual report) lie south of the station area, judging by those street boundaries.
+#
+# Second path, "Florida Live Local Act" (F.S. 166.04151(7), florida/ corpus): multifamily and mixed-use residential
+# must be allowed in Cocoa's commercial and industrial districts. Its density ("highest currently allowed ... on any
+# land in the municipality") and height ("highest ... within 1 mile ... or three stories") are not numbers in the
+# corpus, so those rules stay TODO.
 
 # ---------------------------------------------------------------- eligibility (multi-family homes)
 - path: City of Cocoa land development code
@@ -90,6 +101,61 @@
     doc_id: cocoa_zoning_code
     section: App. A, Art. XI, Sec. 19
     quote: "Residential land uses."
+
+- path: City of Cocoa land development code
+  rule: eligible
+  applies_if: {zoning_code: {eq: INST}}
+  value: false
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 21
+    quote: "All uses not specifically or provisionally permitted herein."
+
+# Single-family districts: one dwelling per lot; no density stated, so eligibility stays not covered.
+- path: City of Cocoa land development code
+  rule: note
+  applies_if: {zoning_code: {eq: RE}}
+  value: "one single-family dwelling per lot (minimum lot 20,000 sq ft); no units-per-acre density stated"
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 1
+    quote: "One single-family dwelling."
+
+- path: City of Cocoa land development code
+  rule: note
+  applies_if: {zoning_code: {eq: RR-1}}
+  value: "one single-family dwelling per lot (minimum lot 1 acre); no units-per-acre density stated"
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 2
+    quote: "One single-family dwelling."
+
+- path: City of Cocoa land development code
+  rule: note
+  applies_if: {zoning_code: {eq: RU-1-7}}
+  value: "one single-family dwelling per lot (minimum lot 7,500 sq ft); no units-per-acre density stated"
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 3
+    quote: "One single-family dwelling."
+
+- path: City of Cocoa land development code
+  rule: note
+  applies_if: {zoning_code: {eq: RU-1-7a}}
+  value: "one single-family dwelling per lot (minimum lot 7,500 sq ft); no units-per-acre density stated"
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 3A
+    quote: "One single-family dwelling."
+
+- path: City of Cocoa land development code
+  rule: note
+  applies_if: {zoning_code: {eq: PUD}}
+  value: "PUD density is set per PUD by City Council; mixed-use PUDs are capped at the comprehensive plan maximum, or 25 units/acre if the plan sets none"
+  cite:
+    doc_id: cocoa_zoning_code
+    section: App. A, Art. XI, Sec. 17
+    quote: "In no case shall the density exceed the maximum density established in the city's comprehensive plan or twenty-five (25) units per acre if not established therein."
 
 # ---------------------------------------------------------------- uses
 - path: City of Cocoa land development code
@@ -276,16 +342,26 @@
     section: App. A, Art. XI, Sec. 14
     quote: "Multiple-family dwellings as regulated by section 6, RU-2-25 Multiple-Family District."
 
-# Site plan approval is required in RU-2-25 (and C-P multi-family follows RU-2-25); the total number of
-# approval steps is not stated.
+# Art. XIII, Sec. 1(B): any development other than a single-family home or single duplex needs site plan approval
+# before a building permit (2 approvals). P-S and C-P allow multi-family only as a special exception, which the
+# same sentence names as a third, prior approval.
 - path: City of Cocoa land development code
   rule: approval_steps
-  applies_if: {zoning_code: {in: [RU-2-25, C-P]}}
-  value: TODO
+  applies_if: {zoning_code: {in: [P-S, C-P]}}
+  value: 3
   cite:
-    doc_id: cocoa_zoning_code
-    section: App. A, Art. XI, Sec. 6
-    quote: "All development in the RU-2-25 Multiple-Family Dwelling District, except for the construction of an individual single-family dwelling unit on a single lot, shall be required to submit a site plan and obtain approval pursuant to article XIII, section 1 of this zoning ordinance."
+    doc_id: cocoa_site_plan
+    section: App. A, Art. XIII, Sec. 1
+    quote: "Except for single family homes or a single duplex unit, any development, change of use, any use approved as a special exception, mobile home parks, and mobile home cooperatives shall require a site plan approval prior to the issuance of any building permit."
+
+- path: City of Cocoa land development code
+  rule: approval_steps
+  applies_if: {zoning_code: {in: [RU-2-15, RU-2-25, C-N, C-R]}}
+  value: 2
+  cite:
+    doc_id: cocoa_site_plan
+    section: App. A, Art. XIII, Sec. 1
+    quote: "Except for single family homes or a single duplex unit, any development, change of use, any use approved as a special exception, mobile home parks, and mobile home cooperatives shall require a site plan approval prior to the issuance of any building permit."
 
 # Multi-family parking depends on bedroom count (1, 1.5 or 2 spaces per unit); no single per-unit value.
 - path: City of Cocoa land development code
@@ -296,3 +372,75 @@
     doc_id: cocoa_zoning_code
     section: App. A, Art. XII, Sec. 1
     quote: "Efficiency unit - One (1) space per dwelling unit."
+
+# ---------------------------------------------------------------- Florida Live Local Act (F.S. 166.04151(7))
+# Cocoa's commercial (C-G, C-N, C-R, C-P, C-W) and industrial (M-2) districts. Residential districts are left
+# not covered rather than ineligible: the Act also reaches property owned by a county, municipality or school
+# district, and ownership is not a zoning attribute.
+- path: Florida Live Local Act
+  rule: eligible
+  applies_if: {zoning_code: {in: [C-G, C-N, C-R, C-P, C-W, M-2]}}
+  value: true
+  cite:
+    doc_id: fl_stat_166_04151
+    section: F.S. 166.04151(7)(a)
+    quote: "A municipality must authorize multifamily and mixed-use residential as allowable uses in any area zoned for commercial, industrial, or mixed use;"
+
+- path: Florida Live Local Act
+  rule: allows_uses
+  applies_if: {}
+  value: [residential, mixed_use]
+  cite:
+    doc_id: fl_stat_166_04151
+    section: F.S. 166.04151(7)(a)
+    quote: "A municipality must authorize multifamily and mixed-use residential as allowable uses in any area zoned for commercial, industrial, or mixed use;"
+
+# One approval, named: administrative approval with no board or council action.
+- path: Florida Live Local Act
+  rule: approval_steps
+  applies_if: {}
+  value: 1
+  cite:
+    doc_id: fl_stat_166_04151
+    section: F.S. 166.04151(7)(e)
+    quote: "A proposed development authorized under this subsection must be administratively approved without further action by the governing body of the municipality or any quasi-judicial or administrative board or reviewing body if the development satisfies the municipality’s land development regulations for multifamily developments in areas zoned for such use and is otherwise consistent with the comprehensive plan, with the exception of provisions establishing allowable densities, floor area ratios, height, and land use."
+
+- path: Florida Live Local Act
+  rule: discretionary
+  applies_if: {}
+  value: false
+  cite:
+    doc_id: fl_stat_166_04151
+    section: F.S. 166.04151(7)(a)
+    quote: "Notwithstanding any other law, local ordinance, or regulation to the contrary, a municipality may not require a proposed multifamily development to obtain a zoning or land use change, special exception, conditional use approval, variance, transfer of density or development units, amendment to a development of regional impact, amendment to a municipal charter, or comprehensive plan amendment for the building height, zoning, and densities authorized under this subsection."
+
+# The floor is Cocoa's highest allowed density anywhere in the city; that city-wide maximum is not in the corpus.
+- path: Florida Live Local Act
+  rule: max_units_per_acre
+  applies_if: {}
+  value: TODO
+  cite:
+    doc_id: fl_stat_166_04151
+    section: F.S. 166.04151(7)(b)
+    quote: "A municipality may not restrict the density of a proposed development authorized under this subsection below the highest currently allowed, or allowed on July 1, 2023, density on any land in the municipality where residential development is allowed under the municipality’s land development regulations."
+
+# The floor is the tallest allowed commercial/residential height within 1 mile, or three stories (not feet).
+- path: Florida Live Local Act
+  rule: max_height_ft
+  applies_if: {}
+  value: TODO
+  cite:
+    doc_id: fl_stat_166_04151
+    section: F.S. 166.04151(7)(d)
+    quote: "A municipality may not restrict the height of a proposed development authorized under this subsection below the highest currently allowed, or allowed on July 1, 2023, height for a commercial or residential building located in its jurisdiction within 1 mile of the proposed development or three stories, whichever is higher."
+
+# "Affordable" per F.S. 420.0004(3): housing costs at most 30% of income for the income groups in 420.0004(9),
+# (11), (12) and (17), the highest being moderate income (< 120% of median, 420.0004(12)).
+- path: Florida Live Local Act
+  rule: note
+  applies_if: {zoning_code: {in: [C-G, C-N, C-R, C-P, C-W, M-2]}}
+  value: "at least 40% of units must be rental units affordable (as defined in F.S. 420.0004) for at least 30 years"
+  cite:
+    doc_id: fl_stat_166_04151
+    section: F.S. 166.04151(7)(a)
+    quote: "if at least 40 percent of the residential units in a proposed multifamily development are rental units that, for a period of at least 30 years, are affordable as defined in s. 420.0004."

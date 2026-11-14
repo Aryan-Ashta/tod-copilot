@@ -63,3 +63,45 @@
   path_name: City of Cocoa land development code
   url: https://library.municode.com/fl/cocoa/codes/code_of_ordinances?nodeId=PTIICO_APXAZO
   retrieved_at: 2026-11-13
+
+- doc_id: ca_gov_code_65913_4
+  title: California Government Code § 65913.4 - Streamlined, ministerial approval process (subdivisions (a) opening paragraph, (c), (d))
+  jurisdiction: california
+  path_name: SB 79 new construction
+  url: https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=65913.4
+  retrieved_at: 2026-11-14
+
+- doc_id: ca_gov_code_65863_2
+  title: California Government Code § 65863.2 - No minimum parking within one-half mile of public transit (AB 2097)
+  jurisdiction: california
+  path_name: null
+  url: https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=GOV&sectionNum=65863.2
+  retrieved_at: 2026-11-14
+
+- doc_id: la_lamc_12_24_x1
+  title: Los Angeles Municipal Code Sec. 12.24 X.1 - Class 1 Conditional Use for Adaptive Reuse Projects (Ord. No. 188,793)
+  jurisdiction: los_angeles
+  path_name: LA Citywide Adaptive Reuse
+  url: https://codelibrary.amlegal.com/codes/los_angeles/latest/lapz/0-0-0-7378
+  retrieved_at: 2026-11-14
+
+- doc_id: cocoa_site_plan
+  title: City of Cocoa Code of Ordinances, Appendix A - Zoning, Art. XIII, Sec. 1 - Site plan approval process
+  jurisdiction: brevard
+  path_name: City of Cocoa land development code
+  url: https://library.municode.com/fl/cocoa/codes/code_of_ordinances?nodeId=PTIICO_APXAZO_ARTXIIISUDIRE_S1SIPLAPPRPRDECHUSANUSAPSPEXWEMOHOPAMOHOCO
+  retrieved_at: 2026-11-14
+
+- doc_id: fl_stat_166_04151
+  title: Florida Statutes § 166.04151(7)-(8) - Live Local Act (SB 102 (2023), SB 328 (2024) and later amendments), 2026 Florida Statutes
+  jurisdiction: florida
+  path_name: Florida Live Local Act
+  url: https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0100-0199/0166/Sections/0166.04151.html
+  retrieved_at: 2026-11-14
+
+- doc_id: fl_stat_420_0004
+  title: Florida Statutes § 420.0004 - Definitions (affordable; extremely-low, low, moderate and very-low income), 2026 Florida Statutes
+  jurisdiction: florida
+  path_name: null
+  url: https://www.leg.state.fl.us/statutes/index.cfm?App_mode=Display_Statute&URL=0400-0499/0420/Sections/0420.0004.html
+  retrieved_at: 2026-11-14

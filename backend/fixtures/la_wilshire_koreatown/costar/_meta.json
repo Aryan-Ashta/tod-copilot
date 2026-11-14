@@ -3,6 +3,6 @@
  "urls": [
   "backend/fixtures/la_wilshire_koreatown/costar/buildings_source.yaml"
  ],
- "retrieved_at": "2026-11-14T05:23:15.462077+00:00",
+ "retrieved_at": "2026-11-14T06:40:48.556985+00:00",
  "note": "hand-entered from cited public reporting; TODO(kickoff): replace with CoStar export"
 }
