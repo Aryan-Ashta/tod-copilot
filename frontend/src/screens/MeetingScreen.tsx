@@ -5,7 +5,7 @@ import { useApp } from '../state/AppContext'
 import Disclaimer from '../components/Disclaimer'
 import MapView, { type MapHandle } from '../components/MapView'
 import Scoreboard from '../components/Scoreboard'
-import TileTray, { TILE_MIME, tileInfo } from '../components/TileTray'
+import TileTray, { TILE_MIME, TileGlyph, tileInfo } from '../components/TileTray'
 import FactorHover from '../components/FactorHover'
 import { buildingLabel, parcelLabel } from '../format'
 import type { Citation, TileKind } from '../types'
@@ -108,8 +108,8 @@ function Meeting() {
   return (
     <div className="flex h-full flex-col">
       <Disclaimer large>
-        <span className="text-neutral-300">{state.locale?.name ?? ''}</span>
-        <Link to={`/plan/${state.planId}`} className="rounded border border-neutral-700 px-3 py-1 text-base hover:bg-neutral-800">
+        <span>{state.locale?.name ?? ''}</span>
+        <Link to={`/plan/${state.planId}`} className="border-b border-ink text-base">
           Plan view
         </Link>
       </Disclaimer>
@@ -121,52 +121,52 @@ function Meeting() {
           </div>
         </div>
         {toast && (
-          <div className="absolute top-40 left-1/2 z-20 w-[min(90vw,720px)] -translate-x-1/2 rounded-lg border border-rose-700 bg-rose-950/95 p-4 text-lg text-rose-100 shadow-2xl">
+          <div className="absolute top-40 left-1/2 z-20 w-[min(90vw,720px)] -translate-x-1/2 border border-ink border-l-4 border-l-gap bg-paper p-4 text-lg" role="alert">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="font-semibold">Not placed: {toast.text}</div>
                 <div className="mt-1 flex flex-wrap gap-3 text-base">
                   {toast.citation && (
-                    <button onClick={() => openCitation(toast.citation!)} className="text-sky-300 underline">
+                    <button onClick={() => openCitation(toast.citation!)} className="text-blue underline">
                       § {toast.citation.section} ({toast.citation.doc_id})
                     </button>
                   )}
                   {toast.factorKey && (
                     <FactorHover keys={[toast.factorKey]}>
-                      <span className="text-amber-200">factor {toast.factorKey}</span>
+                      <span className="text-slate">factor {toast.factorKey}</span>
                     </FactorHover>
                   )}
                 </div>
               </div>
-              <button onClick={() => setToast(null)} className="text-rose-300 hover:text-white">
+              <button onClick={() => setToast(null)} aria-label="Dismiss" className="ctl px-2 py-0.5">
                 ✕
               </button>
             </div>
           </div>
         )}
-        <div className="absolute right-3 bottom-28 z-10 w-96 rounded-lg border border-neutral-800 bg-neutral-950/90 p-3 text-base shadow-xl backdrop-blur">
-          <div className="mb-2 flex items-center gap-2">
+        <div className="absolute right-3 bottom-28 z-10 w-96 border border-rule bg-paper p-3 text-base">
+          <div className="mb-2 flex items-center gap-2 border-b border-rule pb-2">
             <span className="font-semibold">Changes</span>
-            {state.rescoring && <span className="text-sm text-neutral-500">updating…</span>}
+            {state.rescoring && <span className="text-sm text-slate">updating…</span>}
             <div className="ml-auto flex gap-2">
               <button
                 disabled={!state.edits.length}
                 onClick={() => dispatch({ type: 'undo' })}
-                className="rounded bg-neutral-800 px-3 py-1 hover:bg-neutral-700 disabled:opacity-40"
+                className="ctl disabled:opacity-40"
               >
                 Undo
               </button>
               <button
                 disabled={!state.edits.length}
                 onClick={() => dispatch({ type: 'reset' })}
-                className="rounded bg-neutral-800 px-3 py-1 hover:bg-neutral-700 disabled:opacity-40"
+                className="ctl disabled:opacity-40"
               >
                 Reset
               </button>
             </div>
           </div>
           {state.history.length === 0 ? (
-            <p className="text-sm text-neutral-500">Drag a tile from the tray onto a parcel or building.</p>
+            <p className="text-sm text-slate">Drag a tile from the tray onto a parcel or building.</p>
           ) : (
             <ol className="max-h-56 list-decimal space-y-1 overflow-y-auto pl-5 text-sm">
               {state.history.map((h) => (
@@ -179,7 +179,7 @@ function Meeting() {
               onClick={() =>
                 addEdit({ kind: 'remove_tile', target_id: selTarget }, `Removed ${placed.label.replace(/^Added /, '')}`)
               }
-              className="mt-2 w-full rounded bg-neutral-800 px-3 py-1 text-sm hover:bg-neutral-700"
+              className="ctl mt-2 w-full"
             >
               Remove tile on selection
             </button>
@@ -191,15 +191,16 @@ function Meeting() {
           <TileTray disabled={!state.basePlan} />
         </div>
         {!plan.parcels && !state.loadError && (
-          <div className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 text-xl text-neutral-400">Loading plan…</div>
+          <div className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 text-xl text-slate">Loading plan…</div>
         )}
       </div>
       {ghost && (
         <div
-          className={`pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-lg px-4 py-2 text-lg font-semibold text-white shadow-2xl ${tileInfo(ghost.tile).cls} ${ghost.back ? 'opacity-60 transition-all duration-400 ease-in' : 'opacity-90'}`}
+          className={`pointer-events-none fixed z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center text-lg font-semibold ${ghost.back ? 'opacity-50 transition-all duration-400 ease-in' : ''}`}
           style={{ left: ghost.x, top: ghost.y }}
         >
-          {tileInfo(ghost.tile).label}
+          <TileGlyph kind={ghost.tile} ghost className="h-20 w-20" />
+          <span className="bg-paper/90 px-1">{tileInfo(ghost.tile).label}</span>
         </div>
       )}
     </div>
