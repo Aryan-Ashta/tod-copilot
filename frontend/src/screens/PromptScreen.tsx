@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { areaCheck, createPlan, geocode, getLocales, parsePrompt, stockPrompts } from '../api'
+import { areaCheck, createPlan, geocode, getLocales } from '../api'
 import Disclaimer from '../components/Disclaimer'
 import AreaPicker, { type PolygonGeometry } from '../components/AreaPicker'
 import Segmented from '../components/Segmented'
@@ -14,7 +14,6 @@ import {
   type Locale,
   type PlanGoals,
   type PlanOptions,
-  type StockPrompt,
 } from '../types'
 
 const REPLAY_HINT = 'Replays exist only for whole recorded areas with default options; this runs live'
@@ -33,8 +32,8 @@ const HOUSING_GOALS: { key: Exclude<keyof PlanGoals, 'transit_coverage_pct'>; la
 // A UI limit, not a model factor: the backend accepts any coverage goal from 0 to 100.
 const COVERAGE_RANGE = { min: 0, max: 100, step: 5 }
 
-// Screen space the floating headline, search and prompt bar cover, so the US view and fly-tos land in what is left.
-const MAP_PADDING = { top: 150, right: 24, bottom: 230, left: 24 }
+// Screen space the floating headline, search and bottom bar cover, so the US view and fly-tos land in what is left.
+const MAP_PADDING = { top: 150, right: 24, bottom: 140, left: 24 }
 
 export default function PromptScreen() {
   const navigate = useNavigate()
@@ -47,14 +46,9 @@ export default function PromptScreen() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<GeocodeResult[] | null>(null)
   const [searching, setSearching] = useState(false)
-  const [stock, setStock] = useState<StockPrompt[]>([])
-  const [prompt, setPrompt] = useState('')
   const [options, setOptions] = useState<PlanOptions>(DEFAULT_PLAN_OPTIONS)
-  const [focusTouched, setFocusTouched] = useState(false)
   const [replay, setReplay] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const parseSeq = useRef(0)
-  const typing = useRef(0)
   const [optionsOpen, setOptionsOpen] = useState(false)
   const optionsRef = useRef<HTMLDivElement>(null)
   const optionsButtonRef = useRef<HTMLButtonElement>(null)
@@ -82,26 +76,7 @@ export default function PromptScreen() {
         if (ls.length) setSelected((s) => s ?? ls[0].id)
       })
       .catch((e: Error) => setError(e.message))
-    stockPrompts()
-      .then(setStock)
-      .catch(() => {
-        // chips are optional; the free-text prompt still works
-      })
   }, [])
-
-  // Free text steers the focus until the user picks one.
-  useEffect(() => {
-    if (focusTouched || !prompt.trim()) return
-    const seq = ++parseSeq.current
-    const t = setTimeout(() => {
-      parsePrompt(prompt)
-        .then((p) => {
-          if (seq === parseSeq.current) setOptions((o) => ({ ...o, focus: p.focus }))
-        })
-        .catch(() => {})
-    }, 300)
-    return () => clearTimeout(t)
-  }, [prompt, focusTouched])
 
   // Server decides what a drawn boundary runs as (sub-area, metro, or rejected).
   const [check, setCheck] = useState<AreaCheck | null>(null)
@@ -128,10 +103,7 @@ export default function PromptScreen() {
   const replayAllowed = wholeLocale !== null && defaultOptions
   const replayOn = replay && replayAllowed
   const areaOk = wholeLocale !== null || (check !== null && check.kind !== null && !check.error)
-  const canSubmit = areaOk && !submitting && (replayOn || prompt.trim().length > 0)
-
-  const chipLocaleId = areaLocaleId ?? (check?.kind === 'metro' ? check.sources_from : null)
-  const visibleStock = stock.filter((p) => p.locale_id === null || p.locale_id === chipLocaleId)
+  const canSubmit = areaOk && !submitting
 
   const onBoundary = (b: PolygonGeometry | null) => {
     setBoundary(b)
@@ -177,34 +149,7 @@ export default function PromptScreen() {
     }
   }
 
-  // A stock prompt types itself into the box (instantly under reduced motion).
-  const pickStock = (p: StockPrompt) => {
-    clearInterval(typing.current)
-    setOptions({
-      ...DEFAULT_PLAN_OPTIONS,
-      ...p.options,
-      goals: { ...DEFAULT_PLAN_OPTIONS.goals, ...p.options.goals },
-    })
-    setFocusTouched(false)
-    parseSeq.current++ // drop any in-flight parse of the old text
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setPrompt(p.prompt)
-      return
-    }
-    let n = 0
-    const step = Math.max(1, Math.ceil(p.prompt.length / 30))
-    typing.current = window.setInterval(() => {
-      n = Math.min(p.prompt.length, n + step)
-      setPrompt(p.prompt.slice(0, n))
-      if (n >= p.prompt.length) clearInterval(typing.current)
-    }, 16)
-  }
-  useEffect(() => () => clearInterval(typing.current), [])
-
-  const setFocus = (v: PlanOptions['focus']) => {
-    setOptions((o) => ({ ...o, focus: v }))
-    setFocusTouched(true)
-  }
+  const setFocus = (v: PlanOptions['focus']) => setOptions((o) => ({ ...o, focus: v }))
 
   const setGoal = (k: keyof PlanGoals, v: number | null) => {
     setOptions((o) => ({ ...o, goals: { ...o.goals, [k]: v } }))
@@ -223,7 +168,7 @@ export default function PromptScreen() {
         locale_id: areaLocaleId,
         boundary,
         area_name: boundary ? areaName : null,
-        prompt: prompt.trim(),
+        prompt: '',
         options,
       })
       navigate(`/plan/${plan_id}`)
@@ -301,36 +246,6 @@ export default function PromptScreen() {
       <span className={`h-2 w-2 shrink-0 rounded-full ${statusTone === 'ok' ? 'bg-green' : statusTone === 'error' ? 'bg-gap' : 'bg-slate/50'}`} />
       <span className="truncate">{statusText}</span>
     </span>
-  )
-
-  const chips = visibleStock.length > 0 && (
-    <div className="no-scrollbar flex gap-2 overflow-x-auto px-1 pt-1 pb-1">
-      {visibleStock.map((p, i) => (
-        <button
-          key={p.id}
-          onClick={() => pickStock(p)}
-          title={p.prompt}
-          style={d(i)}
-          className="chip-in shrink-0 rounded-full border border-white/60 bg-paper/85 px-3.5 py-1.5 text-[13px] font-medium whitespace-nowrap shadow-[0_4px_14px_rgb(28_34_48/.12)] backdrop-blur-md transition-[translate,background-color] duration-200 hover:-translate-y-0.5 hover:bg-white"
-        >
-          {p.title}
-        </button>
-      ))}
-    </div>
-  )
-
-  const promptBox = (
-    <textarea
-      value={prompt}
-      onChange={(e) => {
-        clearInterval(typing.current)
-        setPrompt(e.target.value)
-      }}
-      rows={2}
-      aria-label="Prompt"
-      placeholder="What should the plan do? e.g. Plan transit-oriented development around the rail stations"
-      className="min-w-0 flex-1 resize-none bg-transparent px-4 py-3 text-[17px] leading-snug text-paper placeholder:text-paper/45 focus:outline-none"
-    />
   )
 
   const optionControls = (
@@ -435,9 +350,8 @@ export default function PromptScreen() {
           <div className="enter relative flex w-full max-w-[880px] flex-col items-center gap-3" style={d(4)}>
             {errorNote}
             {areaStatus}
-            <div className="w-full">{chips}</div>
             {optionsOpen && (
-              // centred over the prompt bar (Tailwind's translate property); pop-in animates transform, so they compose
+              // centred over the bar (Tailwind's translate property); pop-in animates transform, so they compose
               <div
                 ref={optionsRef}
                 className="pop-in absolute bottom-full left-1/2 mb-3 w-[min(640px,100%)] -translate-x-1/2 rounded-3xl border border-white/60 bg-paper/95 p-6 shadow-[0_18px_48px_rgb(28_34_48/.22)] backdrop-blur-md"
@@ -446,8 +360,7 @@ export default function PromptScreen() {
                 <div className="mt-5 border-t border-rule pt-4">{replayToggle}</div>
               </div>
             )}
-            <div className="flex w-full items-end gap-2 rounded-[26px] bg-ink p-2 shadow-[0_20px_50px_rgb(28_34_48/.35)]">
-              {promptBox}
+            <div className="flex items-center gap-2 rounded-[26px] bg-ink p-2 shadow-[0_20px_50px_rgb(28_34_48/.35)]">
               <button
                 ref={optionsButtonRef}
                 onClick={() => setOptionsOpen(!optionsOpen)}
