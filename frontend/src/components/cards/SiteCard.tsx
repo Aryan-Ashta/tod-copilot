@@ -1,5 +1,5 @@
 import { usePlan } from '../../state/PlanContext'
-import { fmtNum, humanize, parcelLabel, buildingLabel } from '../../format'
+import { fmtNum, geometryCentroid, humanize, parcelLabel, buildingLabel } from '../../format'
 import { siteLetters, UNDERUSED_LAND_USES } from '../../mapLayers'
 import { CardShell, Empty, Section, td, th } from './common'
 import FactorHover from '../FactorHover'
@@ -60,7 +60,14 @@ export default function SiteCard() {
                   key={s.id}
                   className="cursor-pointer border-t border-neutral-900 hover:bg-neutral-900"
                   onClick={() =>
-                    dispatch({ type: 'select', selected: { parcelId: s.parcel_ids[0], buildingId: s.building_id ?? undefined } })
+                    dispatch({
+                      type: 'select',
+                      selected: {
+                        parcelId: s.parcel_ids[0],
+                        buildingId: s.building_id ?? undefined,
+                        flyTo: geometryCentroid(s.geometry) ?? undefined,
+                      },
+                    })
                   }
                 >
                   <td className={`${td} font-bold`}>{letters.get(s.id) ?? ''}</td>

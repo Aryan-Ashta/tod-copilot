@@ -34,9 +34,19 @@ def cached_get(url: str, params: Optional[dict] = None, *, headers: Optional[dic
         if settings.OFFLINE:
             raise OfflineCacheMiss(url)
         h = {"User-Agent": USER_AGENT, **(headers or {})}
-        r = httpx.get(url, params=params, headers=h, timeout=timeout, follow_redirects=True)
-        r.raise_for_status()
-        raw = r.content
+        for attempt in range(3):
+            r = httpx.get(url, params=params, headers=h, timeout=timeout, follow_redirects=True)
+            r.raise_for_status()
+            raw = r.content
+            if fmt != "json":
+                break
+            try:   # a body cut off mid-transfer arrives as HTTP 200; caching it would poison every later run
+                json.loads(raw)
+                break
+            except json.JSONDecodeError:
+                if attempt == 2:
+                    raise
+                time.sleep(2 ** attempt)
         d.mkdir(parents=True, exist_ok=True)
         body_path.write_bytes(raw)
         (d / f"{key}.meta.json").write_text(json.dumps(

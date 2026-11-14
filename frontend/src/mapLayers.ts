@@ -1,7 +1,7 @@
 // deck.gl layer builders, in docs/06 order (bottom → top). Each builder is pure; MapView memoizes
 // each one on the identity of its data so thousands of extrusions are not rebuilt on every render.
 import { GeoJsonLayer, PolygonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers'
-import { PathStyleExtension } from '@deck.gl/extensions'
+import { DataFilterExtension, PathStyleExtension, type DataFilterExtensionProps } from '@deck.gl/extensions'
 import type { Color, PickingInfo } from '@deck.gl/core'
 import type { Feature, Geometry as GJGeometry } from 'geojson'
 import type {
@@ -20,6 +20,8 @@ import type {
   UseType,
 } from './types'
 import { geometryCentroid } from './format'
+import { separateFootprints } from './footprints'
+import { REDUCED_MOTION, standingShare, type Build } from './construction'
 
 export type LayerKey =
   | 'base_dark'
@@ -102,7 +104,7 @@ const INFRA_COLORS: Partial<Record<InfraKind, Color>> = {
 }
 const AMBER: Color = [227, 180, 72]
 const NO_SIDEWALK_COLOR: Color = [185, 58, 46]
-const FT_TO_M = 0.3048 // unit conversion, not a planning factor
+export const FT_TO_M = 0.3048 // unit conversion, not a planning factor
 // Ground-plane layers draw in layer order without depth testing or writing: the iso camera's narrow field of view
 // puts the eye far away, and coplanar polygons (flood zones, parcels) z-fight at that depth precision. Extruded
 // buildings still depth-test, and draw after these, so they correctly hide what is behind them.
@@ -196,7 +198,8 @@ export function utilitiesLayer(infra: InfraFeature[], visible: boolean) {
   })
 }
 
-export function amenitiesLayer(infra: InfraFeature[], added: InfraFeature[], visible: boolean) {
+/** `pendingParks`: parcels whose proposed park is still being laid out (construction.ts draws it meanwhile). */
+export function amenitiesLayer(infra: InfraFeature[], added: InfraFeature[], visible: boolean, pendingParks: ReadonlySet<string>) {
   const kinds: Partial<Record<InfraKind, true>> = {
     ev_charger: true,
     school: true,
@@ -205,7 +208,9 @@ export function amenitiesLayer(infra: InfraFeature[], added: InfraFeature[], vis
     grocery: true,
     affordable_housing: true,
   }
-  const feats = [...infra, ...added].filter((f) => kinds[f.kind]).map((f) => feature(f.geometry, f))
+  const feats = [...infra, ...added.filter((f) => !pendingParks.has(String(f.attrs.parcel_id)))]
+    .filter((f) => kinds[f.kind])
+    .map((f) => feature(f.geometry, f))
   return new GeoJsonLayer<InfraFeature>({
     id: 'amenities',
     parameters: FLAT,
@@ -331,17 +336,13 @@ export interface BuildingDatum {
   polygon: number[][][]
 }
 
-function polygonsOf(g: Geometry): number[][][][] {
-  if (g.type === 'Polygon') return [g.coordinates as number[][][]]
-  if (g.type === 'MultiPolygon') return g.coordinates as number[][][][]
-  return []
-}
-
+/** One datum per drawn polygon, with overlapping footprints resolved (footprints.ts) so extrusions never z-fight. */
 export function flattenBuildings(buildings: Building[], conversions: ConversionCandidate[]): BuildingDatum[] {
   const conv = new Map(conversions.map((c) => [c.building_id, c]))
+  const shapes = separateFootprints(buildings, conversions)
   const out: BuildingDatum[] = []
   for (const b of buildings) {
-    for (const polygon of polygonsOf(b.footprint)) out.push({ building: b, conversion: conv.get(b.id), polygon })
+    for (const polygon of shapes.get(b.id) ?? []) out.push({ building: b, conversion: conv.get(b.id), polygon })
   }
   return out
 }
@@ -353,16 +354,33 @@ const mix = (a: Color, b: Color, t: number): Color => {
   const at = (i: number) => Math.round(a[i] + (b[i] - a[i]) * t)
   return [at(0), at(1), at(2)]
 }
+// Selected building: ink, the one block darker than everything else on the paper ground (white vanished into it).
+const SELECTED_BLOCK: Color = [58, 66, 86]
+// The selection shell sits this much proud of the building so its faces never z-fight with the building's own.
+const SELECTED_GROW = 1.02
+const SELECTED_LIFT_M = 0.6
+
+// A building whose use changes fades to its new colour (the scaffold wrap in construction.ts runs alongside).
+const easeOutCubic = (t: number) => 1 - (1 - t) ** 3
+const RECOLOUR = { duration: REDUCED_MOTION ? 0 : 1600, easing: easeOutCubic }
+
+const storeyElevation = (b: Building, storyHeightFt: number | null) =>
+  storyHeightFt !== null ? (b.stories.value ?? 0) * storyHeightFt * FT_TO_M : 0
+
+// Hides buildings without reordering the data, so indices (and the colour transitions keyed on them) stay put.
+const HIDE = new DataFilterExtension({ filterSize: 1 })
 
 /**
  * Existing buildings: light grey blocks; conversion candidates in their best-use colour, washed toward the block grey
  * as the overall score falls. Ink wireframe edges. Extrusion height = stories × story_height_ft (factor); without
- * the factor, buildings stay flat.
+ * the factor, buildings stay flat. `hidden` buildings are being (or have been) demolished: demolitionLayer draws them.
  */
-export function buildingsLayer(data: BuildingDatum[], storyHeightFt: number | null, visible: boolean, selectedId?: string) {
-  return new PolygonLayer<BuildingDatum>({
+export function buildingsLayer(data: BuildingDatum[], storyHeightFt: number | null, visible: boolean, hidden: ReadonlySet<string>) {
+  return new PolygonLayer<BuildingDatum, DataFilterExtensionProps<BuildingDatum>>({
     id: 'buildings',
-    data,
+    // PolygonLayer does not pass an extension accessor's update trigger to its sublayers, so a changed `hidden` set
+    // never reached the filter values; a fresh array (same order) makes every attribute recompute instead.
+    data: hidden.size ? data.slice() : data,
     visible,
     pickable: true,
     extruded: storyHeightFt !== null,
@@ -372,15 +390,60 @@ export function buildingsLayer(data: BuildingDatum[], storyHeightFt: number | nu
     lineWidthUnits: 'pixels',
     material: MATTE,
     getPolygon: (d) => d.polygon,
-    getElevation: (d) => (storyHeightFt !== null ? (d.building.stories.value ?? 0) * storyHeightFt * FT_TO_M : 0),
+    getElevation: (d) => storeyElevation(d.building, storyHeightFt),
     getFillColor: (d) => {
-      if (d.building.id === selectedId) return [255, 255, 255]
       if (!d.conversion) return BLOCK
       return mix(BLOCK, USE_COLORS[d.conversion.best_use], Math.max(0.15, d.conversion.overall))
     },
     getLineColor: [28, 34, 48, 150],
     getLineWidth: 0.5,
-    updateTriggers: { getFillColor: selectedId, getElevation: storyHeightFt },
+    extensions: [HIDE],
+    getFilterValue: (d) => (hidden.has(d.building.id) ? 0 : 1),
+    filterRange: [0.5, 1],
+    updateTriggers: { getElevation: storyHeightFt, getFilterValue: hidden },
+    // conversions arriving from the agent, a Convert tile or an undo all show as a fade, not a jump
+    transitions: { getFillColor: RECOLOUR },
+  })
+}
+
+/** Buildings coming down for a new build or a park, at their standing share of height; gone once demolished. */
+export function demolitionLayer(data: BuildingDatum[], storyHeightFt: number | null, demolitions: ReadonlyMap<string, Build>, clock: number) {
+  const falling = data.filter((d) => {
+    const b = demolitions.get(d.building.id)
+    return b !== undefined && standingShare(b, clock) > 0
+  })
+  return new PolygonLayer<BuildingDatum>({
+    id: 'demolition',
+    data: falling,
+    extruded: storyHeightFt !== null,
+    wireframe: true,
+    material: MATTE,
+    getPolygon: (d) => d.polygon,
+    getElevation: (d) => storeyElevation(d.building, storyHeightFt) * standingShare(demolitions.get(d.building.id)!, clock),
+    getFillColor: BLOCK,
+    getLineColor: [28, 34, 48, 150],
+    updateTriggers: { getElevation: clock },
+  })
+}
+
+/** The selected building as a slightly larger ink shell over it: instant, unlike the faded use colours. */
+export function selectedBuildingLayer(data: BuildingDatum[], storyHeightFt: number | null, selectedId?: string) {
+  const sel = selectedId ? data.filter((d) => d.building.id === selectedId) : []
+  const grown = sel.map((d) => {
+    const outer = d.polygon[0]
+    const [cx, cy] = outer.reduce((a, p) => [a[0] + p[0] / outer.length, a[1] + p[1] / outer.length], [0, 0])
+    return { d, ring: outer.map(([x, y]) => [cx + (x - cx) * SELECTED_GROW, cy + (y - cy) * SELECTED_GROW]) }
+  })
+  return new PolygonLayer<(typeof grown)[number]>({
+    id: 'selected-building',
+    data: grown,
+    extruded: storyHeightFt !== null,
+    wireframe: true,
+    material: MATTE,
+    getPolygon: (g) => g.ring,
+    getElevation: (g) => storeyElevation(g.d.building, storyHeightFt) + SELECTED_LIFT_M,
+    getFillColor: SELECTED_BLOCK,
+    getLineColor: [28, 34, 48, 200],
   })
 }
 
@@ -445,8 +508,17 @@ export function sitesLayer(data: SiteDatum[], visible: boolean) {
   ]
 }
 
-export function newBuildingsLayer(sites: Site[], visible: boolean) {
-  const data = sites.filter((s) => s.kind === 'new_build' && s.status === 'pursue').map((s) => feature(s.geometry, s))
+const NEW_BUILD: Color = [169, 191, 231]
+// On-watch sites (the plan counts them; they don't pencil yet) stand as translucent massing, pursued ones solid.
+const NEW_BUILD_WATCH_ALPHA = 110
+
+/**
+ * Proposed new buildings for every site still in the plan, at `rise(siteId)` (0..1) of their height while they are
+ * being built (construction.ts); `clock` changes only while something is going up. A site moving between watch and
+ * pursue fades between ghost and solid.
+ */
+export function newBuildingsLayer(sites: Site[], visible: boolean, rise: (siteId: string) => number, clock: number) {
+  const data = sites.filter((s) => s.kind === 'new_build' && s.status !== 'pass').map((s) => feature(s.geometry, s))
   return new GeoJsonLayer<Site>({
     id: 'new_buildings',
     data,
@@ -456,9 +528,11 @@ export function newBuildingsLayer(sites: Site[], visible: boolean) {
     wireframe: true,
     filled: true,
     material: MATTE,
-    getElevation: (f) => f.properties.height_ft * FT_TO_M,
-    getFillColor: [169, 191, 231],
+    getElevation: (f) => f.properties.height_ft * FT_TO_M * rise(f.properties.id),
+    getFillColor: (f) => (f.properties.status === 'pursue' ? NEW_BUILD : withAlpha(NEW_BUILD, NEW_BUILD_WATCH_ALPHA)),
     getLineColor: [28, 34, 48, 170],
+    updateTriggers: { getElevation: clock },
+    transitions: { getFillColor: RECOLOUR },
   })
 }
 

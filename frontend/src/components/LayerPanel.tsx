@@ -15,7 +15,7 @@ export default function LayerPanel() {
             {LAYER_DEFS.filter((d) => d.group === g).map((d) => (
               <label key={d.key} className="flex cursor-pointer items-center gap-2 py-0.5">
                 <input type="checkbox" checked={state.layers[d.key]} onChange={() => dispatch({ type: 'toggle_layer', key: d.key })} />
-                {LAYER_SWATCH[d.key] && <span className="h-2 w-4 border border-ink/20" style={{ background: LAYER_SWATCH[d.key] }} />}
+                {LAYER_SWATCH[d.key] && <span className="h-2 w-4 rounded-xs border border-ink/20" style={{ background: LAYER_SWATCH[d.key] }} />}
                 <span>{d.label}</span>
                 {d.key === 'utilities' && noUtilities && <span className="text-amber-300">not public here</span>}
               </label>
@@ -24,7 +24,8 @@ export default function LayerPanel() {
         ))}
         <p className="text-xs text-slate">
           Conversion colours: residential blue, hotel mustard, mixed use green, keep grey; paler = lower overall score.
-          Red sidewalk lines = frontage mapped without sidewalk. Mustard lots = underused parcels.
+          New buildings: solid = pencils today, translucent = on watch. Red sidewalk lines = frontage mapped without
+          sidewalk. Mustard lots = underused parcels.
         </p>
       </div>
     </MapPanel>

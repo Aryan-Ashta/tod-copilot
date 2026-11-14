@@ -4,6 +4,9 @@ import { areaCheck, createPlan, geocode, getLocales, parsePrompt, stockPrompts }
 import Disclaimer from '../components/Disclaimer'
 import AreaPicker, { type PolygonGeometry } from '../components/AreaPicker'
 import { LocalePoster } from '../components/LocalePosters'
+import Segmented from '../components/Segmented'
+import Slider from '../components/Slider'
+import { useApp } from '../state/AppContext'
 import type { BBox } from '../geo'
 import {
   DEFAULT_PLAN_OPTIONS,
@@ -17,16 +20,19 @@ import {
 
 const REPLAY_HINT = 'Replays exist only for whole recorded areas with default options; this runs live'
 
-const OPTION_GROUPS: { key: 'focus'; legend: string; choices: [string, string][] }[] = [
-  { key: 'focus', legend: 'Focus', choices: [['all', 'All'], ['conversions', 'Conversions only'], ['new_build', 'New construction only']] },
+const FOCUS: { value: PlanOptions['focus']; label: string }[] = [
+  { value: 'all', label: 'Both' },
+  { value: 'conversions', label: 'Conversions' },
+  { value: 'new_build', label: 'New construction' },
 ]
 
-const GOAL_FIELDS: { key: keyof PlanGoals; label: string; max?: number; placeholder?: string }[] = [
+const HOUSING_GOALS: { key: Exclude<keyof PlanGoals, 'transit_coverage_pct'>; label: string }[] = [
   { key: 'affordable_homes', label: 'New affordable homes' },
   { key: 'total_homes', label: 'New homes total' },
   { key: 'conversions', label: 'Buildings converted' },
-  { key: 'transit_coverage_pct', label: 'Transit coverage %', max: 100, placeholder: '90 (default)' },
 ]
+// A UI limit, not a model factor: the backend accepts any coverage goal from 0 to 100.
+const COVERAGE_RANGE = { min: 0, max: 100, step: 5 }
 
 function SectionHead({ children }: { children: ReactNode }) {
   return <h2 className="wide mt-16 mb-5 border-t-2 border-ink pt-4 text-[22.5px] leading-tight font-bold">{children}</h2>
@@ -50,6 +56,8 @@ export default function PromptScreen() {
   const [replay, setReplay] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const parseSeq = useRef(0)
+  const mapBoxRef = useRef<HTMLDivElement>(null)
+  const { factorNumber } = useApp()
 
   useEffect(() => {
     getLocales()
@@ -122,6 +130,20 @@ export default function PromptScreen() {
     if (l) setFlyTo([...l.bbox])
   }
 
+  // A poster click picks the area and brings the map into view, where it flies to that area.
+  const pickPoster = (id: string) => {
+    pickLocale(id)
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    mapBoxRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' })
+  }
+
+  // The coverage slider rests on factors.yaml transit_coverage_goal_pct until the user moves it.
+  const defaultCoverage = factorNumber('transit_coverage_goal_pct')
+  const coverage = options.goals.transit_coverage_pct ?? defaultCoverage
+  const coverageMarks = [...new Set([COVERAGE_RANGE.min, defaultCoverage ?? COVERAGE_RANGE.min, COVERAGE_RANGE.max])]
+    .sort((a, b) => a - b)
+    .map((v) => ({ value: v, label: `${v}%` }))
+
   const search = async () => {
     if (!query.trim()) return
     setSearching(true)
@@ -162,9 +184,8 @@ export default function PromptScreen() {
     setFocusTouched(true)
   }
 
-  const setGoal = (k: keyof PlanGoals, raw: string) => {
-    const n = raw.trim() === '' ? null : Number(raw)
-    setOptions((o) => ({ ...o, goals: { ...o.goals, [k]: n === null || Number.isNaN(n) ? null : n } }))
+  const setGoal = (k: keyof PlanGoals, v: number | null) => {
+    setOptions((o) => ({ ...o, goals: { ...o.goals, [k]: v } }))
   }
 
   const submit = async () => {
@@ -209,7 +230,7 @@ export default function PromptScreen() {
               return (
                 <button
                   key={l.id}
-                  onClick={() => pickLocale(l.id)}
+                  onClick={() => pickPoster(l.id)}
                   aria-pressed={on}
                   className="group flex flex-col justify-start text-left"
                 >
@@ -244,7 +265,7 @@ export default function PromptScreen() {
               {searching ? 'Searching…' : 'Search'}
             </button>
             {results && (
-              <ul className="absolute top-full right-0 left-0 z-20 mt-1 border border-rule bg-paper">
+              <ul className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-xl border border-rule bg-paper shadow-[0_8px_24px_rgb(28_34_48/.12)]">
                 {results.length === 0 && <li className="px-3 py-2 text-sm text-slate">No matches in a US county</li>}
                 {results.map((r, i) => (
                   <li key={`${r.label}-${i}`} className="border-b border-rule last:border-b-0">
@@ -262,7 +283,7 @@ export default function PromptScreen() {
             )}
           </form>
 
-          <div className="border border-rule">
+          <div ref={mapBoxRef} className="scroll-mt-6 overflow-hidden rounded-[12px] border border-rule">
             <AreaPicker
               locales={locales ?? []}
               selectedLocale={selected}
@@ -310,44 +331,46 @@ export default function PromptScreen() {
             rows={3}
             aria-label="Prompt"
             placeholder="e.g. Plan transit-oriented development around the rail stations"
-            className="mb-6 w-full border border-rule bg-transparent p-3 text-[18px] placeholder:text-slate/70 focus:border-ink focus:outline-none"
+            className="mb-6 w-full rounded-xl border border-rule bg-transparent p-3 text-[18px] placeholder:text-slate/70 focus:border-ink focus:outline-none"
           />
 
-          <div className="mb-8 flex flex-wrap gap-x-12 gap-y-4">
-            {OPTION_GROUPS.map((g) => (
-              <fieldset key={g.key}>
-                <legend className="mb-1 text-sm text-slate">{g.legend}</legend>
-                <div className="flex flex-wrap gap-x-4 text-[15px]">
-                  {g.choices.map(([v, label]) => (
-                    <label key={v} className="flex cursor-pointer items-center gap-1.5">
-                      <input
-                        type="radio"
-                        name={g.key}
-                        value={v}
-                        checked={options[g.key] === v}
-                        onChange={() => setFocus(v as PlanOptions['focus'])}
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-            ))}
-            <fieldset>
-              <legend className="mb-1 text-sm text-slate">Goals (blank = no goal)</legend>
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-[15px]">
-                {GOAL_FIELDS.map((g) => (
-                  <label key={g.key} className="flex items-center gap-2">
+          <div className="mb-8 grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2">
+            <div>
+              <div className="mb-2 text-sm text-slate">Focus</div>
+              <Segmented label="Focus" options={FOCUS} value={options.focus} onChange={setFocus} />
+            </div>
+            <div>
+              <div className="mb-2 flex items-baseline justify-between text-sm">
+                <span className="text-slate">Transit coverage goal</span>
+                <span className="font-semibold tabular-nums">{coverage === null ? '…' : `${coverage}% of demand`}</span>
+              </div>
+              <Slider
+                label="Transit coverage goal"
+                {...COVERAGE_RANGE}
+                value={coverage ?? COVERAGE_RANGE.min}
+                valueText={coverage === null ? undefined : `${coverage}% of transit demand near a frequent stop`}
+                marks={coverageMarks}
+                disabled={coverage === null}
+                // back on the factors.yaml goal counts as the default, so replays stay available
+                onChange={(pct) => setGoal('transit_coverage_pct', pct === defaultCoverage ? null : pct)}
+              />
+            </div>
+            <fieldset className="md:col-span-2">
+              <legend className="mb-2 text-sm text-slate">Housing goals (blank = no goal)</legend>
+              <div className="grid grid-cols-1 gap-x-12 gap-y-3 text-[15px] sm:grid-cols-3">
+                {HOUSING_GOALS.map((g) => (
+                  <label key={g.key} className="block">
                     {g.label}
                     <input
                       type="number"
                       min={0}
-                      max={g.max}
                       step={1}
-                      placeholder={g.placeholder}
                       value={options.goals[g.key] ?? ''}
-                      onChange={(e) => setGoal(g.key, e.target.value)}
-                      className="w-28 border border-rule bg-transparent px-2 py-1 tabular-nums focus:border-ink focus:outline-none"
+                      onChange={(e) => {
+                        const n = e.target.value.trim() === '' ? null : Number(e.target.value)
+                        setGoal(g.key, n === null || Number.isNaN(n) ? null : n)
+                      }}
+                      className="mt-1 block w-full rounded-lg border border-rule bg-transparent px-3 py-1.5 tabular-nums focus:border-ink focus:outline-none"
                     />
                   </label>
                 ))}

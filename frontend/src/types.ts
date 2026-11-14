@@ -54,6 +54,8 @@ export interface Locale {
   aliases?: string[]
   /** Recorded locale id whose sources a drawn metro area reuses. */
   sources_from: string | null
+  /** The CoStar extract was on the machine that built this; data_tier is the tier the locale is meant to have. */
+  costar_loaded: boolean
 }
 
 export interface Parcel {

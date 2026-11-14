@@ -37,61 +37,70 @@ function Delta({ prev, next, digits, tick }: { prev: number | undefined; next: n
   )
 }
 
+/** Meeting mode's bottom bar: the headline stats in a row, each with its change since the last edit. */
 export default function Scoreboard() {
   const { state } = usePlan()
   const sb = state.scoreboard
   const prev = state.prevScoreboard
   if (!sb) {
     return (
-      <div className="border border-rule bg-paper p-4 text-lg text-slate">
+      <div className="px-6 py-4 text-lg text-slate">
         {state.rescoreError ? `Scoreboard unavailable: ${state.rescoreError}` : 'Loading scoreboard…'}
       </div>
     )
   }
   return (
-    <div className="grid grid-cols-6 border border-ink bg-paper" role="region" aria-label="Scoreboard">
-      {ITEMS.map((it) => (
-        <div key={it.key} className="min-w-0 border-r border-rule px-3 pt-3">
-          <FactorHover keys={it.factors}>
-            <span className="text-[15px] whitespace-nowrap text-slate">{it.label}</span>
-          </FactorHover>
-          <div className="display text-4xl whitespace-nowrap tabular-nums">
-            {fmtNum(sb[it.key], it.digits)}
-            {it.unit && <span className="ml-1 text-xl font-normal text-slate">{it.unit}</span>}
-          </div>
-          {/* fixed-height row under the value so deltas never collide with the next stat */}
-          <div className="flex h-7 items-baseline gap-2 whitespace-nowrap tabular-nums">
-            {state.deltas[it.key] !== undefined && state.edits.length > 0 && (
-              <span className="text-sm text-slate">vs base {fmtDelta(state.deltas[it.key], it.digits)}</span>
-            )}
-            <Delta prev={prev?.[it.key]} next={sb[it.key]} digits={it.digits} tick={state.scoreTick} />
-          </div>
-          {it.key === 'walk_access_pct' && sb.walk_by_amenity_pct && (
-            <FactorHover keys={['walk_minutes_target', 'walk_speed_m_per_s']}>
-              <span className="text-xs whitespace-nowrap text-slate tabular-nums">
-                of new homes · {Object.entries(sb.walk_by_amenity_pct)
-                  .map(([k, v]) => `${k} ${fmtNum(v, 0)}%`)
-                  .join(' · ')}
+    <div role="region" aria-label="Scoreboard">
+      <div className="grid grid-cols-6 divide-x divide-rule">
+        {ITEMS.map((it) => (
+          <div key={it.key} className="min-w-0 px-5 pt-2.5 pb-2">
+            <div className="flex items-baseline justify-between gap-2 whitespace-nowrap">
+              <FactorHover keys={it.factors}>
+                <span className="text-[14px] text-slate">{it.label}</span>
+              </FactorHover>
+              {state.deltas[it.key] !== undefined && state.edits.length > 0 && (
+                <span className="text-xs text-slate tabular-nums">vs base {fmtDelta(state.deltas[it.key], it.digits)}</span>
+              )}
+            </div>
+            <div className="flex items-baseline gap-3 whitespace-nowrap tabular-nums">
+              <span className="display text-[34px]">
+                {fmtNum(sb[it.key], it.digits)}
+                {it.unit && <span className="ml-1 text-lg font-normal text-slate">{it.unit}</span>}
               </span>
+              <Delta prev={prev?.[it.key]} next={sb[it.key]} digits={it.digits} tick={state.scoreTick} />
+            </div>
+            {/* fixed-height row so the bar keeps its height */}
+            <div className="h-5 truncate text-xs text-slate tabular-nums">
+              {it.key === 'walk_access_pct' && sb.walk_by_amenity_pct && (
+                <FactorHover keys={['walk_minutes_target', 'walk_speed_m_per_s']}>
+                  <span>
+                    of new homes ·{' '}
+                    {Object.entries(sb.walk_by_amenity_pct)
+                      .map(([k, v]) => `${k} ${fmtNum(v, 0)}%`)
+                      .join(' · ')}
+                  </span>
+                </FactorHover>
+              )}
+            </div>
+          </div>
+        ))}
+        <div className="min-w-0 px-5 pt-2.5 pb-2">
+          <div className="flex items-baseline justify-between gap-2 whitespace-nowrap">
+            <FactorHover keys={['cap_rate', 'debt_ratio', 'interest_rate', 'per_unit_credit_equity_usd', 'investor_equity_share']}>
+              <span className="text-[14px] text-slate">Funding gap</span>
             </FactorHover>
-          )}
-        </div>
-      ))}
-      <div className="min-w-0 px-3 pt-3">
-        <FactorHover keys={['cap_rate', 'debt_ratio', 'interest_rate', 'per_unit_credit_equity_usd', 'investor_equity_share']}>
-          <span className="text-[15px] text-slate">Funding gap</span>
-        </FactorHover>
-        <div className="display text-4xl whitespace-nowrap tabular-nums">{fmtUsd(sb.funding_gap_usd)}</div>
-        <div className="flex h-7 items-baseline whitespace-nowrap tabular-nums">
-          {state.deltas.funding_gap_usd !== undefined && state.edits.length > 0 && (
-            <span className="text-sm text-slate">
-              vs base {state.deltas.funding_gap_usd < 0 ? '−' : '+'}
-              {fmtUsd(Math.abs(state.deltas.funding_gap_usd))}
-            </span>
-          )}
+            {state.deltas.funding_gap_usd !== undefined && state.edits.length > 0 && (
+              <span className="text-xs text-slate tabular-nums">
+                vs base {state.deltas.funding_gap_usd < 0 ? '−' : '+'}
+                {fmtUsd(Math.abs(state.deltas.funding_gap_usd))}
+              </span>
+            )}
+          </div>
+          <div className="display text-[34px] whitespace-nowrap tabular-nums">{fmtUsd(sb.funding_gap_usd)}</div>
+          <div className="h-5" />
         </div>
       </div>
-      <TargetScope className="col-span-6 border-t border-rule px-4 py-1.5 text-sm" />
+      <TargetScope className="border-t border-rule px-5 py-1.5 text-sm" />
     </div>
   )
 }

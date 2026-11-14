@@ -4,12 +4,12 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Dark th
 
 ## Screens
 
-1. **Prompt:** three locale cards, each with its name, data tier badge (CoStar full / Public only) and its one-sentence purpose from `docs/11-test-locales.md`. A text box and "Plan it." Header note: "Concept · estimates, not legal or financial advice."
+1. **Prompt:** three locale cards, each with its name, data tier badge (CoStar full / Public only) and its one-sentence purpose from `docs/11-test-locales.md`; clicking one scrolls to the map and flies to that area. The map is held to the lower 48 states and draws state lines (US Census Bureau; `frontend/public/geo/us-states.geojson`, built by `scripts/build_us_reference.py`). It shows each recorded area as a pin in its card's colour; areas are drawn freehand (traced as an open line while the button is held, closed into a polygon on release, as on Zillow), as a rectangle (press, drag, release) or as a polygon (click corners). A text box, Focus (segmented control), a transit coverage goal slider (% of demand, resting on `transit_coverage_goal_pct`), three housing goal fields (new affordable homes, new homes total, buildings converted; blank = no goal), and "Plan it." Header note: "Concept · estimates, not legal or financial advice."
 2. **Plan view (main):**
-   - Left column (~640 px): agent checklist (8 rows: pending / running / done / error), then a detail card for the selected agent.
+   - Left column (30% by default, resizable with a draggable divider, kept per browser): agent checklist (8 rows: pending / running / done / error), then a detail card for the selected agent.
    - Right: map, full height, with a layer toggle panel.
-   - Bottom right: targets panel with bars and the homes ↔ green-space slider.
-3. **Meeting mode:** projector-friendly full-screen map with large type. A tile tray (Homes, Park, Stop, Convert to housing, Convert to hotel) to drag onto parcels or buildings. A big scoreboard shows homes, affordable homes, walk access, CO₂, embodied carbon saved and the funding gap with animated deltas. An "Undo" button and a "Reset" button.
+   - Bottom of the map: targets strip (bars side by side) and the homes ↔ green-space slider. The map frames the plan in the area the panels leave free, and card rows (sites, deals, conversion candidates, uncertainty items) fly the map to what they select.
+3. **Meeting mode:** projector-friendly map with large type. Left panel (26% by default, same divider): changes with Undo and Reset, targets, and the homes ↔ green-space slider. A tile tray (Homes, Park, Stop, Convert to housing, Convert to hotel) sits on the map just above a bottom bar with homes, affordable homes, walk access, CO₂, embodied carbon saved and the funding gap with animated deltas.
 
 ## Map layers (bottom → top), each toggleable
 
@@ -24,9 +24,10 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Dark th
 | Infrastructure | FEMA flood zones | blue hatch |
 | Plan | Proposed routes and stops | frequent bus teal/green, BRT thick, on-demand purple dashed polygon |
 | Plan | Underused parcels | amber fill |
-| Plan | Conversion candidates | existing buildings extruded in grey; color by best use (residential blue, hotel purple, mixed use teal, keep = grey); opacity by overall score |
+| Plan | Conversion candidates | existing buildings extruded in grey; color by best use (residential blue, hotel purple, mixed use teal, keep = grey); opacity by overall score; a change of use fades to the new colour (1.6 s) while conversion sites get a scaffold wrap that climbs the facade and comes down (3.4 s) |
 | Plan | Pursued sites | outline by deal strategy; label A/B/C |
-| Plan | New buildings | extruded blue by height |
+| Plan | New buildings | extruded blue by height for every site still in the plan: solid = pencils, translucent = on watch. Each one is built (4.6 s, staggered): a tower crane goes up (a second on big footprints; cranes that could cross stand at different heights, and plots sharing a spot share a crane), floors rise inside scaffolding a storey ahead, then crane and scaffold are struck. Existing buildings on the plot are demolished first (3.6 s: scaffold wrap, the building comes down storey by storey in dust) and the new build starts once the plot is clear. Plays when sites arrive in a live run or replay, when a Homes tile drops, and when the layer is switched on (`src/construction.ts`) |
+| Plan | Proposed parks (meeting mode) | a Park tile on a parcel with buildings demolishes them first; the parcel then greens over and its trees pop up (2.6 s) and stay |
 
 ## Detail cards per agent
 

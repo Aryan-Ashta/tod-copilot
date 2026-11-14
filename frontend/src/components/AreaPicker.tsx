@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Map as MlMap, Marker, NavigationControl, type GeoJSONSource } from 'maplibre-gl'
-import { TerraDraw, TerraDrawPolygonMode, TerraDrawRectangleMode } from 'terra-draw'
+import { TerraDraw, TerraDrawFreehandLineStringMode, TerraDrawPolygonMode, TerraDrawRectangleMode } from 'terra-draw'
 import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
 import { metros } from '../api'
 import { BASE_STYLE } from './MapView'
+import { localeColor, localeShortName } from './LocalePosters'
 import type { Locale } from '../types'
 import type { BBox } from '../geo'
 
@@ -21,10 +22,18 @@ interface Props {
   flyTo: BBox | null
 }
 
-type DrawMode = 'polygon' | 'rectangle'
+type DrawMode = 'freehand' | 'polygon' | 'rectangle'
 
-// Text-safe on paper: blue 5.1:1, dark mustard 4.6:1.
-const tierColor = (l: Locale) => (l.data_tier === 'costar_full' ? '#2F5BD3' : '#8A6512')
+// The map opens on the lower 48 states and cannot pan or zoom out past them (every supported area is there).
+const US_VIEW: [[number, number], [number, number]] = [
+  [-125, 24],
+  [-66.5, 49.5],
+]
+const US_LIMIT: [[number, number], [number, number]] = [
+  [-135, 15],
+  [-55, 56],
+]
+const DRAW_STYLE = { fillColor: '#2F5BD3', fillOpacity: 0.1, outlineColor: '#1C2230', outlineWidth: 2 } as const
 
 function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.FeatureCollection {
   return {
@@ -33,7 +42,7 @@ function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.Fea
       const [w, s, e, n] = l.bbox
       return {
         type: 'Feature',
-        properties: { id: l.id, color: tierColor(l), width: l.id === selected ? 3 : 1.5 },
+        properties: { id: l.id, color: localeColor(l.id), width: l.id === selected ? 2.5 : 1.5, fill: l.id === selected ? 0.1 : 0.05 },
         geometry: {
           type: 'Polygon',
           coordinates: [
@@ -71,14 +80,27 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     const map = new MlMap({
       container: containerRef.current,
       style: BASE_STYLE,
-      center: [-98.5, 37.5],
-      zoom: 3,
+      bounds: US_VIEW,
+      maxBounds: US_LIMIT,
+      renderWorldCopies: false,
       attributionControl: { compact: true },
     })
     // Offline: tile fetches fail; keep them silent.
     map.on('error', () => {})
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left')
     map.on('load', () => {
+      // State lines (US Census cartographic boundaries; scripts/build_us_reference.py), under everything else.
+      map.addSource('states', { type: 'geojson', data: '/geo/us-states.geojson', attribution: 'States: US Census Bureau' })
+      map.addLayer({
+        id: 'states-line',
+        type: 'line',
+        source: 'states',
+        paint: {
+          'line-color': '#1C2230',
+          'line-opacity': 0.4,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.8, 8, 1.6],
+        },
+      })
       // Onboarded counties (thin grey) and cities (dashed, brighter), under the recorded boxes. A guide only: any US
       // county can be drawn in; area_check validates the drawing.
       map.addSource('metros', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -109,7 +131,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
           // outlines are a guide only; area_check still validates drawings
         })
       map.addSource('locales', { type: 'geojson', data: localeOutlines([], null) })
-      map.addLayer({ id: 'locales-fill', type: 'fill', source: 'locales', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.06 } })
+      map.addLayer({ id: 'locales-fill', type: 'fill', source: 'locales', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['get', 'fill'] } })
       map.addLayer({
         id: 'locales-line',
         type: 'line',
@@ -119,8 +141,14 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       const draw = new TerraDraw({
         adapter: new TerraDrawMapLibreGLAdapter({ map }),
         modes: [
-          new TerraDrawPolygonMode({ styles: { fillColor: '#2F5BD3', fillOpacity: 0.1, outlineColor: '#1C2230', outlineWidth: 2 } }),
-          new TerraDrawRectangleMode({ styles: { fillColor: '#2F5BD3', fillOpacity: 0.1, outlineColor: '#1C2230', outlineWidth: 2 } }),
+          // Freehand is traced as an open line (no closing edge back to the start, as on Zillow) and becomes a
+          // polygon on release; rectangle also draws while the button is held.
+          new TerraDrawFreehandLineStringMode({
+            drawInteraction: 'click-drag',
+            styles: { lineStringColor: '#1C2230', lineStringWidth: 2, closingPointOpacity: 0, closingPointOutlineOpacity: 0 },
+          }),
+          new TerraDrawPolygonMode({ styles: DRAW_STYLE }),
+          new TerraDrawRectangleMode({ drawInteraction: 'click-drag', styles: DRAW_STYLE }),
         ],
       })
       draw.start()
@@ -129,7 +157,19 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
         const others = snapshot.filter((f) => f.id !== id).map((f) => f.id as string)
         if (others.length) draw.removeFeatures(others)
         const done = snapshot.find((f) => f.id === id)
-        if (done?.geometry.type === 'Polygon') onBoundaryRef.current(done.geometry as PolygonGeometry)
+        let ring: PolygonGeometry | null = done?.geometry.type === 'Polygon' ? (done.geometry as PolygonGeometry) : null
+        if (done?.geometry.type === 'LineString') {
+          // Close the traced line into a polygon shown with the polygon mode's style; a tap or a scribble of
+          // fewer than three points is dropped.
+          draw.removeFeatures([id])
+          const pts = done.geometry.coordinates as [number, number][]
+          if (pts.length >= 3) {
+            const polygon: PolygonGeometry = { type: 'Polygon', coordinates: [[...pts, pts[0]]] }
+            const [added] = draw.addFeatures([{ type: 'Feature', geometry: polygon, properties: { mode: 'polygon' } }])
+            if (added?.valid) ring = polygon
+          }
+        }
+        if (ring) onBoundaryRef.current(ring)
         // Back to static so map panning works again; the drawn feature stays.
         draw.setMode('static')
         setMode(null)
@@ -154,16 +194,41 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     }
   }, [])
 
-  // Outlines plus HTML name labels (the base style has no glyphs for symbol layers).
+  // Outlines plus one HTML pin per recorded area at its centre (the base style has no glyphs for symbol layers).
+  // Clicking a pin selects that area, but only while nothing is drawn or being drawn.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
     ;(map.getSource('locales') as GeoJSONSource | undefined)?.setData(localeOutlines(locales, selectedLocale))
     const markers = locales.map((l) => {
-      const el = document.createElement('div')
-      el.textContent = l.name
-      el.style.cssText = `color:${tierColor(l)};font:600 12px Archivo Variable,system-ui;text-shadow:0 0 3px #EDEFEA,0 0 3px #EDEFEA;white-space:nowrap;pointer-events:none`
-      return new Marker({ element: el, anchor: 'bottom-left' }).setLngLat([l.bbox[0], l.bbox[3]]).addTo(map)
+      const on = l.id === selectedLocale
+      const color = localeColor(l.id)
+      const el = document.createElement('button')
+      el.type = 'button'
+      el.className = 'flex items-center gap-2 cursor-pointer'
+      el.setAttribute('aria-label', `Pick ${l.name}`)
+      el.setAttribute('aria-pressed', String(on))
+      const dot = document.createElement('span')
+      dot.className = 'relative block h-3.5 w-3.5 shrink-0 rounded-full border-[2.5px] border-white shadow-[0_1px_4px_rgb(28_34_48/.35)]'
+      dot.style.background = color
+      if (on) {
+        const ring = document.createElement('span')
+        ring.className = 'pin-pulse absolute -inset-2.5 rounded-full border-2'
+        ring.style.borderColor = color
+        dot.append(ring)
+      }
+      const name = document.createElement('span')
+      name.className = `rounded-full bg-white px-2.5 py-1 text-[12.5px] whitespace-nowrap shadow-[0_1px_2px_rgb(28_34_48/.15),0_6px_16px_rgb(28_34_48/.14)] transition-transform hover:-translate-y-px ${on ? 'font-bold text-ink' : 'font-semibold text-slate'}`
+      name.textContent = localeShortName(l)
+      el.append(dot, name)
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation()
+        const draw = drawRef.current
+        if (!draw || draw.getMode() !== 'static' || draw.getSnapshot().length > 0) return
+        onLocaleRef.current(l.id)
+      })
+      const [w, s, e, n] = l.bbox
+      return new Marker({ element: el, anchor: 'left', offset: [-7, 0] }).setLngLat([(w + e) / 2, (s + n) / 2]).addTo(map)
     })
     return () => markers.forEach((m) => m.remove())
   }, [locales, selectedLocale, ready])
@@ -186,7 +251,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
   }, [boundary, ready])
 
   const startMode = (m: DrawMode) => {
-    drawRef.current?.setMode(m)
+    drawRef.current?.setMode(m === 'freehand' ? 'freehand-linestring' : m)
     setMode(m)
   }
   const clear = () => {
@@ -196,28 +261,38 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     onBoundary(null)
   }
 
-  // the site's .ctl button; aria-pressed fills it ink while a drawing mode is on
-  const btn = 'ctl bg-paper px-2.5 py-1 text-xs'
+  const btn = 'ctl px-3 py-1 text-[13px]'
+  const hint =
+    mode === 'freehand'
+      ? 'Press and drag around the area; release to close it'
+      : mode === 'polygon'
+        ? 'Click to add corners; click the first corner to finish'
+        : mode === 'rectangle'
+          ? 'Press and drag across the map; release to finish'
+          : 'Pick a pin, or draw your own area'
 
   return (
-    <div className="relative h-[420px] overflow-hidden">
-      <div ref={containerRef} className="h-full w-full" />
-      <div className="absolute top-3 left-3 z-10 flex gap-2">
-        <button type="button" disabled={!ready} onClick={() => startMode('polygon')} className={btn} aria-pressed={mode === 'polygon'}>
-          Draw polygon
-        </button>
-        <button type="button" disabled={!ready} onClick={() => startMode('rectangle')} className={btn} aria-pressed={mode === 'rectangle'}>
-          Draw rectangle
-        </button>
+    <div>
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-rule bg-paper px-3 py-2.5">
+        {(
+          [
+            ['freehand', 'Draw freehand'],
+            ['rectangle', 'Draw rectangle'],
+            ['polygon', 'Draw polygon'],
+          ] as const
+        ).map(([m, label]) => (
+          <button key={m} type="button" disabled={!ready} onClick={() => startMode(m)} className={btn} aria-pressed={mode === m}>
+            {label}
+          </button>
+        ))}
         <button type="button" disabled={!ready} onClick={clear} className={btn}>
           Clear
         </button>
+        <span className={`ml-auto text-[13px] ${mode ? 'font-semibold text-ink' : 'text-slate'}`} aria-live="polite">
+          {hint}
+        </span>
       </div>
-      {mode && (
-        <div className="absolute right-3 bottom-3 z-10 border border-rule bg-paper px-2 py-1 text-xs text-slate">
-          {mode === 'polygon' ? 'Click to add corners; click the first corner to finish' : 'Click two opposite corners'}
-        </div>
-      )}
+      <div ref={containerRef} className="h-[420px] w-full" />
     </div>
   )
 }

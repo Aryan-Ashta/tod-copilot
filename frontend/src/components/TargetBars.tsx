@@ -46,16 +46,19 @@ export function TargetScope({ className = '' }: { className?: string }) {
   )
 }
 
-/** Each target as a small iso bar with a direct label; with edits, the base plan shows as a dashed ghost bar. */
-export default function TargetBars({ compact = false }: { compact?: boolean }) {
+/**
+ * Each target as a small iso bar with a direct label; with edits, the base plan shows as a dashed ghost bar.
+ * `row` lays the targets side by side for the strip along the bottom of the plan map.
+ */
+export default function TargetBars({ row = false }: { row?: boolean }) {
   const { state } = usePlan()
   const targets = state.plan.targets
   const base = new Map((state.basePlan?.targets ?? []).map((t) => [t.key, t.value]))
   if (!targets) return <p className="text-sm text-slate italic">Waiting for the sustainability agent…</p>
   return (
     <>
-      <TargetScope className={compact ? 'mb-2 text-xs' : 'mb-3 text-sm'} />
-      <ul className={`divide-y divide-rule ${compact ? 'text-xs' : 'text-sm'}`}>
+      <TargetScope className={row ? 'mb-1.5 text-xs' : 'mb-3 text-sm'} />
+      <ul className={row ? 'grid grid-cols-5 divide-x divide-rule text-xs' : 'divide-y divide-rule text-sm'}>
         {targets.map((t) => {
           const b = base.get(t.key) ?? t.value
           const max = Math.max(Math.abs(t.value), Math.abs(b))
@@ -64,7 +67,7 @@ export default function TargetBars({ compact = false }: { compact?: boolean }) {
           const missesTarget = t.target !== null && t.key === 'flood_exposure' && t.value > t.target
           const value = `${fmtNum(t.value, 1)} ${t.unit}`
           return (
-            <li key={t.key} className={`flex items-end gap-3 ${compact ? 'py-1' : 'py-2'}`}>
+            <li key={t.key} className={`flex items-end ${row ? 'gap-2 px-2 first:pl-0 last:pr-0' : 'gap-3 py-2'}`}>
               <IsoColumn
                 pct={pct}
                 basePct={state.edits.length > 0 ? basePct : null}

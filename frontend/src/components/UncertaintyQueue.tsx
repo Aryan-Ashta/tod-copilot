@@ -41,7 +41,7 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
                 <div key={m.target_id + m.what} className="py-2">
                   <button
                     className="text-left text-neutral-100 hover:underline"
-                    onClick={() => dispatch({ type: 'select', selected: { stopId: m.target_id } })}
+                    onClick={() => dispatch({ type: 'select', selected: { stopId: m.target_id, flyTo: stop?.lonlat } })}
                   >
                     {m.what}
                   </button>

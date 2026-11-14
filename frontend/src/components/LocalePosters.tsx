@@ -3,6 +3,7 @@
 import { memo, type ReactNode } from 'react'
 import { IsoBox, IsoFloors, IsoGhost, IsoTile, ISO, Poster, isoViewBox, type BoxGeom } from '../iso'
 import type { Locale } from '../types'
+import { dataTierLabel } from '../format'
 
 const GREY = ISO.block
 
@@ -86,6 +87,10 @@ const STYLE: Record<string, { color: string; title: string[]; scene: Scene; ink?
   brevard_cocoa: { color: ISO.mustard, title: ['Cocoa,', 'Brevard'], scene: BREVARD, ink: true },
 }
 
+/** The locale's poster colour and title, shared by its map outline and pin so card and map read as the same place. */
+export const localeColor = (id: string) => STYLE[id]?.color ?? ISO.blue
+export const localeShortName = (l: Locale) => STYLE[l.id]?.title.join(' ') ?? l.name
+
 function stationsValue(l: Locale): string {
   const planned = l.stations.filter((s) => s.mode.endsWith('_planned')).length
   return planned === l.stations.length && planned > 0 ? `${planned} planned` : String(l.stations.length)
@@ -95,7 +100,7 @@ export const LocalePoster = memo(function LocalePoster({ locale, index }: { loca
   const s = STYLE[locale.id] ?? { color: ISO.blue, title: [locale.name.split(':')[0]], scene: LA }
   const metrics = [
     { label: 'Stations', value: stationsValue(locale) },
-    { label: 'Data', value: locale.data_tier === 'costar_full' ? 'CoStar' : 'Public' },
+    { label: 'Data', value: dataTierLabel(locale, true) },
   ]
   return (
     <Poster

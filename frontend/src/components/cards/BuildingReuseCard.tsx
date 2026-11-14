@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { usePlan } from '../../state/PlanContext'
 import { useApp } from '../../state/AppContext'
-import { buildingLabel, fmtNum, humanize } from '../../format'
+import { buildingLabel, fmtNum, geometryCentroid, humanize } from '../../format'
 import { CardShell, CiteList, Empty, Section, td, th } from './common'
 import SourceBadge, { SourcedValue } from '../SourceBadge'
 import FactorHover, { FactorText } from '../FactorHover'
@@ -49,7 +49,7 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
         {c.screening_only && <span className="text-sm text-amber-300">screening only</span>}
       </div>
       {b && (
-        <figure className="border border-rule px-3 pt-3 pb-2">
+        <figure className="rounded-xl border border-rule px-3 pt-3 pb-2">
           <MassingFigure
             b={b}
             use={c.best_use}
@@ -76,7 +76,7 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
             {FITS.map((f) => (
               <li key={f} className="grid grid-cols-[6rem_1fr_3rem] items-center gap-3">
                 <span>{f}</span>
-                <span className="h-2 bg-rule">
+                <span className="h-2 overflow-hidden rounded-full bg-rule">
                   <span className="block h-full" style={{ width: `${Math.max(0, Math.min(1, fit[f])) * 100}%`, background: USE_HEX[c.best_use] === '#c4c9c1' ? '#5F6778' : USE_HEX[c.best_use] }} />
                 </span>
                 <span className="text-right tabular-nums">{fmtNum(fit[f], 2)}</span>
@@ -137,7 +137,7 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
           <select
             value={use}
             onChange={(e) => setUse(e.target.value as UseType)}
-            className="border border-rule bg-paper px-1 text-xs"
+            className="rounded-md border border-rule bg-paper px-1 text-xs"
           >
             {uses.map((u) => (
               <option key={u} value={u}>
@@ -251,19 +251,26 @@ export default function BuildingReuseCard() {
                       <tr
                         key={c.building_id}
                         onClick={() =>
-                          dispatch({ type: 'select', selected: { buildingId: c.building_id, parcelId: b?.parcel_id } })
+                          dispatch({
+                            type: 'select',
+                            selected: {
+                              buildingId: c.building_id,
+                              parcelId: b?.parcel_id,
+                              flyTo: geometryCentroid(b?.footprint) ?? undefined,
+                            },
+                          })
                         }
                         className={`cursor-pointer hover:bg-ink/[0.03] ${selected.buildingId === c.building_id ? 'bg-ink/[0.06]' : ''}`}
                       >
                         <td className={td}>
-                          <span className="flex items-center gap-1.5">
-                            <span className="truncate">{buildingLabel(b, c.building_id)}</span>
+                          <span className="flex flex-col items-start gap-0.5">
+                            <span>{buildingLabel(b, c.building_id)}</span>
                             {b && <SourceBadge prov={b.property_type.prov} />}
                           </span>
                         </td>
                         <td className={td}>{humanize(b?.property_type.value ?? '—')}</td>
                         <td className={td}>
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 whitespace-nowrap">
                             <span className="h-2.5 w-2.5" style={{ background: USE_HEX[c.best_use] }} />
                             {humanize(c.best_use)}
                           </span>

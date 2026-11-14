@@ -1,5 +1,5 @@
 import { usePlan } from '../../state/PlanContext'
-import { humanize, siteNames } from '../../format'
+import { geometryCentroid, humanize, siteNames } from '../../format'
 import { siteLetters, STRATEGY_COLORS } from '../../mapLayers'
 import { CardShell, Empty } from './common'
 import FactorHover from '../FactorHover'
@@ -35,14 +35,22 @@ export default function LandDealCard() {
                   <button
                     className="font-medium hover:underline"
                     onClick={() =>
-                      s && dispatch({ type: 'select', selected: { parcelId: s.parcel_ids[0], buildingId: s.building_id ?? undefined } })
+                      s &&
+                      dispatch({
+                        type: 'select',
+                        selected: {
+                          parcelId: s.parcel_ids[0],
+                          buildingId: s.building_id ?? undefined,
+                          flyTo: geometryCentroid(s.geometry) ?? undefined,
+                        },
+                      })
                     }
                   >
                     {title}
                   </button>
                   <FactorHover keys={DEAL_KEYS}>
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
-                      <span aria-hidden className="inline-block h-2.5 w-2.5 border border-ink" style={{ background: `rgb(${c[0]},${c[1]},${c[2]})` }} />
+                      <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-xs border border-ink" style={{ background: `rgb(${c[0]},${c[1]},${c[2]})` }} />
                       {humanize(d.strategy)}
                     </span>
                   </FactorHover>
