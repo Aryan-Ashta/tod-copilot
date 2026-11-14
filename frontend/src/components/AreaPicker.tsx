@@ -4,7 +4,6 @@ import { TerraDraw, TerraDrawFreehandLineStringMode, TerraDrawPolygonMode, Terra
 import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
 import { metros } from '../api'
 import { BASE_STYLE } from './MapView'
-import { localeColor, localeShortName } from './LocalePosters'
 import type { Locale } from '../types'
 import type { BBox } from '../geo'
 
@@ -34,8 +33,14 @@ const US_LIMIT: [[number, number], [number, number]] = [
   [-55, 56],
 ]
 const DRAW_STYLE = { fillColor: '#2F5BD3', fillOpacity: 0.1, outlineColor: '#1C2230', outlineWidth: 2 } as const
-// Recorded areas left off this map (no pin, no outline); their poster cards still pick them.
+// Recorded areas left off this map (no pin, no outline).
 const NOT_ON_MAP: Record<string, true> = { brevard_cocoa: true }
+// Pin colour and short name per recorded area; others get blue and their full name.
+const PIN: Record<string, { color: string; name: string }> = {
+  houston_downtown: { color: '#2E7D5B', name: 'Houston Main St rail' },
+  la_wilshire_koreatown: { color: '#2F5BD3', name: 'Wilshire Koreatown' },
+}
+const pinColor = (id: string) => PIN[id]?.color ?? '#2F5BD3'
 // Esri's canvas land colour. The base tiles print country and state names (e.g. "UNITED STATES") through z7.
 const BASE_LAND = '#EFEFEF'
 
@@ -46,7 +51,7 @@ function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.Fea
       const [w, s, e, n] = l.bbox
       return {
         type: 'Feature',
-        properties: { id: l.id, color: localeColor(l.id), width: l.id === selected ? 2.5 : 1.5, fill: l.id === selected ? 0.1 : 0.05 },
+        properties: { id: l.id, color: pinColor(l.id), width: l.id === selected ? 2.5 : 1.5, fill: l.id === selected ? 0.1 : 0.05 },
         geometry: {
           type: 'Polygon',
           coordinates: [
@@ -213,7 +218,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     ;(map.getSource('locales') as GeoJSONSource | undefined)?.setData(localeOutlines(shown, selectedLocale))
     const markers = shown.map((l) => {
       const on = l.id === selectedLocale
-      const color = localeColor(l.id)
+      const color = pinColor(l.id)
       const el = document.createElement('button')
       el.type = 'button'
       el.className = 'flex items-center gap-2 cursor-pointer'
@@ -230,7 +235,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       }
       const name = document.createElement('span')
       name.className = `rounded-full bg-white px-2.5 py-1 text-[12.5px] whitespace-nowrap shadow-[0_1px_2px_rgb(28_34_48/.15),0_6px_16px_rgb(28_34_48/.14)] transition-transform hover:-translate-y-px ${on ? 'font-bold text-ink' : 'font-semibold text-slate'}`
-      name.textContent = localeShortName(l)
+      name.textContent = PIN[l.id]?.name ?? l.name
       el.append(dot, name)
       el.addEventListener('click', (ev) => {
         ev.stopPropagation()

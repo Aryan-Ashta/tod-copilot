@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { areaCheck, createPlan, geocode, getLocales, parsePrompt, stockPrompts } from '../api'
 import Disclaimer from '../components/Disclaimer'
 import AreaPicker, { type PolygonGeometry } from '../components/AreaPicker'
-import { LocalePoster } from '../components/LocalePosters'
 import Segmented from '../components/Segmented'
 import Slider from '../components/Slider'
 import { useApp } from '../state/AppContext'
@@ -58,7 +57,6 @@ export default function PromptScreen() {
   const [replay, setReplay] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const parseSeq = useRef(0)
-  const mapBoxRef = useRef<HTMLDivElement>(null)
   const { factorNumber } = useApp()
 
   useEffect(() => {
@@ -131,13 +129,6 @@ export default function PromptScreen() {
     setAreaName(null)
     const l = locales?.find((x) => x.id === id)
     if (l) setFlyTo([...l.bbox])
-  }
-
-  // A poster click picks the area and brings the map into view, where it flies to that area.
-  const pickPoster = (id: string) => {
-    pickLocale(id)
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    mapBoxRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' })
   }
 
   // The sliders show real numbers: the locale's transit budget times the multiplier (just the multiplier until a
@@ -218,28 +209,7 @@ export default function PromptScreen() {
           </p>
           {error && <p className="mb-6 border-l-2 border-gap pl-4 text-gap">{error}</p>}
 
-          <div className="grid grid-cols-1 gap-12 md:grid-cols-3">
-            {!locales && !error && <p className="text-slate">Loading locales…</p>}
-            {locales?.map((l, i) => {
-              const on = areaLocaleId === l.id
-              return (
-                <button
-                  key={l.id}
-                  onClick={() => pickPoster(l.id)}
-                  aria-pressed={on}
-                  className="group flex flex-col justify-start text-left"
-                >
-                  <LocalePoster locale={l} index={i} />
-                  <span className={`mt-3 block border-b pb-2 text-sm ${on ? 'border-ink' : 'border-transparent group-hover:border-rule'}`}>
-                    <span className="font-semibold">{l.name}</span>
-                    <span className="mt-0.5 block text-slate">{l.purpose}</span>
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          <SectionHead>Or search and draw an area</SectionHead>
+          <SectionHead>Pick an area</SectionHead>
           <form
             className="relative mb-4 flex items-end gap-4"
             onSubmit={(e) => {
@@ -278,7 +248,7 @@ export default function PromptScreen() {
             )}
           </form>
 
-          <div ref={mapBoxRef} className="scroll-mt-6 overflow-hidden rounded-[12px] border border-rule">
+          <div className="overflow-hidden rounded-[12px] border border-rule">
             <AreaPicker
               locales={locales ?? []}
               selectedLocale={selected}
