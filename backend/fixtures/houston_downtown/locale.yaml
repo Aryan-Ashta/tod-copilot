@@ -1,5 +1,6 @@
 id: houston_downtown
 name: 'Houston: Downtown + Main St rail'
+market_scope: Houston CBD   # brokerage-report submarket name for the market researcher (docs/12 §5.3)
 purpose: The building reuse engine on a high-vacancy office market, plus the no-zoning
   legal path
 data_tier: costar_full

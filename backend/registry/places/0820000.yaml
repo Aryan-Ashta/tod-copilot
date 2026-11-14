@@ -1,0 +1,22 @@
+# Managed by backend/onboard (docs/12 §14). status: reviewed = checked by a person; agent_verified = code checks passed; not_found = no public source found.
+fips: 0820000
+name: Denver city
+basename: Denver
+state: 08
+county: 08031
+jurisdiction: co_denver
+zoning:
+  status: agent_verified
+  layers:
+  - url: https://denvergov.org/maps/data/Zoning/MapServer/1
+    field: ZONE_DISTRICT
+    label: City of Denver zoning
+    prefix: ''
+  verified_at: '2026-11-14T20:36:27+00:00'
+  model: anthropic:claude-haiku-5-5
+utilities:
+  status: not_found
+  layers: []
+  reason: water_main; sewer_main
+  verified_at: '2026-11-14T20:37:57+00:00'
+  model: anthropic:claude-haiku-5-5

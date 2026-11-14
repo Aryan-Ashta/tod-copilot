@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, type Dispatch, type ReactNode } from 'react'
 import { getLocales, getPlan, openStream, rescore, simulateCount } from '../api'
 import { LAYER_DEFS, type LayerKey } from '../mapLayers'
-import { fmtDelta } from '../format'
+import { fmtDelta, fmtUsd } from '../format'
 import type {
   AgentEvent,
   AgentName,
@@ -140,8 +140,10 @@ export function describeChange(prev: Scoreboard | null, next: Scoreboard): strin
     parts.push(`transport CO₂ avoided ${fmtDelta(d(prev.transport_co2_tonnes_per_year, next.transport_co2_tonnes_per_year))} t/yr`)
   if (Math.abs(d(prev.embodied_co2_saved_tonnes, next.embodied_co2_saved_tonnes)) >= 0.5)
     parts.push(`embodied carbon saved ${fmtDelta(d(prev.embodied_co2_saved_tonnes, next.embodied_co2_saved_tonnes))} t`)
-  if (prev.pencils_yes !== next.pencils_yes || prev.pencils_total !== next.pencils_total)
-    parts.push(`pencils ${next.pencils_yes}/${next.pencils_total}`)
+  if (prev.affordable_homes !== next.affordable_homes)
+    parts.push(`affordable homes ${fmtDelta(d(prev.affordable_homes, next.affordable_homes))}`)
+  const gap = d(prev.funding_gap_usd, next.funding_gap_usd)
+  if (Math.abs(gap) >= 1) parts.push(`funding gap ${gap < 0 ? '−' : '+'}${fmtUsd(Math.abs(gap))}`)
   return parts.length ? parts.join(', ') : 'no change'
 }
 
@@ -186,7 +188,8 @@ function reducer(s: PlanState, a: PlanAction): PlanState {
       const agentStatus = { ...s.agentStatus }
       for (const ag of AGENTS) agentStatus[ag] = p.agent_errors[ag] ? 'error' : 'done'
       if (agentStatus.coordinator !== 'error') agentStatus.coordinator = 'done'
-      return { ...s, basePlan: p, plan: p, locale: p.locale, agentStatus, loadError: null }
+      // scoredKey reset: a reloaded plan (drawn-area agent research rebuilt it) re-applies the current edits via rescore.
+      return { ...s, basePlan: p, plan: p, locale: p.locale, agentStatus, loadError: null, scoredKey: null }
     }
     case 'load_error':
       return { ...s, loadError: a.message }
@@ -309,7 +312,13 @@ export function PlanProvider({
         .catch((e: Error) => alive && dispatch({ type: 'load_error', message: e.message }))
     const stream = (asReplay: boolean) => {
       close = openStream(planId, asReplay, {
-        onEvent: (event) => alive && dispatch({ type: 'event', event }),
+        onEvent: (event) => {
+          if (!alive) return
+          dispatch({ type: 'event', event })
+          // "Plan ready", and the later "Agent research finished" on drawn areas: the stream may stay open while
+          // research runs in the background, so load (or reload) the plan now rather than at stream end.
+          if (event.agent === 'coordinator' && event.status === 'done' && event.payload?.plan_id) loadFull()
+        },
         onEnd: () => {
           if (!alive) return
           dispatch({ type: 'stream_ended' })

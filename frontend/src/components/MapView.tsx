@@ -184,6 +184,8 @@ function tooltipFor(info: PickingInfo): string | null {
     case 'amenities': {
       const f = p.feature
       const name = typeof f.attrs.name === 'string' ? `${f.attrs.name} · ` : ''
+      if (f.kind === 'affordable_housing')
+        return `${name}${fmtNum(f.attrs.li_units as number | null)} affordable of ${fmtNum(f.attrs.units as number | null)} homes (HUD LIHTC)`
       return `${name}${humanize(f.kind)}${f.attrs.proposed ? ' (proposed)' : ''}`
     }
   }

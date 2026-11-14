@@ -1,5 +1,6 @@
 id: la_wilshire_koreatown
 name: 'Los Angeles: Wilshire corridor, Koreatown'
+market_scope: Mid-Wilshire   # brokerage-report submarket name for the market researcher (docs/12 §5.3)
 purpose: 'Overlapping laws: choose per parcel between new construction under SB 79
   and conversion under LA''s Citywide Adaptive Reuse Ordinance'
 data_tier: costar_full

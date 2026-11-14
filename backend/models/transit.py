@@ -109,11 +109,24 @@ def candidates(existing: dict, grid: list[dict], G: nx.Graph, stations: list[dic
 
 
 # ---------------------------------------------------------------- selection
-def optimize_network(existing: dict, grid: list[dict], cands: list[dict], budget: float, f: dict, epsg: int,
+def optimize_network(existing: dict, grid: list[dict], cands: list[dict], coverage_goal_pct: float, f: dict, epsg: int,
                      locale_id: str, to_lonlat) -> dict:
-    rail_xy = [lonlat_to_utm(*s["geometry"]["coordinates"], epsg) for s in existing["stops"] if s["properties"].get("rail")]
-    covered = _covered(grid, rail_xy, f["stop_catchment_m"])
+    """Add service greedily by uncovered demand per dollar until the share of demand within a frequent stop (rail or
+    a bus at frequent_bus_headway_min or better) reaches the goal; the cost is the operating funding it needs."""
+    frequent = f["frequent_bus_headway_min"]
+    freq = {r["properties"]["route_id"] for r in existing["routes"]
+            if r["properties"]["mode"] == "rail" or (r["properties"].get("peak_headway_min") is not None
+                                                     and r["properties"]["peak_headway_min"] <= frequent)}
+    base_xy = [lonlat_to_utm(*s["geometry"]["coordinates"], epsg) for s in existing["stops"]
+               if s["properties"].get("rail") or set(s["properties"].get("route_ids") or []) & freq]
+    covered = _covered(grid, base_xy, f["stop_catchment_m"])
     demand = {c["h3"]: c["demand"] for c in grid}
+    total_demand = sum(demand.values())
+
+    def pct(cov: set) -> float:
+        return 100 * sum(demand[h] for h in cov) / total_demand if total_demand else 0.0
+
+    baseline = pct(covered)
     for c in cands:
         c["cover"] = _covered(grid, c["stops_xy"], f["stop_catchment_m"])
     selected, spent, notes = [], 0.0, []
@@ -126,27 +139,25 @@ def optimize_network(existing: dict, grid: list[dict], cands: list[dict], budget
 
     upgrades = [c for c in cands if c["type"] == "upgrade"]
     if locale_id == "brevard_cocoa" and upgrades:
-        # Guardrail: at least one existing route gets more frequent. Use the best demand per dollar; if the full
-        # upgrade does not fit the budget, use the most frequent multiple of the frequent headway that does.
+        # Guardrail: at least one existing route gets more frequent; the best by demand per dollar.
         best = max(upgrades, key=lambda c: sum(demand[h] for h in c["cover"]) / max(c["cost"], 1))
-        hw = f["frequent_bus_headway_min"]
-        while best["cost"] > budget and hw * 2 < best["old_headway_min"]:
-            hw *= 2
-            best = {**best, "headway_min": hw, "cost": upgrade_cost(best["cycle_time_h"], best["old_headway_min"], hw, f)}
         take(best)
-        notes.append(f"route {best.get('name') or best['id']} runs every {hw} min instead of "
+        notes.append(f"route {best.get('name') or best['id']} runs every {frequent} min instead of "
                      f"{best['old_headway_min']:.0f} so at least one existing route gets more frequent")
         cands = [c for c in cands if c["id"] != best["id"]]
     pool = list(cands)
-    while pool:
-        scored = [(sum(demand[h] for h in c["cover"] - covered) / max(c["cost"], 1), c) for c in pool
-                  if spent + c["cost"] <= budget]
+    while pool and pct(covered) < coverage_goal_pct:
+        scored = [(sum(demand[h] for h in c["cover"] - covered) / max(c["cost"], 1), c) for c in pool]
         scored = [s for s in scored if s[0] > 0]
         if not scored:
             break
         _, c = max(scored, key=lambda s: s[0])
         take(c)
         pool = [p for p in pool if p["id"] != c["id"]]
+    coverage = pct(covered)
+    if coverage < coverage_goal_pct:
+        notes.append(f"frequent stops reach {coverage:.1f}% of demand, short of the {coverage_goal_pct:g}% goal: "
+                     f"no remaining candidate route adds coverage")
     # BRT variants for strong corridors
     for c in list(selected):
         length_km = c.get("length_km") or (LineString([lonlat_to_utm(*xy, epsg) for xy in _coords(c["geometry"])]).length / 1000)
@@ -156,25 +167,21 @@ def optimize_network(existing: dict, grid: list[dict], cands: list[dict], budget
                 cost = upgrade_cost(c["cycle_time_h"], c["headway_min"], f["brt_headway_min"], f)
             else:
                 cost = new_route_cost(length_km, f["brt_headway_min"], f)[1] - c["cost"]
-            if spent + cost <= budget:
-                selected.append({**c, "id": f"brt-{c['id']}", "kind": "brt", "type": "brt", "phase": 3,
-                                 "headway_min": f["brt_headway_min"], "cost": cost, "cover": set()})
-                spent += cost
+            selected.append({**c, "id": f"brt-{c['id']}", "kind": "brt", "type": "brt", "phase": 3,
+                             "headway_min": f["brt_headway_min"], "cost": cost, "cover": set()})
+            spent += cost
     # on-demand zone where no fixed route reaches above-median demand
     all_xy = [lonlat_to_utm(*s["geometry"]["coordinates"], epsg) for s in existing["stops"]] + \
         [xy for c in selected for xy in c["stops_xy"]]
     reach = _covered(grid, all_xy, f["stop_catchment_m"])
     med = statistics.median([c["demand"] for c in grid]) if grid else 0
     gap = [c for c in grid if c["h3"] not in reach and c["demand"] > med]
-    if len(gap) >= 3 and spent + f["on_demand_cost_usd_per_zone_year"] <= budget:
+    if len(gap) >= 3:
         hull = MultiPoint([c["lonlat"] for c in gap]).convex_hull
         selected.append({"id": "odz-1", "kind": "on_demand_zone", "type": "on_demand", "phase": 1,
                          "geometry": mapping(hull), "headway_min": None, "cost": f["on_demand_cost_usd_per_zone_year"],
                          "stops_xy": [], "cover": {c["h3"] for c in gap}})
         spent += f["on_demand_cost_usd_per_zone_year"]
-    elif gap:
-        notes.append(f"{len(gap)} above-median demand cells have no fixed route; an on-demand zone "
-                     f"(factor `on_demand_cost_usd_per_zone_year`) does not fit the remaining budget")
     routes = []
     sel_ids = {c["id"].removeprefix("upg-") for c in selected if c["type"] == "upgrade"}
     for r in existing["routes"]:
@@ -188,7 +195,8 @@ def optimize_network(existing: dict, grid: list[dict], cands: list[dict], budget
     for c in selected:
         routes.append(Route(id=c["id"], kind=c["kind"], geometry=c["geometry"], headway_min=_int(c["headway_min"]),
                             phase=c["phase"], annual_operating_cost_usd=round(c["cost"], 2)))
-    return {"routes": routes, "selected": selected, "spent": spent, "notes": notes}
+    return {"routes": routes, "selected": selected, "spent": spent, "notes": notes,
+            "coverage_baseline_pct": round(baseline, 1), "coverage_pct": round(coverage, 1)}
 
 
 def _int(v) -> Optional[int]:

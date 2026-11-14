@@ -1,19 +1,11 @@
 """Legal corpus integrity: verbatim citations, registered documents, required rule kinds, search."""
 import pytest
 
-from backend.corpus.loader import load_index, load_rules, load_sections, search_corpus
+from backend.corpus.loader import (ATTRS, OPS, RULE_KINDS, USES, load_index, load_rules, load_sections,
+                                   search_corpus)
+from backend.settings import CORPUS_DIR
 
-JURISDICTIONS = ["houston", "los_angeles", "brevard"]
-RULE_KINDS = {
-    "eligible", "max_height_ft", "max_units_per_acre", "max_far", "parking_min_per_unit",
-    "allows_uses", "approval_steps", "discretionary", "note", "stop_tier",
-}
-USES = {"residential", "hotel", "mixed_use", "keep_current"}
-ATTRS = {
-    "property_type", "land_use", "building_age_years", "stories", "distance_to_stop_mi", "station_mode",
-    "stop_tier", "area_acres", "zoning_code", "in_flood_zone", "est_units",
-}
-OPS = {"in", "lte", "gte", "eq"}
+JURISDICTIONS = sorted(p.stem for p in (CORPUS_DIR / "rules").glob("*.yaml"))
 EXPECTED_PATHS = {
     "houston": {"Houston development rules"},
     "los_angeles": {"SB 79 new construction", "LA Citywide Adaptive Reuse"},
@@ -55,7 +47,8 @@ def test_rule_shape_and_verbatim_quote(jurisdiction, rule):
 def test_every_path_has_minimum_rules(jurisdiction):
     rules = load_rules(jurisdiction)
     paths = {r["path"] for r in rules}
-    assert paths == EXPECTED_PATHS[jurisdiction]
+    if jurisdiction in EXPECTED_PATHS:
+        assert paths == EXPECTED_PATHS[jurisdiction]
     for p in paths:
         kinds = {r["rule"] for r in rules if r["path"] == p}
         assert {"eligible", "allows_uses", "approval_steps"} <= kinds, (p, kinds)

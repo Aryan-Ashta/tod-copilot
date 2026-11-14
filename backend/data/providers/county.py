@@ -1,38 +1,51 @@
-"""CountyParcelProvider: county assessor parcels (HCAD, LA County Assessor, Brevard Property Appraiser).
+"""CountyParcelProvider: county assessor parcels, recorded from the county's registry parcel layer
+(backend/registry/counties/<fips>.yaml `parcels`), with its `land_use` code map.
 
 PARCELS / OWNERSHIP_SALES at medium confidence; BUILDING_ATTRS (year built, use, area) at low confidence,
 attached to the largest OSM footprint on each parcel.
 """
 import re
 from functools import lru_cache
-from pathlib import Path
+from typing import Optional
 
-import yaml
 from shapely.geometry import shape
 from shapely.strtree import STRtree
 
 from backend.data.geo import area_acres
-from backend.data.locales import get_locale, source_locale
+from backend.data.locales import get_locale
 from backend.data.providers._base import features, first_url, fx, meta, prov, retrieved, sourced
 from backend.data.resolver import Capability
+from backend.onboard import registry
 from backend.schemas import Locale, Sourced
 
-MAPS_PATH = Path(__file__).resolve().parent.parent / "land_use_maps.yaml"
 BUILDING_USES = {"office", "retail", "hotel", "industrial", "parking_garage", "residential"}
 CAPS = {Capability.PARCELS, Capability.OWNERSHIP_SALES, Capability.BUILDING_ATTRS}
 
 
-@lru_cache(maxsize=1)
-def land_use_maps() -> dict:
-    return yaml.safe_load(MAPS_PATH.read_text())
+def land_use_map(locale_id: str) -> Optional[dict]:
+    """The county's registry `land_use` section, or None when it has none (every parcel maps to `other`)."""
+    m = registry.county_view(get_locale(locale_id).county_fips).get("land_use")
+    return None if registry.section_status(m) in (None, "not_found") else m
 
 
 def map_land_use(locale_id: str, props: dict) -> str:
-    m = land_use_maps()[source_locale(locale_id)]   # a drawn metro area uses its metro's county code map
+    m = land_use_map(locale_id)
+    if m is None:
+        return "other"
     if m.get("vacant_code_suffix") and (props.get("raw_code") or "").endswith(m["vacant_code_suffix"]):
         return "vacant"
     raw = re.sub(r"\s+", " ", str(props.get(m["field"]) or "").strip())
     return m["map"].get(raw, m["default"])
+
+
+def _no_zoning_note(locale: Locale) -> Optional[str]:
+    """A registry place with `zoning.none` (e.g. Houston) whose jurisdiction is this locale's."""
+    for g in registry.place_geoids():
+        p = registry.place(g)
+        z = p.get("zoning") or {}
+        if z.get("none") and registry.place_jurisdiction(p) == locale.jurisdiction:
+            return z.get("note") or f"{p.get('name')} has no zoning"
+    return None
 
 
 class CountyParcelProvider:
@@ -53,10 +66,19 @@ def _p(locale_id: str, confidence: str, note: str | None = None):
 
 @lru_cache(maxsize=None)
 def _parcels(locale_id: str, epsg: int, cap: str) -> list[dict]:
-    src = source_locale(locale_id)
-    lu = land_use_maps()[src]
+    loc = get_locale(locale_id)
+    county = registry.county(loc.county_fips)
+    lu = land_use_map(locale_id)
+
+    def lu_note(pr: dict) -> str:
+        return (f"county use code {pr.get(lu['field'])!s} mapped via the registry land_use map" if lu
+                else "no land-use code map for this county")
     zoning_note = meta(locale_id, "county").get("zoning")
-    jurisdiction = get_locale(locale_id).jurisdiction
+    no_zoning = _no_zoning_note(loc)
+    state = registry.state(loc.county_fips[:2])
+    sale_note = (f"{state['name']} is a non-disclosure state" if state["policies"].get("non_disclosure")
+                 else "sale price not in the public parcel layer")
+    notes = (county.get("parcels") or {}).get("notes") or {}
     out = []
     for f in features(fx(locale_id, "county", "parcels.geojson")):
         pr = f["properties"]
@@ -65,30 +87,24 @@ def _parcels(locale_id: str, epsg: int, cap: str) -> list[dict]:
         if cap == Capability.PARCELS.value:
             acres = pr.get("area_acres") or area_acres(f["geometry"], epsg)
             row["area_acres"] = Sourced(value=round(acres, 4), prov=med)
-            row["land_use"] = Sourced(value=map_land_use(locale_id, pr), prov=_p(
-                locale_id, "medium", f"county use code {pr.get(lu['field'])!s} mapped via land_use_maps.yaml"))
+            row["land_use"] = Sourced(value=map_land_use(locale_id, pr), prov=_p(locale_id, "medium", lu_note(pr)))
             row["address"] = sourced(pr.get("address"), med)
-            if src == "houston_downtown" and jurisdiction == "houston":
-                row["zoning_code"] = sourced(None, med, "Houston has no zoning")
-            elif src == "houston_downtown":
-                row["zoning_code"] = sourced(None, med, "no zoning layer recorded outside the City of Houston")
-            else:
+            if no_zoning:
+                row["zoning_code"] = sourced(None, med, no_zoning)
+            elif zoning_note:
                 row["zoning_code"] = sourced(pr.get("zoning_code"), _p(locale_id, "medium", zoning_note),
                                              "no zoning polygon covers this parcel")
+            else:
+                row["zoning_code"] = sourced(None, med, "no zoning layer recorded for this area")
             row["city"] = pr.get("city")
         else:
             row["owner"] = sourced(pr.get("owner"), med, "owner name not published in this county layer")
-            row["last_sale_usd"] = sourced(pr.get("last_sale_usd"), med,
-                                           "Texas is a non-disclosure state" if src == "houston_downtown"
-                                           else "sale price not in the public parcel layer")
-            year_note = {"houston_downtown": "HCAD new_owner_date (ownership transfer)",
-                         "la_wilshire_koreatown": "Prop 13 land base year (last change in ownership)"}.get(src)
-            row["last_sale_year"] = sourced(pr.get("last_sale_year"), _p(locale_id, "medium", year_note),
+            row["last_sale_usd"] = sourced(pr.get("last_sale_usd"), med, sale_note)
+            row["last_sale_year"] = sourced(pr.get("last_sale_year"),
+                                            _p(locale_id, "medium", notes.get("last_sale_year")),
                                             "sale year not in the public parcel layer")
-            row["assessed_value_usd"] = sourced(pr.get("assessed_value_usd"), _p(
-                locale_id, "medium", {"houston_downtown": "HCAD total market value",
-                                      "la_wilshire_koreatown": "Assessor roll land + improvement (Prop 13 limited)",
-                                      "brevard_cocoa": "Property Appraiser land + building value"}[src]))
+            row["assessed_value_usd"] = sourced(pr.get("assessed_value_usd"),
+                                                _p(locale_id, "medium", notes.get("assessed_value_usd")))
             row["lease_expiry_year"] = Sourced(value=None, prov=_p(locale_id, "missing",
                                                                    "lease data has no public source"))
         out.append(row)
@@ -103,7 +119,8 @@ def _building_attrs(locale_id: str) -> list[dict]:
         return []
     bgeoms = [shape(f["geometry"]) for f in bfeats]
     tree = STRtree([g.representative_point() for g in bgeoms])
-    typed = land_use_maps()[source_locale(locale_id)].get("building_type_reliable", True)
+    lu = land_use_map(locale_id)
+    typed = (lu or {}).get("building_type_reliable", True)
     out = []
     for f in features(fx(locale_id, "county", "parcels.geojson")):
         pr = f["properties"]

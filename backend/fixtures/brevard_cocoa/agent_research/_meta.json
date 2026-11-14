@@ -1,0 +1,8 @@
+{
+ "source": "agent_research",
+ "urls": [
+  "backend/fixtures/brevard_cocoa/agent_research/buildings_source.yaml"
+ ],
+ "retrieved_at": "2026-11-14T19:03:37.389559+00:00",
+ "note": "agent-found, code-verified public facts (docs/12); each field carries its quote, confidence and retrieval time"
+}

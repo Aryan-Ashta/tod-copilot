@@ -1,4 +1,6 @@
-"""Runtime settings loaded from `.env` (git-ignored). Names only live in `.env.example`."""
+"""Runtime settings from the environment. Secrets come from Doppler (project tod-copilot, config prd), injected by
+`doppler run -- <command>`; a git-ignored `.env` fills only variables Doppler did not set (load_dotenv never
+overrides). Names only live in `.env.example`."""
 import os
 from pathlib import Path
 
@@ -13,6 +15,12 @@ LLM_ENABLED = bool(ANTHROPIC_API_KEY) and not OFFLINE and os.getenv("TOD_LLM", "
 MODEL = os.getenv("TOD_MODEL", "anthropic:claude-haiku-5-5")   # docs/model-eval.md (2026-11-14)
 NREL_API_KEY = os.getenv("NREL_API_KEY", "DEMO_KEY")
 REPLAY_DELAY_S = float(os.getenv("REPLAY_DELAY_S", "0.25"))
+
+# Agent research (docs/12): runs only while recording, never at plan time.
+RESEARCH_MODEL = os.getenv("RESEARCH_MODEL") or MODEL                    # building/market researcher subagents
+RESEARCH_SEARCH = os.getenv("RESEARCH_SEARCH") or "anthropic"           # anthropic | fixture:<path.yaml>
+RESEARCH_SEARCH_MODEL = os.getenv("RESEARCH_SEARCH_MODEL") or "anthropic:claude-haiku-5-5"
+AREA_RESEARCH = os.getenv("AREA_RESEARCH") == "1"   # also research drawn metro areas, in the background after the plan
 
 # LangSmith tracing (optional): on when a key is set and not offline. Inputs and outputs are hidden so licensed
 # CoStar/Matterport/Vexcel values in tool calls never leave this machine; traces keep structure, timing and tokens.

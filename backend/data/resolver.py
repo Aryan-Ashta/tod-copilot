@@ -23,6 +23,7 @@ class Capability(str, Enum):
     AMENITIES = "amenities"               # schools, clinics, parks, grocery
     WALK_NETWORK = "walk_network"
     FLOOD = "flood"
+    AFFORDABLE_INVENTORY = "affordable_inventory"   # HUD LIHTC properties
     SOLAR = "solar"
 
 
@@ -87,12 +88,13 @@ class Resolver:
 
 
 def default_resolver() -> Resolver:
-    from backend.data.providers import (afdc, costar, county, demand, derived, fcc, fema, gtfs, matterport, osm,
-                                        pvwatts, research, utilities, vexcel)
+    from backend.data.providers import (afdc, agent_research, costar, county, demand, derived, fcc, fema, gtfs, hud,
+                                        matterport, osm, pvwatts, research, utilities, vexcel)
     return Resolver([
         costar.CoStarProvider(), matterport.MatterportProvider(), vexcel.VexcelProvider(),
-        research.PublicResearchProvider(),
+        research.PublicResearchProvider(), agent_research.AgentResearchProvider(),
         county.CountyParcelProvider(), afdc.AfdcProvider(), fcc.FccBroadbandProvider(),
-        utilities.CityOpenDataProvider(), fema.FemaProvider(), gtfs.GtfsProvider(), demand.DemandProvider(),
+        utilities.CityOpenDataProvider(), fema.FemaProvider(), hud.HudLihtcProvider(), gtfs.GtfsProvider(),
+        demand.DemandProvider(),
         pvwatts.PvwattsProvider(), osm.OsmProvider(), derived.DerivedInteriorProvider(),
     ])

@@ -5,9 +5,10 @@ import { fmtNum, fmtUsd, parcelLabel, siteNames } from '../../format'
 import { siteLetters } from '../../mapLayers'
 import { CardShell, Empty, Section, td, th } from './common'
 import FactorHover, { useFactorLabel } from '../FactorHover'
+import SourceBadge from '../SourceBadge'
 import { CapitalStacksFigure, SLICES } from './CapitalStacksFigure'
 import { ISO } from '../../iso'
-import type { CapitalStack, Site } from '../../types'
+import type { CapitalStack, GoalKey, GoalReport, Site } from '../../types'
 
 const INCENTIVE = 'houston_downtown_per_unit_incentive_usd'
 
@@ -88,6 +89,76 @@ function GapLine({ s, name }: { s: CapitalStack; name: string }) {
   )
 }
 
+const GOAL_LABELS: Record<GoalKey, string> = {
+  affordable_homes: 'New affordable homes',
+  total_homes: 'New homes',
+  conversions: 'Buildings converted',
+  transit_coverage: 'Frequent-transit coverage',
+}
+
+function fmtGoal(v: number, unit: string): string {
+  return unit === '% of demand' ? `${fmtNum(v, 1)}%` : fmtNum(v)
+}
+
+/** What the goals need: per-goal progress, the one-time housing gap, yearly transit funding, the existing baseline. */
+function GoalsSection({ r }: { r: GoalReport }) {
+  const ex = r.existing_affordable
+  return (
+    <Section title="Funding needed for the goals">
+      <table className="w-full text-sm">
+        <thead>
+          <tr>
+            <th className={th}>Goal</th>
+            <th className={th}>Target</th>
+            <th className={th}>Reached</th>
+            <th className={th}>Met</th>
+          </tr>
+        </thead>
+        <tbody>
+          {r.goals.map((g) => (
+            <tr key={g.key}>
+              <td className={td}>{GOAL_LABELS[g.key]}</td>
+              <td className={`${td} tabular-nums`}>{g.goal === null ? '—' : fmtGoal(g.goal, g.unit)}</td>
+              <td className={`${td} tabular-nums`}>{fmtGoal(g.achieved, g.unit)}</td>
+              <td className={`${td} ${g.met === null ? '' : g.met ? 'text-emerald-300' : 'text-gap'}`}>
+                {g.met === null ? '—' : g.met ? 'yes' : 'no'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ul className="mt-2 space-y-1 text-[14px]">
+        <li>
+          One-time housing funding gap:{' '}
+          <FactorHover keys={['per_unit_credit_equity_usd', 'affordable_share', 'debt_ratio', 'investor_equity_share']}>
+            <span className="font-semibold">{fmtUsd(r.housing_gap_usd)}</span>
+          </FactorHover>{' '}
+          across {r.sites_funded} sites (total cost {fmtUsd(r.total_cost_usd)}; tax credit equity{' '}
+          {fmtUsd(r.tax_credit_equity_usd)}; incentives {fmtUsd(r.incentive_usd)})
+        </li>
+        <li>
+          Transit operating funding: <span className="font-semibold">{fmtUsd(r.transit_operating_usd_per_year)}</span>/yr
+        </li>
+        <li>
+          {ex ? (
+            <>
+              Existing affordable homes here (HUD LIHTC): {fmtNum(ex.affordable_homes)} in {fmtNum(ex.properties)}{' '}
+              properties <SourceBadge prov={ex.prov} />
+            </>
+          ) : (
+            'Existing affordable inventory: not recorded for this area'
+          )}
+        </li>
+        {r.notes.map((n) => (
+          <li key={n} className="text-slate">
+            {n}
+          </li>
+        ))}
+      </ul>
+    </Section>
+  )
+}
+
 export default function FundingCard() {
   const { state } = usePlan()
   const { plan } = state
@@ -122,31 +193,41 @@ export default function FundingCard() {
   }, [sites])
 
   const stackById = new Map((stacks ?? []).map((s) => [s.site_id, s]))
-  const yes = (stacks ?? []).filter((s) => s.pencils).length
+  // reserve sites are priced but not needed for the goals: listed as a count only
+  const shown = (stacks ?? []).filter((s) => siteById.get(s.site_id)?.status !== 'reserve')
+  const reserve = sites.filter((s) => s.status === 'reserve').length
+  // header totals cover funded sites only, so they match the goals table and the scoreboard
+  const funded = shown.filter((s) => siteById.get(s.site_id)?.status === 'pursue')
+  const yes = funded.filter((s) => s.pencils).length
+  const gapSum = funded.reduce((a, s) => a + Math.max(s.gap_usd, 0), 0)
   // default selection: the site closest to pencilling (smallest gap per home), else the first stack
-  const closest = (stacks ?? [])
+  const closest = shown
     .filter((s) => s.gap_to_pencil?.gap_per_home_usd != null)
     .sort((a, b) => a.gap_to_pencil!.gap_per_home_usd! - b.gap_to_pencil!.gap_per_home_usd!)[0]
-  const sel = (picked && stackById.get(picked)) || closest || stacks?.[0]
+  const sel = (picked && stackById.get(picked)) || closest || shown[0]
 
   return (
     <CardShell title="Funding" note={plan.notes?.funding}>
+      {plan.goals_report && <GoalsSection r={plan.goals_report} />}
       {!stacks ? (
         <Empty>Waiting for the funding agent…</Empty>
-      ) : stacks.length === 0 ? (
+      ) : shown.length === 0 ? (
         <Empty>No capital stacks.</Empty>
       ) : (
         <>
           <p className="text-[15px]">
-            <span className={`font-bold ${yes > 0 ? 'text-emerald-300' : 'text-gap'}`}>
-              Pencils: {yes} of {stacks.length} sites
+            <span className={`font-bold ${gapSum > 0 ? 'text-gap' : 'text-emerald-300'}`}>
+              Funding gap {fmtUsd(gapSum)} · {yes} of {funded.length} funded sites pencil without it
             </span>
             <span className="text-slate"> · columns are each site's capital stack; dashed red is the gap.</span>
           </p>
+          {reserve > 0 && (
+            <p className="text-[14px] text-slate">{reserve} priced sites held in reserve (not needed for the goals)</p>
+          )}
           <figure className="rounded-xl border border-rule p-3">
-            <CapitalStacksFigure stacks={stacks} names={names} selected={sel?.site_id ?? null} onSelect={setPicked} />
+            <CapitalStacksFigure stacks={shown} names={names} selected={sel?.site_id ?? null} onSelect={setPicked} />
             <figcaption className="mt-2 grid grid-cols-2 gap-x-4 text-[13px] text-slate">
-              {stacks.map((s, i) => (
+              {shown.map((s, i) => (
                 <button
                   key={s.site_id}
                   onClick={() => setPicked(s.site_id)}
@@ -187,19 +268,23 @@ export default function FundingCard() {
                   <tr>
                     <th className={th}>Site</th>
                     <th className={th}>Total cost</th>
+                    <th className={th}>Affordable</th>
                     <th className={th}>Gap</th>
                     <th className={th}>Pencils?</th>
                     <th className={th}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stacks.map((s) => (
+                  {shown.map((s) => (
                     <tr key={s.site_id}>
                       <td className={td} title={s.site_id}>
                         {label(s.site_id)}
                       </td>
                       <td className={`${td} tabular-nums`}>
                         <FactorHover keys={s.assumptions}>{fmtUsd(s.total_cost_usd)}</FactorHover>
+                      </td>
+                      <td className={`${td} tabular-nums`}>
+                        {fmtNum(s.affordable_units)} of {fmtNum(s.units)}
                       </td>
                       <td className={`${td} tabular-nums`}>{fmtUsd(s.gap_usd)}</td>
                       <td className={`${td} ${s.pencils ? 'text-emerald-300' : 'text-gap'}`}>{s.pencils ? 'yes' : 'no'}</td>
@@ -212,7 +297,7 @@ export default function FundingCard() {
           )}
           {showMath && (
             <div className="space-y-2">
-              {stacks.map((s) => (
+              {shown.map((s) => (
                 <div key={s.site_id}>
                   <div className="mb-0.5 text-xs font-semibold">{label(s.site_id)}</div>
                   <MathRow s={s} />
@@ -220,10 +305,10 @@ export default function FundingCard() {
               ))}
             </div>
           )}
-          {showTable && stacks.some((s) => s.gap_to_pencil) && (
+          {showTable && shown.some((s) => s.gap_to_pencil) && (
             <Section title="Gap to pencil, every site">
               <ul className="space-y-1.5 text-[13px]">
-                {stacks
+                {shown
                   .filter((s) => s.gap_to_pencil)
                   .map((s) => (
                     <GapLine key={s.site_id} s={s} name={label(s.site_id)} />
@@ -259,7 +344,7 @@ export default function FundingCard() {
                           <td className={`${td} tabular-nums`}>{fmtUsd(st?.total_cost_usd)}</td>
                           <td className={`${td} tabular-nums`}>{fmtUsd(st?.gap_usd)}</td>
                           <td className={td}>{st ? (st.pencils ? 'yes' : 'no') : '—'}</td>
-                          <td className={`${td} ${s.status === 'pass' ? 'text-neutral-500' : 'text-emerald-300'}`}>{s.status}</td>
+                          <td className={`${td} ${s.status === 'pass' || s.status === 'reserve' ? 'text-neutral-500' : s.status === 'watch' ? 'text-amber-300' : 'text-emerald-300'}`}>{s.status}</td>
                         </tr>
                       )
                     }),

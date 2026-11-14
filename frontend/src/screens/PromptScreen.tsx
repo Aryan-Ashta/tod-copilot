@@ -13,28 +13,26 @@ import {
   type AreaCheck,
   type GeocodeResult,
   type Locale,
+  type PlanGoals,
   type PlanOptions,
   type StockPrompt,
 } from '../types'
 
 const REPLAY_HINT = 'Replays exist only for whole recorded areas with default options; this runs live'
 
-/** Recorded locale whose stock prompts also apply to a drawn metro area, by the city named in the area_check label. */
-function metroLocaleId(label: string | null): string | null {
-  if (!label) return null
-  if (label.includes('Houston')) return 'houston_downtown'
-  if (label.includes('Los Angeles')) return 'la_wilshire_koreatown'
-  return null
-}
-
 const FOCUS: { value: PlanOptions['focus']; label: string }[] = [
   { value: 'all', label: 'Both' },
   { value: 'conversions', label: 'Conversions' },
   { value: 'new_build', label: 'New construction' },
 ]
-// Slider ranges are UI limits, not model factors: the backend accepts any multiplier above 0 and any share 0-1.
-const BUDGET_RANGE = { min: 0.25, max: 3, step: 0.05 }
-const AFFORDABLE_RANGE = { min: 0, max: 0.6, step: 0.05 }
+
+const HOUSING_GOALS: { key: Exclude<keyof PlanGoals, 'transit_coverage_pct'>; label: string }[] = [
+  { key: 'affordable_homes', label: 'New affordable homes' },
+  { key: 'total_homes', label: 'New homes total' },
+  { key: 'conversions', label: 'Buildings converted' },
+]
+// A UI limit, not a model factor: the backend accepts any coverage goal from 0 to 100.
+const COVERAGE_RANGE = { min: 0, max: 100, step: 5 }
 
 function SectionHead({ children }: { children: ReactNode }) {
   return <h2 className="wide mt-16 mb-5 border-t-2 border-ink pt-4 text-[22.5px] leading-tight font-bold">{children}</h2>
@@ -54,7 +52,7 @@ export default function PromptScreen() {
   const [stock, setStock] = useState<StockPrompt[]>([])
   const [prompt, setPrompt] = useState('')
   const [options, setOptions] = useState<PlanOptions>(DEFAULT_PLAN_OPTIONS)
-  const [optionsTouched, setOptionsTouched] = useState(false)
+  const [focusTouched, setFocusTouched] = useState(false)
   const [replay, setReplay] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const parseSeq = useRef(0)
@@ -75,19 +73,19 @@ export default function PromptScreen() {
       })
   }, [])
 
-  // Free text steers the options until the user edits a select.
+  // Free text steers the focus until the user picks one.
   useEffect(() => {
-    if (optionsTouched || !prompt.trim()) return
+    if (focusTouched || !prompt.trim()) return
     const seq = ++parseSeq.current
     const t = setTimeout(() => {
       parsePrompt(prompt)
-        .then((o) => {
-          if (seq === parseSeq.current) setOptions(o)
+        .then((p) => {
+          if (seq === parseSeq.current) setOptions((o) => ({ ...o, focus: p.focus }))
         })
         .catch(() => {})
     }, 300)
     return () => clearTimeout(t)
-  }, [prompt, optionsTouched])
+  }, [prompt, focusTouched])
 
   // Server decides what a drawn boundary runs as (sub-area, metro, or rejected).
   const [check, setCheck] = useState<AreaCheck | null>(null)
@@ -110,14 +108,13 @@ export default function PromptScreen() {
 
   const wholeLocale = !boundary ? (locales?.find((x) => x.id === selected) ?? null) : null
   const areaLocaleId = wholeLocale ? wholeLocale.id : check?.kind === 'subarea' ? check.locale_id : null
-  const defaultOptions =
-    options.focus === 'all' && options.transit_budget_multiplier === 1 && options.affordable_share === null
+  const defaultOptions = options.focus === 'all' && Object.values(options.goals).every((v) => v === null)
   const replayAllowed = wholeLocale !== null && defaultOptions
   const replayOn = replay && replayAllowed
   const areaOk = wholeLocale !== null || (check !== null && check.kind !== null && !check.error)
   const canSubmit = areaOk && !submitting && (replayOn || prompt.trim().length > 0)
 
-  const chipLocaleId = areaLocaleId ?? (check?.kind === 'metro' ? metroLocaleId(check.label) : null)
+  const chipLocaleId = areaLocaleId ?? (check?.kind === 'metro' ? check.sources_from : null)
   const visibleStock = stock.filter((p) => p.locale_id === null || p.locale_id === chipLocaleId)
 
   const onBoundary = (b: PolygonGeometry | null) => {
@@ -140,12 +137,12 @@ export default function PromptScreen() {
     mapBoxRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' })
   }
 
-  // The sliders show real numbers: the locale's transit budget times the multiplier (just the multiplier until a
-  // locale is known), and the affordable share (factors.yaml affordable_share until the user moves it).
-  const budgetBase = chipLocaleId ? factorNumber('transit_budget_usd', chipLocaleId) : null
-  const budgetText = (m: number) => (budgetBase === null ? `${m}×` : `$${Number(((budgetBase * m) / 1e6).toFixed(2))}M/yr`)
-  const defaultShare = factorNumber('affordable_share') ?? 0
-  const share = options.affordable_share ?? defaultShare
+  // The coverage slider rests on factors.yaml transit_coverage_goal_pct until the user moves it.
+  const defaultCoverage = factorNumber('transit_coverage_goal_pct')
+  const coverage = options.goals.transit_coverage_pct ?? defaultCoverage
+  const coverageMarks = [...new Set([COVERAGE_RANGE.min, defaultCoverage ?? COVERAGE_RANGE.min, COVERAGE_RANGE.max])]
+    .sort((a, b) => a - b)
+    .map((v) => ({ value: v, label: `${v}%` }))
 
   const search = async () => {
     if (!query.trim()) return
@@ -173,14 +170,22 @@ export default function PromptScreen() {
 
   const pickStock = (p: StockPrompt) => {
     setPrompt(p.prompt)
-    setOptions(p.options)
-    setOptionsTouched(false)
+    setOptions({
+      ...DEFAULT_PLAN_OPTIONS,
+      ...p.options,
+      goals: { ...DEFAULT_PLAN_OPTIONS.goals, ...p.options.goals },
+    })
+    setFocusTouched(false)
     parseSeq.current++ // drop any in-flight parse of the old text
   }
 
-  const setOption = <K extends keyof PlanOptions>(k: K, v: PlanOptions[K]) => {
-    setOptions((o) => ({ ...o, [k]: v }))
-    setOptionsTouched(true)
+  const setFocus = (v: PlanOptions['focus']) => {
+    setOptions((o) => ({ ...o, focus: v }))
+    setFocusTouched(true)
+  }
+
+  const setGoal = (k: keyof PlanGoals, v: number | null) => {
+    setOptions((o) => ({ ...o, goals: { ...o.goals, [k]: v } }))
   }
 
   const submit = async () => {
@@ -248,11 +253,11 @@ export default function PromptScreen() {
             }}
           >
             <label className="flex-1">
-              <span className="block text-sm text-slate">Place in Harris County or Los Angeles County</span>
+              <span className="block text-sm text-slate">Place in any US county</span>
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search Houston or Los Angeles"
+                placeholder="Search a US city or address"
                 className="w-full border-0 border-b border-ink bg-transparent py-1.5 text-[18px] placeholder:text-slate/70 focus:outline-none focus-visible:outline-2"
               />
             </label>
@@ -261,7 +266,7 @@ export default function PromptScreen() {
             </button>
             {results && (
               <ul className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-xl border border-rule bg-paper shadow-[0_8px_24px_rgb(28_34_48/.12)]">
-                {results.length === 0 && <li className="px-3 py-2 text-sm text-slate">No matches in Harris County or Los Angeles County</li>}
+                {results.length === 0 && <li className="px-3 py-2 text-sm text-slate">No matches in a US county</li>}
                 {results.map((r, i) => (
                   <li key={`${r.label}-${i}`} className="border-b border-rule last:border-b-0">
                     <button
@@ -329,41 +334,48 @@ export default function PromptScreen() {
             className="mb-6 w-full rounded-xl border border-rule bg-transparent p-3 text-[18px] placeholder:text-slate/70 focus:border-ink focus:outline-none"
           />
 
-          <div className="mb-8 grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.7fr)]">
+          <div className="mb-8 grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2">
             <div>
               <div className="mb-2 text-sm text-slate">Focus</div>
-              <Segmented label="Focus" options={FOCUS} value={options.focus} onChange={(v) => setOption('focus', v)} />
+              <Segmented label="Focus" options={FOCUS} value={options.focus} onChange={setFocus} />
             </div>
             <div>
               <div className="mb-2 flex items-baseline justify-between text-sm">
-                <span className="text-slate">Transit budget</span>
-                <span className="font-semibold tabular-nums">{budgetText(options.transit_budget_multiplier)}</span>
+                <span className="text-slate">Transit coverage goal</span>
+                <span className="font-semibold tabular-nums">{coverage === null ? '…' : `${coverage}% of demand`}</span>
               </div>
               <Slider
-                label="Transit budget"
-                {...BUDGET_RANGE}
-                value={options.transit_budget_multiplier}
-                valueText={budgetText(options.transit_budget_multiplier)}
-                marks={[BUDGET_RANGE.min, 1, BUDGET_RANGE.max].map((m) => ({ value: m, label: budgetText(m) }))}
-                onChange={(m) => setOption('transit_budget_multiplier', m)}
+                label="Transit coverage goal"
+                {...COVERAGE_RANGE}
+                value={coverage ?? COVERAGE_RANGE.min}
+                valueText={coverage === null ? undefined : `${coverage}% of transit demand near a frequent stop`}
+                marks={coverageMarks}
+                disabled={coverage === null}
+                // back on the factors.yaml goal counts as the default, so replays stay available
+                onChange={(pct) => setGoal('transit_coverage_pct', pct === defaultCoverage ? null : pct)}
               />
             </div>
-            <div>
-              <div className="mb-2 flex items-baseline justify-between text-sm">
-                <span className="text-slate">Affordable homes</span>
-                <span className="font-semibold tabular-nums">{Math.round(share * 100)}% of homes</span>
+            <fieldset className="md:col-span-2">
+              <legend className="mb-2 text-sm text-slate">Housing goals (blank = no goal)</legend>
+              <div className="grid grid-cols-1 gap-x-12 gap-y-3 text-[15px] sm:grid-cols-3">
+                {HOUSING_GOALS.map((g) => (
+                  <label key={g.key} className="block">
+                    {g.label}
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={options.goals[g.key] ?? ''}
+                      onChange={(e) => {
+                        const n = e.target.value.trim() === '' ? null : Number(e.target.value)
+                        setGoal(g.key, n === null || Number.isNaN(n) ? null : n)
+                      }}
+                      className="mt-1 block w-full rounded-lg border border-rule bg-transparent px-3 py-1.5 tabular-nums focus:border-ink focus:outline-none"
+                    />
+                  </label>
+                ))}
               </div>
-              <Slider
-                label="Affordable homes"
-                {...AFFORDABLE_RANGE}
-                value={share}
-                valueText={`${Math.round(share * 100)}% of homes affordable`}
-                marks={[AFFORDABLE_RANGE.min, defaultShare, AFFORDABLE_RANGE.max].map((s) => ({ value: s, label: `${Math.round(s * 100)}%` }))}
-                color="var(--color-green)"
-                // back on the factors.yaml share counts as the default, so replays stay available
-                onChange={(s) => setOption('affordable_share', Math.abs(s - defaultShare) < 1e-9 ? null : s)}
-              />
-            </div>
+            </fieldset>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 border-t border-rule pt-5">

@@ -3,18 +3,23 @@ from datetime import date
 
 from backend.agents import common
 from backend.agents.context import RunContext
-from backend.corpus.loader import load_index, load_rules
+from backend.corpus.loader import has_rules, load_index, load_rules, path_info
 from backend.corpus.loader import search_corpus as corpus_search
 from backend.models import zoning
 from backend.models.reuse import units_for
 from backend.schemas import ZoningEnvelope
-from backend.settings import CORPUS_DIR
 
 NAME = "zoning_legislation"
 GOAL = "For each candidate parcel, which legal paths apply and what each allows, with verbatim citations."
-ARO = "LA Citywide Adaptive Reuse"
-NEW_BUILD_EXCLUDE = {ARO}
 NOT_COVERED = "No legal corpus for this area: every legal question is not covered."
+
+
+def is_conversion_only(name: str) -> bool:
+    return path_info(name)["kind"] == "conversion"
+
+
+def is_new_construction_only(name: str) -> bool:
+    return path_info(name)["kind"] == "new_construction"
 
 
 def snippet(text: str, words: int = 25) -> str:
@@ -23,17 +28,15 @@ def snippet(text: str, words: int = 25) -> str:
     return " ".join(w[:words]) + ("…" if len(w) > words else "")
 
 
-def path_names(jurisdiction: str, rules: list[dict]) -> list[str]:
-    if jurisdiction == "houston":
-        return ["Houston development rules"]
-    if jurisdiction == "los_angeles":
-        return ["SB 79 new construction", ARO]
+def path_names(rules: list[dict]) -> list[str]:
     return list(dict.fromkeys(r["path"] for r in rules))
 
 
-def conversion_paths(jurisdiction: str, paths):
-    """Paths that govern converting an existing building (SB 79 is new construction only)."""
-    return [p for p in paths if p.name == ARO] if jurisdiction == "los_angeles" else list(paths)
+def conversion_paths(paths):
+    """Paths that govern converting an existing building (backend/corpus/paths.yaml kind conversion or both); a
+    conversion-only ordinance, where one exists, is the conversion path."""
+    conv = [p for p in paths if is_conversion_only(p.name)]
+    return conv or [p for p in paths if not is_new_construction_only(p.name)] or list(paths)
 
 
 def tools(ctx: RunContext):
@@ -49,7 +52,7 @@ def tools(ctx: RunContext):
         compute homes per path and the recommended path. Returns eligibility counts per path."""
         if "readiness" not in ctx.plan_parts:
             raise ValueError("run infrastructure first")
-        if not (CORPUS_DIR / "rules" / f"{loc.jurisdiction}.yaml").exists():
+        if not has_rules(loc.jurisdiction):
             ctx.cache["path_names"] = []
             ctx.plan_parts["envelopes"] = []
             ctx.pre["homes_by_parcel"] = {}
@@ -57,7 +60,7 @@ def tools(ctx: RunContext):
             ctx.step(NAME, NOT_COVERED)
             return NOT_COVERED
         rules = load_rules(loc.jurisdiction)
-        names = path_names(loc.jurisdiction, rules)
+        names = path_names(rules)
         urls = {d["doc_id"]: d.get("url") for d in load_index()}
         ctx.cache["path_names"] = names
         year = date.today().year
@@ -84,10 +87,10 @@ def tools(ctx: RunContext):
                              building_age_years=(year - b.year_built.value) if b.year_built.value else None,
                              est_units=units_for(b.rentable_area_sqft.value, f))
             paths = zoning.apply_rules(attrs, rules, names, urls)
-            homes = {pth.name: (attrs["est_units"] if pth.name == ARO and pth.eligible else
+            homes = {pth.name: (attrs["est_units"] if is_conversion_only(pth.name) and pth.eligible else
                                 zoning.homes_for(p.area_acres.value, pth, f)) for pth in paths}
             paths = [pth.model_copy(update={"homes": homes[pth.name] if pth.eligible else None}) for pth in paths]
-            nb = [h for n, h in homes.items() if n not in NEW_BUILD_EXCLUDE and h]
+            nb = [h for n, h in homes.items() if not is_conversion_only(n) and h]
             homes_by_parcel[p.id] = max(nb) if nb else None
             attrs_by_parcel[p.id] = attrs
             if p.id in envelope_ids:
@@ -121,7 +124,7 @@ def run(ctx: RunContext) -> None:
 
 def explain(ctx: RunContext) -> str:
     envs = ctx.plan_parts.get("envelopes", [])
-    if not (CORPUS_DIR / "rules" / f"{ctx.locale.jurisdiction}.yaml").exists():
+    if not has_rules(ctx.locale.jurisdiction):
         return NOT_COVERED
     names = ctx.cache.get("path_names", [])
     rec: dict[str, int] = {}
@@ -136,6 +139,7 @@ def explain(ctx: RunContext) -> str:
         both = sum(1 for e in envs if sum(1 for x in e.paths if x.eligible) > 1)
         base += f"{both} parcels qualify under more than one path; each shows the paths side by side. "
     base += f"{uncovered} parcels are not covered by the corpus." if uncovered else "Every parcel is covered by the corpus."
-    if ctx.locale.jurisdiction == "houston":
-        base += " Houston has no zoning; development rules apply and deed restrictions need a title check."
+    for n in names:
+        if note := path_info(n).get("explain_note"):
+            base += f" {note}"
     return base

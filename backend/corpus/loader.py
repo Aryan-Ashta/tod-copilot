@@ -14,8 +14,23 @@ from rank_bm25 import BM25Okapi
 
 from backend.settings import CORPUS_DIR
 
-# Jurisdictions whose search also covers another jurisdiction's documents (state law applies locally).
-_SEARCH_ALSO = {"los_angeles": ("california",), "brevard": ("florida",)}
+RULE_KINDS = {
+    "eligible", "max_height_ft", "max_units_per_acre", "max_far", "parking_min_per_unit",
+    "allows_uses", "approval_steps", "discretionary", "note", "stop_tier",
+}
+USES = {"residential", "hotel", "mixed_use", "keep_current"}
+ATTRS = {
+    "property_type", "land_use", "building_age_years", "stories", "distance_to_stop_mi", "station_mode",
+    "stop_tier", "area_acres", "zoning_code", "in_flood_zone", "est_units",
+}
+OPS = {"in", "lte", "gte", "eq"}
+
+
+def _with_state(jurisdiction: str) -> tuple[str, ...]:
+    """The jurisdiction plus the state whose law applies there (backend/registry)."""
+    from backend.onboard.registry import state_jurisdiction
+    s = state_jurisdiction(jurisdiction)
+    return (jurisdiction, s) if s else (jurisdiction,)
 
 
 def _tokens(text: str) -> list[str]:
@@ -66,7 +81,7 @@ def load_sections(doc_id: str) -> dict[str, str]:
 
 @lru_cache(maxsize=None)
 def _bm25(jurisdiction: str) -> tuple[BM25Okapi | None, tuple[dict, ...], tuple[frozenset[str], ...]]:
-    jurisdictions = (jurisdiction, *_SEARCH_ALSO.get(jurisdiction, ()))
+    jurisdictions = _with_state(jurisdiction)
     chunks = tuple(
         {"doc_id": d["doc_id"], "section": sec, "text": txt}
         for d in _index() if d["jurisdiction"] in jurisdictions
@@ -81,8 +96,8 @@ def _bm25(jurisdiction: str) -> tuple[BM25Okapi | None, tuple[dict, ...], tuple[
 def search_corpus(jurisdiction: str, query: str, k: int = 5) -> list[dict]:
     """Top-k section chunks by BM25 for `query`: [{doc_id, section, text}].
 
-    Only chunks sharing at least one query token are returned. `los_angeles` also searches `california`;
-    `brevard` also searches `florida`.
+    Only chunks sharing at least one query token are returned. A city or county also searches its state's
+    documents (e.g. `los_angeles` searches `california`).
     """
     bm25, chunks, token_sets = _bm25(jurisdiction)
     q = _tokens(query)
@@ -94,12 +109,35 @@ def search_corpus(jurisdiction: str, query: str, k: int = 5) -> list[dict]:
     return [dict(chunks[i]) for i in ranked[:k]]
 
 
+def _rules_file(jurisdiction: str):
+    return CORPUS_DIR / "rules" / f"{jurisdiction}.yaml"
+
+
 @lru_cache(maxsize=None)
 def _rules(jurisdiction: str) -> tuple[dict, ...]:
-    with open(CORPUS_DIR / "rules" / f"{jurisdiction}.yaml") as fh:
-        return tuple(yaml.safe_load(fh) or [])
+    out = []
+    for j in _with_state(jurisdiction):
+        if _rules_file(j).exists():
+            with open(_rules_file(j)) as fh:
+                out += yaml.safe_load(fh) or []
+    return tuple(out)
+
+
+def has_rules(jurisdiction: str) -> bool:
+    """True when the jurisdiction or its state has an approved rules file."""
+    return any(_rules_file(j).exists() for j in _with_state(jurisdiction))
 
 
 def load_rules(jurisdiction: str) -> list[dict]:
-    """Structured rules for a jurisdiction: [{path, rule, applies_if, value, cite: {doc_id, section, quote}}]."""
+    """Structured rules for a jurisdiction, then its state's: [{path, rule, applies_if, value, cite}]."""
     return copy.deepcopy(list(_rules(jurisdiction)))
+
+
+@lru_cache(maxsize=1)
+def _paths() -> dict:
+    return yaml.safe_load((CORPUS_DIR / "paths.yaml").read_text()) or {}
+
+
+def path_info(name: str) -> dict:
+    """{kind: new_construction|conversion|both, explain_note?} for a legal path (backend/corpus/paths.yaml)."""
+    return {"kind": "both", **(_paths().get(name) or {})}

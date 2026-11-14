@@ -21,10 +21,9 @@ def affordable_units(units: int, f: dict) -> int:
     return math.floor(units * f["affordable_share"])
 
 
-def _noi_value(units: int, f: dict) -> tuple[float, float]:
-    """Affordable homes (affordable_share, the same ones that earn tax credit equity) rent at the 60% AMI limit."""
-    aff = affordable_units(units, f)
-    rent = (units - aff) * f["rent_usd_per_unit_month"] + aff * f["affordable_rent_usd_per_unit_month"]
+def _noi_value(units: int, affordable: int, f: dict) -> tuple[float, float]:
+    """`affordable` homes (the same ones that earn tax credit equity) rent at the 60% AMI limit."""
+    rent = (units - affordable) * f["rent_usd_per_unit_month"] + affordable * f["affordable_rent_usd_per_unit_month"]
     noi = rent * 12 * (1 - f["vacancy_rate"] - f["opex_ratio"])
     return noi, noi / f["cap_rate"]
 
@@ -33,8 +32,10 @@ def new_build_pro_forma(homes: int, land_cost: Optional[float], f: dict, incenti
     if land_cost is None:
         return None
     total_cost = land_cost + homes * f["construction_cost_usd_per_unit"]
-    noi, value = _noi_value(homes, f)
-    return {"kind": "new_build", "units": homes, "land_cost_usd": land_cost, "total_cost_usd": total_cost,
+    aff = affordable_units(homes, f)
+    noi, value = _noi_value(homes, aff, f)
+    return {"kind": "new_build", "units": homes, "affordable_units": aff, "land_cost_usd": land_cost,
+            "total_cost_usd": total_cost,
             "noi_usd": noi, "value_usd": value, "margin": (value - total_cost) / total_cost if total_cost else 0.0,
             "incentive_per_unit_usd": incentive_per_unit,
             "factor_keys": ["construction_cost_usd_per_unit", *NOI_KEYS]}
@@ -46,13 +47,26 @@ def conversion_pro_forma(units: int, acquisition: Optional[float], rentable_area
     if acquisition is None:
         return None
     total_cost = acquisition + rentable_area_sqft * f[cost_key]
-    noi, value = _noi_value(units, f)
+    aff = affordable_units(units, f)
+    noi, value = _noi_value(units, aff, f)
     noi += extra_noi_usd
     value += extra_noi_usd / f["cap_rate"] + extra_value_usd
-    return {"kind": "conversion", "units": units, "acquisition_usd": acquisition,
+    return {"kind": "conversion", "units": units, "affordable_units": aff, "acquisition_usd": acquisition,
             "rentable_area_sqft": rentable_area_sqft, "total_cost_usd": total_cost, "noi_usd": noi,
             "value_usd": value, "margin": (value - total_cost) / total_cost if total_cost else 0.0,
             "incentive_per_unit_usd": incentive_per_unit, "factor_keys": [cost_key, *NOI_KEYS]}
+
+
+def with_affordable(pf: dict, affordable: int, f: dict) -> dict:
+    """Same pro forma with `affordable` homes at the affordable rent (NOI is linear in the count)."""
+    k = max(0, min(affordable, pf["units"]))
+    d_noi = (k - pf["affordable_units"]) * (f["rent_usd_per_unit_month"] - f["affordable_rent_usd_per_unit_month"]) \
+        * 12 * (1 - f["vacancy_rate"] - f["opex_ratio"])
+    value = pf["value_usd"] - d_noi / f["cap_rate"]
+    total = pf["total_cost_usd"]
+    return {**pf, "affordable_units": k, "noi_usd": pf["noi_usd"] - d_noi, "value_usd": value,
+            "margin": (value - total) / total if total else 0.0}
+
 
 
 def capital_stack(site_id: str, pf: dict, f: dict, incentive_per_unit: float = 0.0) -> tuple[CapitalStack, dict]:
@@ -60,7 +74,7 @@ def capital_stack(site_id: str, pf: dict, f: dict, incentive_per_unit: float = 0
     total = pf["total_cost_usd"]
     debt = min(f["debt_ratio"] * total, pf["value_usd"] * f["max_ltv"])
     incentive = units * incentive_per_unit
-    affordable = affordable_units(units, f)
+    affordable = pf["affordable_units"]
     tax_credit = affordable * f["per_unit_credit_equity_usd"]
     investor = f["investor_equity_share"] * total
     gap = total - debt - incentive - tax_credit - investor
@@ -68,12 +82,13 @@ def capital_stack(site_id: str, pf: dict, f: dict, incentive_per_unit: float = 0
             "investor_equity_share"]
     if incentive_per_unit:
         keys.append("houston_downtown_per_unit_incentive_usd")
-    stack = CapitalStack(site_id=site_id, total_cost_usd=round(total, 2), debt_usd=round(debt, 2),
+    stack = CapitalStack(site_id=site_id, units=units, affordable_units=affordable, total_cost_usd=round(total, 2),
+                         debt_usd=round(debt, 2),
                          tax_credit_equity_usd=round(tax_credit, 2), incentive_usd=round(incentive, 2),
                          investor_equity_usd=round(investor, 2), gap_usd=round(gap, 2), pencils=gap <= 0,
                          assumptions=keys)
-    math_ = {**pf, "debt_usd": debt, "incentive_usd": incentive, "affordable_units": affordable,
-             "tax_credit_equity_usd": tax_credit, "investor_equity_usd": investor, "gap_usd": gap}
+    math_ = {**pf, "debt_usd": debt, "incentive_usd": incentive, "tax_credit_equity_usd": tax_credit,
+             "investor_equity_usd": investor, "gap_usd": gap}
     if gap > 0:
         stack.gap_to_pencil = gap_to_pencil(math_, f)
     return stack, math_
@@ -88,7 +103,7 @@ def gap_to_pencil(m: dict, f: dict) -> GapToPencil:
     debt_limit = "loan_to_cost" if ltc_debt <= m["value_usd"] * f["max_ltv"] else "loan_to_value"
     need_debt = total - m["incentive_usd"] - m["tax_credit_equity_usd"] - m["investor_equity_usd"]
     rent = f["rent_usd_per_unit_month"]
-    market_units = units - affordable_units(units, f)  # only market-rate homes move with the market rent
+    market_units = units - m["affordable_units"]  # only market-rate homes move with the market rent
     value_per_rent = market_units * 12 * (1 - f["vacancy_rate"] - f["opex_ratio"]) / f["cap_rate"]  # per $1/mo
     break_even = None
     if value_per_rent and need_debt <= ltc_debt:

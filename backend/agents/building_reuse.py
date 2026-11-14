@@ -1,5 +1,6 @@
 """5. Building reuse agent: which use each existing building could become, and what stops it."""
 import re
+from typing import Callable, Optional
 
 from backend.agents import common
 from backend.agents.context import RunContext
@@ -7,11 +8,33 @@ from backend.agents.zoning_legislation import conversion_paths
 from backend.models import reuse
 from backend.models.finance import acquisition_basis
 from backend.models.rescore import conversion_homes
-from backend.schemas import Site, Sourced
+from backend.schemas import Building, ConversionCandidate, Parcel, Site, Sourced
 
 NAME = "building_reuse"
 GOAL = "For each existing building, score which use it could become (housing, hotel, mixed use, keep) and list blockers."
 SKIPPED = "conversion sites skipped: the prompt focuses on new construction"
+
+
+def scorer(ctx: RunContext) -> Callable[[Building, Optional[Parcel]], ConversionCandidate]:
+    """score(building, parcel=None): one building's reuse score with the plan's legal paths, readiness, walk and
+    acquisition basis. `parcel` overrides the plan's parcel record (the research gap queue probes parcel values)."""
+    loc, f = ctx.locale, ctx.f
+    envs = {e.parcel_id: e for e in ctx.plan_parts["envelopes"]}
+    rd = {x.target_id: x for x in ctx.plan_parts["readiness"]}
+    parcels = ctx.cache["parcels_by_id"]
+    walk = ctx.pre["walk_m"]
+
+    def score(b: Building, parcel: Optional[Parcel] = None) -> ConversionCandidate:
+        env = envs.get(b.parcel_id)
+        p = parcel if parcel is not None else parcels.get(b.parcel_id)
+        acq = None
+        if p is not None:
+            basis = acquisition_basis(p.last_sale_usd.value, p.assessed_value_usd.value)
+            src = p.last_sale_usd if p.last_sale_usd.value is not None else p.assessed_value_usd
+            acq = Sourced(value=basis, prov=src.prov) if basis is not None else None
+        return reuse.score_reuse(b, conversion_paths(env.paths) if env else None, rd.get(b.id),
+                                 walk.get(b.id, {}), acq, f, locale_id=loc.id, data_tier=loc.data_tier)
+    return score
 
 
 def tools(ctx: RunContext):
@@ -37,23 +60,9 @@ def tools(ctx: RunContext):
         cand = ctx.plan_parts.get("buildings")
         if cand is None:
             raise ValueError("run get_buildings first")
-        envs = {e.parcel_id: e for e in ctx.plan_parts["envelopes"]}
-        rd = {x.target_id: x for x in ctx.plan_parts["readiness"]}
-        parcels = ctx.cache["parcels_by_id"]
-        walk = ctx.pre["walk_m"]
         ctx.step(NAME, f"Scoring {len(cand)} buildings on five fits")
-        out = []
-        for b in cand:
-            env = envs.get(b.parcel_id)
-            p = parcels.get(b.parcel_id)
-            acq = None
-            if p is not None:
-                basis = acquisition_basis(p.last_sale_usd.value, p.assessed_value_usd.value)
-                src = p.last_sale_usd if p.last_sale_usd.value is not None else p.assessed_value_usd
-                acq = Sourced(value=basis, prov=src.prov) if basis is not None else None
-            out.append(reuse.score_reuse(b, conversion_paths(loc.jurisdiction, env.paths) if env else None,
-                                         rd.get(b.id), walk.get(b.id, {}), acq, f, locale_id=loc.id,
-                                         data_tier=loc.data_tier))
+        score = scorer(ctx)
+        out = [score(b) for b in cand]
         # conversion prospects first (by overall), then buildings whose best use is to keep their current use
         out.sort(key=lambda c: (c.best_use == "keep_current", -c.overall))
         ctx.plan_parts["conversions"] = out
@@ -80,7 +89,8 @@ def tools(ctx: RunContext):
         if ctx.options.focus == "new_build":
             picked = []
         sites = []
-        for c in picked[: f["sites_top_n"]]:
+        n = f["goal_sites_top_n"] if ctx.options.goals.housing() else f["sites_top_n"]
+        for c in picked[:n]:
             b = bmap[c.building_id]
             sites.append(Site(id=f"conv-{b.id}", kind="conversion", parcel_ids=[b.parcel_id] if b.parcel_id else [],
                               building_id=b.id, geometry=b.footprint, homes=conversion_homes(c.best_use, c.est_units, f),

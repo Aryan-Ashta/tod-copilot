@@ -147,6 +147,7 @@ export type InfraKind =
   | 'park'
   | 'grocery'
   | 'flood_zone'
+  | 'affordable_housing'
 
 export interface InfraFeature {
   kind: InfraKind
@@ -193,7 +194,10 @@ export interface TransitPlan {
   routes: Route[]
   stops: Stop[]
   measurements: MeasurementSuggestion[]
-  budget_usd: number
+  coverage_goal_pct: number
+  coverage_baseline_pct: number
+  coverage_pct: number
+  annual_operating_cost_usd: number
 }
 
 export interface Citation {
@@ -228,7 +232,7 @@ export interface Site {
   geometry: Geometry
   homes: number
   height_ft: number
-  status: 'pursue' | 'pass' | 'watch'
+  status: 'pursue' | 'pass' | 'watch' | 'reserve'
 }
 
 export type DealKind = 'buy' | 'ground_lease' | 'joint_development' | 'owner_partnership' | 'pass'
@@ -252,6 +256,8 @@ export interface GapToPencil {
 
 export interface CapitalStack {
   site_id: string
+  units: number
+  affordable_units: number
   total_cost_usd: number
   debt_usd: number
   tax_credit_equity_usd: number
@@ -271,6 +277,35 @@ export interface TargetScore {
   unit: string
   target: number | null
   factor_keys: string[]
+}
+
+export type GoalKey = 'affordable_homes' | 'total_homes' | 'conversions' | 'transit_coverage'
+
+export interface GoalProgress {
+  key: GoalKey
+  goal: number | null
+  achieved: number
+  unit: string
+  met: boolean | null
+}
+
+export interface ExistingAffordable {
+  properties: number
+  affordable_homes: number
+  total_homes: number
+  prov: Provenance
+}
+
+export interface GoalReport {
+  goals: GoalProgress[]
+  sites_funded: number
+  total_cost_usd: number
+  housing_gap_usd: number
+  tax_credit_equity_usd: number
+  incentive_usd: number
+  transit_operating_usd_per_year: number
+  existing_affordable: ExistingAffordable | null
+  notes: string[]
 }
 
 export interface DemandCell {
@@ -310,17 +345,25 @@ export interface Plan {
   precomputed: Precomputed
   options?: PlanOptions
   llm_run?: LlmRun | null
+  goals_report?: GoalReport | null
+}
+
+export interface PlanGoals {
+  affordable_homes: number | null
+  total_homes: number | null
+  conversions: number | null
+  transit_coverage_pct: number | null
 }
 
 export interface PlanOptions {
   focus: 'all' | 'conversions' | 'new_build'
-  /** × the locale's transit_budget_usd. */
-  transit_budget_multiplier: number
-  /** Share of homes that are affordable; null uses factors.yaml affordable_share. */
-  affordable_share: number | null
+  goals: PlanGoals
 }
 
-export const DEFAULT_PLAN_OPTIONS: PlanOptions = { focus: 'all', transit_budget_multiplier: 1, affordable_share: null }
+export const DEFAULT_PLAN_OPTIONS: PlanOptions = {
+  focus: 'all',
+  goals: { affordable_homes: null, total_homes: null, conversions: null, transit_coverage_pct: null },
+}
 
 export interface LlmRun {
   model: string
@@ -356,6 +399,8 @@ export interface AreaCheck {
   label: string | null
   jurisdiction: string | null
   area_km2: number | null
+  /** Recorded locale whose county sources and stock prompts a drawn area reuses; null outside those counties. */
+  sources_from: string | null
   error: string | null
 }
 
@@ -363,8 +408,8 @@ export interface MetroProperties {
   kind: 'county' | 'place'
   geoid: string
   name: string
-  sources_from: string
-  jurisdiction: string
+  sources_from: string | null
+  jurisdiction: string | null
 }
 
 export interface MetroOutlines {
@@ -406,8 +451,8 @@ export interface Scoreboard {
   walk_access_pct: number
   transport_co2_tonnes_per_year: number
   embodied_co2_saved_tonnes: number
-  pencils_yes: number
-  pencils_total: number
+  affordable_homes: number
+  funding_gap_usd: number
   walk_by_amenity_pct?: Record<string, number>
 }
 
@@ -427,6 +472,7 @@ export interface PlanPatch {
   targets?: TargetScore[]
   transit?: TransitPlan
   infrastructure_added?: InfraFeature[]
+  goals_report?: GoalReport | null
 }
 
 export interface RescoreResponse {

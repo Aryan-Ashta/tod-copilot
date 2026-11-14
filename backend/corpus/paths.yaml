@@ -1,0 +1,8 @@
+# Legal path kinds (docs/10). kind: new_construction | conversion | both. A conversion-only path (an adaptive reuse
+# ordinance) prices homes from the existing building; new-construction-only paths never govern a conversion.
+# explain_note: an extra sentence for the zoning agent's explanation when the path is evaluated.
+Houston development rules: {kind: both, explain_note: "Houston has no zoning; development rules apply and deed restrictions need a title check."}
+SB 79 new construction: {kind: new_construction}
+LA Citywide Adaptive Reuse: {kind: conversion}
+City of Cocoa land development code: {kind: both}
+Florida Live Local Act: {kind: both}

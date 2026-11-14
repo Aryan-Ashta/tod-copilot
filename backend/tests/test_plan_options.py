@@ -1,5 +1,4 @@
-from backend.agents.plan_options import apply_options, parse_prompt, stock_prompts
-from backend.data.factors import resolve
+from backend.agents.plan_options import parse_prompt, stock_prompts
 from backend.data.locales import LOCALE_IDS
 from backend.schemas import PlanOptions
 
@@ -10,21 +9,10 @@ def test_parse_focus():
     assert parse_prompt("Compare SB 79 new construction with adaptive reuse").focus == "all"
 
 
-def test_parse_budget_and_affordable():
-    f = resolve("houston_downtown")
-    assert parse_prompt("Design bus service on a small budget").transit_budget_multiplier == f["transit_budget_option_multipliers"]["half"]
-    assert parse_prompt("Expand frequent bus service and phase in BRT").transit_budget_multiplier == f["transit_budget_option_multipliers"]["double"]
-    assert parse_prompt("Maximize affordable housing").affordable_share == f["affordable_share_high"]
+def test_budget_and_affordable_words_do_not_set_goals():
+    # goals come from numeric fields only, never from the prompt
+    assert parse_prompt("Maximize affordable housing on a small budget") == PlanOptions()
     assert parse_prompt("Plan TOD around the stations") == PlanOptions()
-
-
-def test_apply_options_does_not_mutate():
-    f = resolve("houston_downtown")
-    before = dict(f)
-    out = apply_options(f, PlanOptions(transit_budget_multiplier=0.75, affordable_share=0.35))
-    assert out["transit_budget_usd"] == 7_500_000
-    assert out["affordable_share"] == 0.35
-    assert f == before
 
 
 def test_stock_prompts_valid():
@@ -36,4 +24,4 @@ def test_stock_prompts_valid():
 def test_stock_prompt_text_parses_to_its_options():
     # the UI re-parses the textarea after a chip fills it; the chip's options must survive that
     for p in stock_prompts():
-        assert parse_prompt(p.prompt) == p.options, p.id
+        assert parse_prompt(p.prompt).focus == p.options.focus, p.id

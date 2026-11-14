@@ -1,13 +1,14 @@
 import { usePlan } from '../state/PlanContext'
 import { TargetScope } from './TargetBars'
-import { fmtDelta, fmtNum } from '../format'
+import { fmtDelta, fmtNum, fmtUsd } from '../format'
 import FactorHover from './FactorHover'
 import type { Scoreboard as SB } from '../types'
 
-type NumKey = Exclude<keyof SB, 'walk_by_amenity_pct'>
+type NumKey = Exclude<keyof SB, 'walk_by_amenity_pct' | 'funding_gap_usd'>
 
 const ITEMS: { key: NumKey; label: string; unit: string; digits: number; factors: string[] }[] = [
   { key: 'homes', label: 'Homes', unit: '', digits: 0, factors: ['avg_unit_sqft_residential', 'site_lot_coverage_ratio', 'newbuild_assumed_stories'] },
+  { key: 'affordable_homes', label: 'Affordable homes', unit: '', digits: 0, factors: ['affordable_share', 'affordable_rent_usd_per_unit_month'] },
   { key: 'walk_access_pct', label: 'Walk access', unit: '%', digits: 1, factors: ['walk_minutes_target', 'walk_speed_m_per_s', 'walk_detour_factor'] },
   {
     key: 'transport_co2_tonnes_per_year',
@@ -36,7 +37,7 @@ function Delta({ prev, next, digits, tick }: { prev: number | undefined; next: n
   )
 }
 
-/** Meeting mode's bottom bar: the five headline stats in a row, each with its change since the last edit. */
+/** Meeting mode's bottom bar: the headline stats in a row, each with its change since the last edit. */
 export default function Scoreboard() {
   const { state } = usePlan()
   const sb = state.scoreboard
@@ -50,7 +51,7 @@ export default function Scoreboard() {
   }
   return (
     <div role="region" aria-label="Scoreboard">
-      <div className="grid grid-cols-5 divide-x divide-rule">
+      <div className="grid grid-cols-6 divide-x divide-rule">
         {ITEMS.map((it) => (
           <div key={it.key} className="min-w-0 px-5 pt-2.5 pb-2">
             <div className="flex items-baseline justify-between gap-2 whitespace-nowrap">
@@ -84,19 +85,22 @@ export default function Scoreboard() {
           </div>
         ))}
         <div className="min-w-0 px-5 pt-2.5 pb-2">
-          <FactorHover keys={['cap_rate', 'debt_ratio', 'interest_rate', 'per_unit_credit_equity_usd', 'investor_equity_share']}>
-            <span className="text-[14px] text-slate">Pencils?</span>
-          </FactorHover>
-          <div className="flex items-baseline gap-3 whitespace-nowrap tabular-nums">
-            <span className="display text-[34px]">
-              {sb.pencils_yes}
-              <span className="text-lg font-normal text-slate">/{sb.pencils_total} sites</span>
-            </span>
-            <Delta prev={prev?.pencils_yes} next={sb.pencils_yes} digits={0} tick={state.scoreTick} />
+          <div className="flex items-baseline justify-between gap-2 whitespace-nowrap">
+            <FactorHover keys={['cap_rate', 'debt_ratio', 'interest_rate', 'per_unit_credit_equity_usd', 'investor_equity_share']}>
+              <span className="text-[14px] text-slate">Funding gap</span>
+            </FactorHover>
+            {state.deltas.funding_gap_usd !== undefined && state.edits.length > 0 && (
+              <span className="text-xs text-slate tabular-nums">
+                vs base {state.deltas.funding_gap_usd < 0 ? '−' : '+'}
+                {fmtUsd(Math.abs(state.deltas.funding_gap_usd))}
+              </span>
+            )}
           </div>
-          <TargetScope className="h-5 truncate text-xs" />
+          <div className="display text-[34px] whitespace-nowrap tabular-nums">{fmtUsd(sb.funding_gap_usd)}</div>
+          <div className="h-5" />
         </div>
       </div>
+      <TargetScope className="border-t border-rule px-5 py-1.5 text-sm" />
     </div>
   )
 }

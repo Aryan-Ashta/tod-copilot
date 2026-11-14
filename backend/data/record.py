@@ -15,7 +15,7 @@ import re
 import statistics
 import time
 import zipfile
-from collections import Counter, defaultdict
+from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -31,52 +31,26 @@ from shapely.strtree import STRtree
 from backend import settings
 from backend.data.geo import lonlat_to_utm, to_utm
 from backend.data.http_cache import cached_get, cached_post, evict
-from backend.data.locales import LOCALE_IDS, locale_dir, source_locale
+from backend.data.locales import LOCALE_IDS, locale_dir
+from backend.onboard import geo, registry
+from backend.onboard.arcgis import arcgis_count, arcgis_query
+from backend.onboard.parcels import join, normalize
 
 ROOT = settings.ROOT
 
 NOW = datetime.now(timezone.utc).isoformat()
 MAX_PARCELS = 6000
 
-HCAD = "https://www.gis.hctx.net/arcgis/rest/services/HCAD/Parcels/MapServer/0"
-LA_PARCELS = "https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0"
-LA_ZONING = "https://maps.lacity.org/lahub/rest/services/City_Planning_Department/MapServer/8"
-LA_SEWER = "https://maps.lacity.org/lahub/rest/services/Sewer_Information/MapServer/9"
-BREVARD = "https://gis.brevardfl.gov/gissrv/rest/services/Base_Map/Parcel_New_WKID2881/MapServer/5"
-BREVARD_ZONING = "https://gis.brevardfl.gov/gissrv/rest/services/Planning_Development/Zoning_WKID2881/MapServer/0"
-COCOA_ZONING = ("https://services1.arcgis.com/Tex1uhbqnOZPx6qT/arcgis/rest/services/"
-                "Public_View_Cocoa_Zoning_with_Split_Lots_June_2023_view/FeatureServer/1")
-COCOA_SEWER_AREA = "https://gis.brevardfl.gov/gissrv/rest/services/Utility_Services/Other_Service_Area_WKID2881/MapServer/0"
-COCOA_WATER_AREA = "https://gis.brevardfl.gov/gissrv/rest/services/Utility_Services/Other_Service_Area_WKID2881/MapServer/1"
-# City of Houston Public Works, public (no token) ArcGIS services
-HOUSTON_SEWER_MAINS = ("https://geohwp.houstontx.gov/arcgis/rest/services/01_BaseData_Infrastructure/"
-                       "Sewer_Network/FeatureServer/11")  # Public Gravity Mains
-HOUSTON_WATER_MAINS = ("https://geogimsms.houstontx.gov/arcgis/rest/services/HW/OutsideWater_gx/"
-                       "MapServer/37")  # Pump Pressure Main (By Type)
 # Esri Living Atlas summary of the FCC Broadband Data Collection (BDC), H3 resolution 8 layer
 FCC_BDC_ITEM = "https://www.arcgis.com/home/item.html?id=e1343efcefc344709057260ee57290a0"
 FCC_BDC_H3 = ("https://services8.arcgis.com/peDZJliSvYims39Q/arcgis/rest/services/"
               "FCC_Broadband_Data_Collection_December_2024_View/FeatureServer/5")
 FEMA = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28"
+HUD_LIHTC = "https://services.arcgis.com/VTyQ9soqVukalItT/arcgis/rest/services/LIHTC/FeatureServer/0"
 TIGER = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer"
 ACS_VEHICLES = "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/ACS_Vehicle_Availability_Boundaries/FeatureServer/2"
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 
-GTFS = {
-    "houston_downtown": ["https://files.mobilitydatabase.org/mdb-2060/latest.zip"],
-    "la_wilshire_koreatown": ["https://gitlab.com/LACMTA/gtfs_rail/-/raw/master/gtfs_rail.zip",
-                              "https://gitlab.com/LACMTA/gtfs_bus/-/raw/master/gtfs_bus.zip"],
-    "brevard_cocoa": ["https://files.mobilitydatabase.org/ntd-40063/latest.zip"],
-}
-STATE = {"houston_downtown": "tx", "la_wilshire_koreatown": "ca", "brevard_cocoa": "fl"}
-TIGER_COUNTIES = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1"
-TIGER_PLACES = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/4"
-# Supported metros: (kind, layer, GEOID, source locale, jurisdiction inside it). A drawn area in the county reuses
-# the source locale's county sources; inside the city it also gets that city's legal corpus.
-METROS = [("county", TIGER_COUNTIES, "48201", "houston_downtown", None),
-          ("county", TIGER_COUNTIES, "06037", "la_wilshire_koreatown", None),
-          ("place", TIGER_PLACES, "4835000", "houston_downtown", "houston"),
-          ("place", TIGER_PLACES, "0644000", "la_wilshire_koreatown", "los_angeles")]
 
 # Cocoa Brightline station: Space Coast TPO / press place it behind the Walmart at 2700 Clearlake Rd,
 # between that site and the FEC railroad corridor.
@@ -115,52 +89,6 @@ def save_locale_yaml(lid: str, data: dict, header: str = "") -> None:
     p.write_text(header + yaml.safe_dump(data, sort_keys=False, allow_unicode=True))
 
 
-def record_metros() -> None:
-    """Census TIGERweb outlines of the supported counties and cities -> backend/fixtures/metros/outlines.geojson.
-
-    Public data, simplified to ~50 m (maxAllowableOffset), so area checks work offline."""
-    feats = []
-    for kind, url, geoid, src, jur in METROS:
-        d = cached_get(f"{url}/query", {"where": f"GEOID='{geoid}'", "outFields": "GEOID,NAME", "returnGeometry": "true",
-                                         "outSR": 4326, "maxAllowableOffset": 0.0005, "f": "geojson"})
-        f = d["features"][0]
-        feats.append({"type": "Feature", "properties": {"kind": kind, "geoid": geoid, "name": f["properties"]["NAME"],
-                                                        "sources_from": src, "jurisdiction": jur},
-                      "geometry": f["geometry"]})
-        print(f"metros: {f['properties']['NAME']}")
-    d = settings.FIXTURES_DIR / "metros"
-    d.mkdir(parents=True, exist_ok=True)
-    write_geojson(d / "outlines.geojson", feats)
-    write_meta(d, "census_tigerweb", [TIGER_COUNTIES, TIGER_PLACES], note="Census TIGERweb current counties and "
-               "incorporated places, maxAllowableOffset 0.0005 deg")
-
-
-def arcgis_query(url: str, bbox, where: str = "1=1", out_fields: str = "*", geometry: bool = True,
-                 page: int = 1000) -> list[dict]:
-    feats, offset = [], 0
-    while True:
-        params = {"geometry": ",".join(f"{v:.6f}" for v in bbox), "geometryType": "esriGeometryEnvelope",
-                  "inSR": 4326, "outSR": 4326, "spatialRel": "esriSpatialRelIntersects", "where": where,
-                  "outFields": out_fields, "returnGeometry": str(geometry).lower(), "f": "geojson",
-                  "orderByFields": "OBJECTID", "resultOffset": offset, "resultRecordCount": page}
-        d = cached_get(f"{url}/query", params)
-        if "error" in d:
-            evict(f"{url}/query", params)
-            raise RuntimeError(f"{url}: {d['error']}")
-        batch = d.get("features", [])
-        feats += batch
-        exceeded = d.get("exceededTransferLimit") or d.get("properties", {}).get("exceededTransferLimit")
-        if not exceeded or not batch:
-            return feats
-        offset += len(batch)
-
-
-def arcgis_count(url: str, bbox, where: str = "1=1") -> int:
-    params = {"geometry": ",".join(f"{v:.6f}" for v in bbox), "geometryType": "esriGeometryEnvelope",
-              "inSR": 4326, "where": where, "returnCountOnly": "true", "f": "json"}
-    return cached_get(f"{url}/query", params)["count"]
-
-
 def bbox_center(b):
     return ((b[0] + b[2]) / 2, (b[1] + b[3]) / 2)
 
@@ -173,27 +101,6 @@ def expand_bbox(b, metres: float):
 
 def in_bbox(lon, lat, b) -> bool:
     return b[0] <= lon <= b[2] and b[1] <= lat <= b[3]
-
-
-def ms_year(v):
-    if v in (None, "", 0):
-        return None
-    try:
-        return datetime.fromtimestamp(int(v) / 1000, tz=timezone.utc).year
-    except (TypeError, ValueError, OSError):
-        return None
-
-
-def num(v):
-    try:
-        x = float(v)
-        return x if math.isfinite(x) else None
-    except (TypeError, ValueError):
-        return None
-
-
-def join(*parts) -> str:
-    return " ".join(str(p).strip() for p in parts if p not in (None, "", 0) and str(p).strip())
 
 
 # ---------------------------------------------------------------- station (Brevard)
@@ -232,17 +139,15 @@ def record_station(lid: str) -> None:
 
 
 # ---------------------------------------------------------------- county parcels
-def parcel_source(lid: str):
-    if lid == "houston_downtown":
-        return HCAD, "Stacked=0 OR Stacked IS NULL"
-    if lid == "la_wilshire_koreatown":
-        return LA_PARCELS, "1=1"
-    return BREVARD, "1=1"
+def parcel_config(lid: str) -> Optional[dict]:
+    """The county's registry `parcels` section, or None when the county has no verified parcel source."""
+    cfg = registry.county(load_locale_yaml(lid)["county_fips"]).get("parcels")
+    return None if registry.section_status(cfg) in (None, "not_found") else cfg
 
 
-def shrink_bbox_if_needed(lid: str) -> list[float]:
+def shrink_bbox_if_needed(lid: str, cfg: dict) -> list[float]:
     data = load_locale_yaml(lid)
-    url, where = parcel_source(lid)
+    url, where = cfg["url"], cfg.get("where", "1=1")
     bbox = list(data["bbox"])
     n = arcgis_count(url, bbox, where)
     original, steps = list(bbox), 0
@@ -263,8 +168,8 @@ def shrink_bbox_if_needed(lid: str) -> list[float]:
     return data["bbox"]
 
 
-def zoning_lookup(url: str, field: str, bbox):
-    feats = arcgis_query(url, bbox, out_fields=field)
+def zoning_lookup(url: str, field: str, bbox, oid: str = "OBJECTID"):
+    feats = arcgis_query(url, bbox, out_fields=field, order_by=oid)
     geoms = [shape(f["geometry"]) for f in feats if f.get("geometry")]
     codes = [f["properties"][field] for f in feats if f.get("geometry")]
     tree = STRtree(geoms)
@@ -277,68 +182,55 @@ def zoning_lookup(url: str, field: str, bbox):
     return lookup, len(feats)
 
 
-def norm_houston(p: dict) -> dict:
-    addr = join(p.get("site_str_pfx"), p.get("site_str_num"), p.get("site_str_name"), p.get("site_str_sfx"),
-                p.get("site_str_sfx_dir"))
-    return {"id": str(p["HCAD_NUM"]), "address": addr or None, "owner": p.get("owner_name_1"),
-            "last_sale_usd": None, "last_sale_year": ms_year(p.get("new_owner_date")),
-            "assessed_value_usd": num(p.get("total_market_val")), "area_acres": num(p.get("Acreage")),
-            "raw_use": p.get("state_class"), "raw_use_desc": p.get("land_use"), "year_built": None,
-            "building_sqft": None, "units": None, "city": p.get("site_city"), "zoning_code": None}
+def registry_places(bbox) -> list[dict]:
+    """Registry places (backend/registry/places) whose outline intersects the bbox, by GEOID."""
+    return [p for p in geo.places_in(bbox) if registry.place(p["geoid"])]
 
 
-def norm_la(p: dict) -> dict:
-    land, imp = num(p.get("Roll_LandValue")), num(p.get("Roll_ImpValue"))
-    yb = p.get("YearBuilt1")
-    yb = int(yb) if yb and str(yb).strip().isdigit() and int(yb) > 1800 else None
-    base = p.get("Roll_LandBaseYear")
-    return {"id": str(p["AIN"]), "address": (p.get("SitusFullAddress") or "").strip() or None, "owner": None,
-            "last_sale_usd": None, "last_sale_year": int(base) if base and int(base) > 1975 else None,
-            "assessed_value_usd": (land or 0) + (imp or 0) if land is not None else None, "area_acres": None,
-            "raw_use": p.get("UseType"), "raw_use_desc": p.get("UseDescription"), "raw_code": p.get("UseCode"),
-            "year_built": yb,
-            "building_sqft": num(p.get("SQFTmain1")) or None, "units": num(p.get("Units1")) or None,
-            "city": p.get("SitusCity"), "zoning_code": None}
+def zoning_layers(lid: str, bbox):
+    """(lookup, note, urls) over the zoning layers of every registry place in the bbox, then the county's own layers
+    (unincorporated parcels); the first layer with a polygon under the parcel wins. lookup is None when no layer."""
+    fips = load_locale_yaml(lid)["county_fips"]
+    layers = []
+    for p in registry_places(bbox):
+        z = registry.place(p["geoid"]).get("zoning") or {}
+        if registry.section_status(z) != "not_found":
+            layers += [(lyr, False) for lyr in z.get("layers") or []]
+    cz = registry.county(fips).get("zoning") or {}
+    if registry.section_status(cz) != "not_found":
+        layers += [(lyr, True) for lyr in cz.get("layers") or []]
+    if not layers:
+        return None, None, []
+    lookups, notes = [], []
+    for lyr, is_county in layers:
+        fn, n = zoning_lookup(lyr["url"], lyr["field"], bbox, lyr.get("oid_field", "OBJECTID"))
+        lookups.append((fn, lyr.get("prefix") or ""))
+        notes.append(f"{lyr['label']} layer, field {lyr['field']} ({n} polygons)"
+                     + (" for unincorporated parcels" if is_county else ""))
 
-
-def norm_brevard(p: dict) -> dict:
-    street = None if (p.get("STREET_NAME") or "").strip().upper() in ("", "UNKNOWN") else p.get("STREET_NAME")
-    addr = join(p.get("STREET_NUMBER"), p.get("STREET_DIRECTION_PREFIX"), street, p.get("STREET_TYPE")) if street else ""
-    land, bldg = num(p.get("LAND_VALUE")), num(p.get("BLDG_VALUE"))
-    return {"id": str(p.get("PARCEL_ID") or p.get("TaxAcct")), "address": (f"{addr}, {p.get('CITY')}" if addr else None),
-            "owner": p.get("OWNER_NAME1"), "last_sale_usd": None, "last_sale_year": None,
-            "assessed_value_usd": (land or 0) + (bldg or 0) if land is not None or bldg is not None else None,
-            "area_acres": num(p.get("ACRES")), "raw_use": p.get("USE_CODE"), "raw_use_desc": p.get("USE_CODE_DESCRIPTION"),
-            "year_built": None, "building_sqft": num(p.get("LIV_AREA")) or None, "units": None, "city": p.get("CITY"),
-            "zoning_code": None}
+    def lookup(g):
+        for fn, prefix in lookups:
+            if (c := fn(g)) is not None:
+                return f"{prefix}{c}"
+        return None
+    return lookup, ", then ".join(notes), [lyr["url"] for lyr, _ in layers]
 
 
 def record_county(lid: str) -> None:
-    src = source_locale(lid)   # a metro area reads its metro's county parcel layer within its own bbox
-    bbox = shrink_bbox_if_needed(lid) if lid in LOCALE_IDS else list(load_locale_yaml(lid)["bbox"])
-    url, where = parcel_source(src)
-    raw = arcgis_query(url, bbox, where)
-    norm = {"houston_downtown": norm_houston, "la_wilshire_koreatown": norm_la, "brevard_cocoa": norm_brevard}[src]
-    urls = [url]
-    zoning, zoning_note = None, None
-    if src == "la_wilshire_koreatown":   # City of LA layer; parcels in other cities get no zoning polygon
-        zoning, n = zoning_lookup(LA_ZONING, "ZONE_CMPLT", bbox)
-        urls.append(LA_ZONING)
-        zoning_note = f"City of LA Generalized Zoning layer, field ZONE_CMPLT ({n} polygons)"
-    elif src == "brevard_cocoa":
-        city, n_city = zoning_lookup(COCOA_ZONING, "Zoning", bbox)
-        county, n_county = zoning_lookup(BREVARD_ZONING, "ZONING", bbox)
-        # City of Cocoa governs inside the city. County district names overlap Cocoa's (RU-1-7, RU-2-15), so
-        # county codes carry a prefix and never match Cocoa rules; County Ch. 62 is not in the corpus.
-        zoning = lambda g: city(g) or (f"Brevard County {c}" if (c := county(g)) else None)  # noqa: E731
-        urls += [COCOA_ZONING, BREVARD_ZONING]
-        zoning_note = (f"City of Cocoa zoning layer, field Zoning ({n_city} polygons), then Brevard County zoning "
-                       f"layer, field ZONING ({n_county} polygons) for unincorporated parcels")
+    fips = load_locale_yaml(lid)["county_fips"]
+    cfg = parcel_config(lid)
+    if cfg is None:
+        print(f"county: no parcel source for {fips}; skipped")
+        return
+    bbox = shrink_bbox_if_needed(lid, cfg) if lid in LOCALE_IDS else list(load_locale_yaml(lid)["bbox"])
+    where = cfg.get("where", "1=1")
+    raw = arcgis_query(cfg["url"], bbox, where, order_by=cfg.get("oid_field", "OBJECTID"))
+    zoning, zoning_note, zoning_urls = zoning_layers(lid, bbox)
     feats, seen = [], set()
     for f in raw:
         if not f.get("geometry"):
             continue
-        props = norm(f["properties"])
+        props = normalize(cfg["fields"], f["properties"])
         if props["id"] in seen or props["id"] in ("None", ""):
             continue
         seen.add(props["id"])
@@ -350,9 +242,26 @@ def record_county(lid: str) -> None:
         feats.append({"type": "Feature", "id": props["id"], "properties": props, "geometry": mapping(g)})
     d = fixture_dir(lid, "county")
     write_geojson(d / "parcels.geojson", feats)
-    write_meta(d, "county_parcels", urls, where=where, zoning=zoning_note,
-               houston_zoning="Houston has no zoning" if src == "houston_downtown" else None)
+    write_meta(d, "county_parcels", [cfg["url"], *zoning_urls], where=where, zoning=zoning_note)
     print(f"county: {len(feats)} parcels")
+    if lid not in LOCALE_IDS:
+        extend_land_use(fips, [f["properties"] for f in feats])
+
+
+def extend_land_use(fips: str, props: list[dict]) -> None:
+    """A drawn area whose parcels carry many codes the county's agent-verified land-use map lacks: map those codes
+    (use-code mapper, new keys only). Needs the LLM; otherwise the codes stay at the map's default."""
+    from collections import Counter
+    from backend.onboard.common import llm_ready, thresholds
+    lu = registry.county(fips).get("land_use")
+    if registry.section_status(lu) != "agent_verified" or not props or not llm_ready():
+        return
+    codes = Counter(c for p in props if (c := re.sub(r"\s+", " ", str(p.get(lu["field"]) or "").strip())))
+    missing = Counter({k: n for k, n in codes.items() if k not in lu["map"]})
+    if sum(missing.values()) / len(props) <= thresholds()["onboard_land_use_extend_share"]:
+        return
+    from backend.onboard import land_use
+    print(f"county: {land_use.extend(fips, missing)} land-use codes added to the county map")
 
 
 # ---------------------------------------------------------------- OSM
@@ -573,7 +482,8 @@ def record_gtfs(lid: str) -> None:
     keep_box = expand_bbox(b, 1000)
     routes_out, stops_out, rail_stations = [], {}, {}
     recorded = lid in LOCALE_IDS
-    feeds = GTFS[source_locale(lid)]   # a metro area reuses its metro's agency feeds
+    fips = data["county_fips"]
+    feeds = [f["url"] for f in (registry.county(fips).get("transit_feeds") or {}).get("feeds") or []]
     for url in feeds:
         z = zipfile.ZipFile(io.BytesIO(cached_get(url, fmt="bytes", timeout=300)))
         stops, routes, trips = _read(z, "stops.txt"), _read(z, "routes.txt"), _read(z, "trips.txt")
@@ -706,7 +616,7 @@ def _acs_tracts(b, depth: int = 0) -> list[dict]:
 def record_demand(lid: str) -> None:
     data = load_locale_yaml(lid)
     b = expand_bbox(tuple(data["bbox"]), 400)
-    st_abbr = STATE[source_locale(lid)]
+    st_abbr = registry.us_states()[data["county_fips"][:2]]["usps"].lower()
     blocks = arcgis_query(f"{TIGER}/2", b, out_fields="GEOID,INTPTLAT,INTPTLON,HU100", geometry=False)
     # Zero-car households are optional: a failed ACS query leaves them missing but keeps homes and jobs.
     acs_note = None
@@ -765,6 +675,35 @@ def record_fema(lid: str) -> None:
     print(f"fema: {len(out)} SFHA polygons")
 
 
+# ---------------------------------------------------------------- HUD LIHTC
+def _year(v) -> Optional[int]:
+    """HUD codes unknown years as 8888/9999."""
+    try:
+        y = int(v)
+    except (TypeError, ValueError):
+        return None
+    return y if y < 8888 else None
+
+
+def record_hud(lid: str) -> None:
+    b = tuple(load_locale_yaml(lid)["bbox"])
+    feats = arcgis_query(HUD_LIHTC, b, out_fields="HUD_ID,PROJECT,PROJ_ADD,PROJ_CTY,N_UNITS,LI_UNITS,YR_PIS")
+    out = []
+    for f in feats:
+        if not f.get("geometry"):
+            continue
+        p = f["properties"]
+        out.append({"type": "Feature", "geometry": f["geometry"], "properties": {
+            "hud_id": p.get("HUD_ID"), "project": p.get("PROJECT"), "address": p.get("PROJ_ADD"),
+            "city": p.get("PROJ_CTY"), "units": p.get("N_UNITS"), "li_units": p.get("LI_UNITS"),
+            "year_placed_in_service": _year(p.get("YR_PIS"))}})
+    d = fixture_dir(lid, "hud")
+    write_geojson(d / "lihtc.geojson", out)
+    write_meta(d, "hud_lihtc", [HUD_LIHTC])
+    li = sum(int(x["properties"]["li_units"] or 0) for x in out)
+    print(f"hud: {len(out)} LIHTC properties, {li} low-income homes")
+
+
 # ---------------------------------------------------------------- NREL (AFDC, PVWatts)
 def record_afdc(lid: str) -> None:
     b = tuple(load_locale_yaml(lid)["bbox"])
@@ -810,19 +749,30 @@ def record_pvwatts(lid: str) -> None:
     print(f"pvwatts: {d['outputs']['ac_annual']:.0f} kWh/kW/yr")
 
 
-# ---------------------------------------------------------------- utilities
-UTILITY_LAYERS = {
-    "houston_downtown": [
-        ("sewer_main", HOUSTON_SEWER_MAINS, "City of Houston Public Works public gravity sewer mains",
-         "1=1"),
-        # existing potable distribution (1) and transmission (2) mains; drops private service connections
-        # and "do not tap" mains, which cannot serve a building
-        ("water_main", HOUSTON_WATER_MAINS, "City of Houston Public Works water distribution and transmission mains",
-         "SUBTYPECD IN (1,2) AND LIFECYCLESTATUS = 'E' AND WATERTYPE = 'POT' "
-         "AND (PIPETYPE IS NULL OR PIPETYPE NOT IN ('PSC','NOTAP'))")],
-    "la_wilshire_koreatown": [("sewer_main", LA_SEWER, "LA Sanitation sewer pipes", "1=1")],
-    "brevard_cocoa": [("sewer_main", COCOA_SEWER_AREA, "City of Cocoa sewer service area", "1=1"),
-                      ("water_main", COCOA_WATER_AREA, "City of Cocoa water service area", "1=1")]}
+def record_local_factors(lid: str) -> None:
+    """A drawn area's own per-locale factors -> <area dir>/factors.yaml (verified: false): rent from ZORI over the
+    area's ZIPs, solar yield from the pvwatts step. Recorded locales use factors.yaml's per-locale values."""
+    if lid in LOCALE_IDS:
+        return
+    from backend.data.factors import load_factors
+    from backend.data.zori import zori_rent
+    data = load_locale_yaml(lid)
+    facs, out = load_factors(), {}
+    rent = zori_rent(tuple(data["bbox"]), [(s["name"], tuple(s["lonlat"])) for s in data.get("stations") or []])
+    if rent is not None:
+        out["rent_usd_per_unit_month"] = {"value": rent["value"], "unit": facs["rent_usd_per_unit_month"].unit,
+                                          "source_url": rent["url"], "verified": False, "note": rent["note"],
+                                          "retrieved_at": rent["retrieved_at"]}
+    solar = locale_dir(lid) / "pvwatts" / "solar.json"
+    if solar.exists():
+        kwh = json.loads(solar.read_text())["annual_kwh_per_kw"]
+        out["solar_kwh_per_kw_year"] = {"value": round(kwh), "unit": facs["solar_kwh_per_kw_year"].unit,
+                                        "source_url": "https://developer.nlr.gov/api/pvwatts/v8.json",
+                                        "verified": False, "note": "NREL PVWatts v8 at the area centre (pvwatts step)",
+                                        "retrieved_at": json.loads((solar.parent / "_meta.json").read_text())
+                                        ["retrieved_at"]}
+    (locale_dir(lid) / "factors.yaml").write_text(yaml.safe_dump(out, sort_keys=False, allow_unicode=True))
+    print(f"local_factors: {', '.join(out) or 'none'}")
 
 
 def write_notes(lid: str) -> None:
@@ -850,23 +800,31 @@ def write_notes(lid: str) -> None:
     (locale_dir(lid) / "_notes.md").write_text("\n".join(lines) + "\n")
 
 
-def record_utilities(lid: str) -> None:
+def utility_layers(lid: str) -> list[dict]:
+    """Registry utility layers ({kind, url, where, label}): every registry place in the bbox, then the county."""
     data = load_locale_yaml(lid)
-    b = tuple(data["bbox"])
-    # The utility layers are the city's own; a metro area outside that city has no public utility source here.
-    if lid not in LOCALE_IDS and data.get("jurisdiction") not in ("houston", "los_angeles"):
-        print("utilities: no public layer outside the City of Houston / City of LA; skipped")
+    sections = [registry.place(p["geoid"]).get("utilities") for p in registry_places(tuple(data["bbox"]))]
+    sections.append(registry.county(data["county_fips"]).get("utilities"))
+    return [lyr for s in sections if s and registry.section_status(s) != "not_found" for lyr in s.get("layers") or []]
+
+
+# ---------------------------------------------------------------- utilities
+def record_utilities(lid: str) -> None:
+    b = tuple(load_locale_yaml(lid)["bbox"])
+    layers = utility_layers(lid)
+    if not layers:
+        print("utilities: no public utility layer in the registry for this area; skipped")
         return
-    layers = UTILITY_LAYERS[source_locale(lid)]
     d = fixture_dir(lid, "utilities")
-    for kind, url, label, where in layers:
-        feats = arcgis_query(url, b, where=where, out_fields="OBJECTID")
-        out = [{"type": "Feature", "properties": {"kind": kind, "layer": label},
+    for lyr in layers:
+        oid = lyr.get("oid_field", "OBJECTID")
+        feats = arcgis_query(lyr["url"], b, where=lyr.get("where", "1=1"), out_fields=oid, order_by=oid)
+        out = [{"type": "Feature", "properties": {"kind": lyr["kind"], "layer": lyr["label"]},
                 "geometry": f["geometry"]} for f in feats if f.get("geometry")]
-        write_geojson(d / f"{kind}.geojson", out)
-        print(f"utilities: {kind} {len(out)} features ({label})")
-    write_meta(d, "city_open_data", [u for _, u, _, _ in layers], layers={k: lbl for k, _, lbl, _ in layers},
-               filters={k: w for k, _, _, w in layers if w != "1=1"})
+        write_geojson(d / f"{lyr['kind']}.geojson", out)
+        print(f"utilities: {lyr['kind']} {len(out)} features ({lyr['label']})")
+    write_meta(d, "city_open_data", [lyr["url"] for lyr in layers], layers={lyr["kind"]: lyr["label"] for lyr in layers},
+               filters={lyr["kind"]: lyr["where"] for lyr in layers if lyr.get("where", "1=1") != "1=1"})
     write_notes(lid)
 
 
@@ -948,23 +906,26 @@ class Linker:
         return self.bfc[bi]["properties"]["id"]
 
 
-# ---------------------------------------------------------------- hand-entered public research
-def record_research(lid: str) -> None:
-    """Link hand-entered research/buildings_source.yaml (cited public sources) to OSM footprints and parcels."""
-    d = locale_dir(lid) / "research"
+# ---------------------------------------------------------------- cited public research (hand-entered or agent-found)
+def link_research(lid: str, folder: str, source: str, note: str) -> Optional[dict]:
+    """Link <folder>/buildings_source.yaml to OSM footprints and parcels -> <folder>/{buildings,parcels}.json.
+
+    Entries carry `lonlat` (linked to the largest footprint within ~25 m) or, from agent research, the queue's own
+    `building_id`/`parcel_id`. Returns counts, or None when there is no source file."""
+    d = locale_dir(lid) / folder
     src = d / "buildings_source.yaml"
     if not src.exists():
-        print("research: no buildings_source.yaml; skipped")
-        return
+        return None
     entries = yaml.safe_load(src.read_text()) or []
     link = Linker(lid)
+    known = {f["properties"]["id"]: i for i, f in enumerate(link.bfc)}
     buildings, parcels, unlinked = [], [], []
     for e in entries:
-        bi = link.building(*e["lonlat"])
+        bi = known.get(e["building_id"]) if e.get("building_id") else link.building(*e["lonlat"])
         if bi is None:
-            unlinked.append(e.get("name") or e["address"])
+            unlinked.append(e.get("name") or e.get("address") or e.get("building_id"))
             continue
-        pid = link.parcel(bi, *e["lonlat"])
+        pid = e.get("parcel_id") or link.parcel(bi, *e["lonlat"])
         fields = {k: v for k, v in (e.get("fields") or {}).items() if v and v.get("value") is not None}
         if e.get("name"):
             fields["name"] = {"value": e["name"], "source_url": next(iter(fields.values()))["source_url"] if fields
@@ -977,9 +938,30 @@ def record_research(lid: str) -> None:
             parcels.append({"id": pid, "fields": pf})
     (d / "buildings.json").write_text(json.dumps(buildings, indent=1))
     (d / "parcels.json").write_text(json.dumps(parcels, indent=1))
-    write_meta(d, "public_research", [str(src.relative_to(ROOT))],
-               note="hand-entered from cited public sources (listings, press, assessor, studies); every field has its URL")
-    print(f"research: {len(buildings)} buildings linked, {len(parcels)} parcels; unlinked: {unlinked}")
+    write_meta(d, source, [str(src.relative_to(ROOT)) if src.is_relative_to(ROOT) else str(src)], note=note)
+    return {"buildings": len(buildings), "parcels": len(parcels), "unlinked": unlinked}
+
+
+def record_research(lid: str) -> None:
+    """Link hand-entered research/buildings_source.yaml (cited public sources) to OSM footprints and parcels."""
+    n = link_research(lid, "research", "public_research",
+                      "hand-entered from cited public sources (listings, press, assessor, studies); every field has its URL")
+    if n is None:
+        print("research: no buildings_source.yaml; skipped")
+        return
+    print(f"research: {n['buildings']} buildings linked, {n['parcels']} parcels; unlinked: {n['unlinked']}")
+
+
+def record_agent_research(lid: str) -> None:
+    """Agent research (docs/12): gap queue -> deepagents researchers -> code verifier -> agent_research/ fixtures."""
+    from backend.research.agent import run_locale
+    run_locale(lid)
+
+
+def record_agent_market(lid: str) -> None:
+    """Market researcher (docs/12 §5.3): submarket vacancy/rent -> agent_research/factor_proposals.yaml (verified: false)."""
+    from backend.research.agent import run_market
+    run_market(lid)
 
 
 # ---------------------------------------------------------------- CoStar data extract (HackPrinceton kit)
@@ -1229,12 +1211,11 @@ def record_vexcel(lid: str) -> None:
         print("vexcel: needs county parcels; skipped")
         return
     min_pct = resolve(lid)["vexcel_surface_parking_hardscape_min_pct"]
-    lu_map = yaml.safe_load((ROOT / "backend" / "data" / "land_use_maps.yaml").read_text())[source_locale(lid)]
+    from backend.data.providers.county import map_land_use
     link = Linker(lid)
     targets = []
     for f in link.pfc:
-        raw = re.sub(r"\s+", " ", str(f["properties"].get(lu_map["field"]) or "").strip())
-        if lu_map["map"].get(raw, lu_map["default"]) == "residential":
+        if map_land_use(lid, f["properties"]) == "residential":
             continue
         c = shape(f["geometry"]).representative_point()
         targets.append((f["properties"]["id"], c.x, c.y))
@@ -1276,6 +1257,10 @@ def record_vexcel(lid: str) -> None:
 
 
 STEPS = {"station": record_station, "county": record_county, "osm": record_osm, "gtfs": record_gtfs,
-         "demand": record_demand, "fema": record_fema, "afdc": record_afdc, "pvwatts": record_pvwatts,
+         "demand": record_demand, "fema": record_fema, "hud": record_hud, "afdc": record_afdc, "pvwatts": record_pvwatts,
+         "local_factors": record_local_factors,
          "utilities": record_utilities, "fcc": record_fcc, "research": record_research, "costar": record_costar,
-         "matterport": record_matterport, "vexcel": record_vexcel}
+         "matterport": record_matterport, "vexcel": record_vexcel, "agent_research": record_agent_research,
+         "agent_market": record_agent_market}
+# Steps that call an LLM and a search API (docs/12): only run when named with --only, never by default.
+LLM_STEPS = ("agent_research", "agent_market")

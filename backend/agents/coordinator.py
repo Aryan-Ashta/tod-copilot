@@ -19,7 +19,6 @@ from backend import settings
 from backend.agents import (building_reuse, funding, infrastructure, land_deal, site, sustainability_health,
                             transit_network, zoning_legislation)
 from backend.agents.context import RunContext
-from backend.agents.plan_options import apply_options
 from backend.data.factors import resolve
 from backend.data.locales import get_locale
 from backend.data.resolver import default_resolver
@@ -31,7 +30,7 @@ NAMES = {m.NAME for m in AGENTS}
 OUTPUTS = {"infrastructure": ["infrastructure", "readiness"], "transit_network": ["transit"],
            "zoning_legislation": ["envelopes"], "site": ["parcels", "sites"],
            "building_reuse": ["buildings", "conversions", "sites"], "land_deal": ["deals"],
-           "funding": ["stacks", "sites"], "sustainability_health": ["targets"]}
+           "funding": ["stacks", "sites", "goals_report"], "sustainability_health": ["targets"]}
 PROMPTS = Path(__file__).with_name("prompts")
 LLM_TIMEOUT_S = 120   # Haiku 5.5 finishes in 45-66 s (docs/model-eval.md); headroom for a slow API during judging
 PLANS_DIR = settings.CACHE_DIR / "plans"
@@ -82,17 +81,19 @@ def _run_llm(ctx: RunContext, notes: dict[str, str], model: str, usage: dict, ru
                                   system_prompt=(PROMPTS / f"{mod.NAME}.md").read_text(), tools=wrapped))
     agent = create_deep_agent(model=model, tools=[], system_prompt=(PROMPTS / "coordinator.md").read_text(),
                               subagents=subagents)
-    o = ctx.options
-    msg = {"messages": [{"role": "user", "content": f"{ctx.locale.name}: {ctx.prompt}\nOptions: focus={o.focus}, "
-                                                    f"transit budget x{o.transit_budget_multiplier:g}, affordable share="
-                                                    f"{'default' if o.affordable_share is None else f'{o.affordable_share:.0%}'}"}]}
+    o, g = ctx.options, ctx.options.goals
+    msg = {"messages": [{"role": "user", "content": f"{ctx.locale.name}: {ctx.prompt}\nOptions: focus={o.focus}; "
+                                                    f"goals: affordable homes={g.affordable_homes}, "
+                                                    f"homes={g.total_homes}, conversions={g.conversions}, "
+                                                    f"transit coverage={g.transit_coverage_pct}%"}]}
     handler = UsageMetadataCallbackHandler()
     usage["handler"] = handler   # read even when the run times out
     pool = cf.ThreadPoolExecutor(max_workers=1)
     # run name, tags and metadata label LangSmith traces (settings.LANGSMITH_ENABLED); no licensed values here
     fut = pool.submit(agent.invoke, msg, config={
         "callbacks": [handler], "run_name": run_name, "tags": [model, ctx.locale.id],
-        "metadata": {"locale_id": ctx.locale.id, "subarea": ctx.boundary is not None, **ctx.options.model_dump()}})
+        "metadata": {"locale_id": ctx.locale.id, "subarea": ctx.boundary is not None, "focus": o.focus,
+                     **{f"goal_{k}": v for k, v in o.goals.model_dump().items()}}})
     try:
         result = fut.result(timeout=LLM_TIMEOUT_S)
     finally:
@@ -138,7 +139,7 @@ def run_plan(locale_id: str, prompt: str, plan_id: str, emit: Callable[[AgentEve
         locale = locale.model_copy(update={"boundary": boundary, "name": f"{area_name or 'Drawn area'} · {locale.name}"})
     options = options or PlanOptions()
     ctx = RunContext(locale=locale, prompt=prompt, resolver=default_resolver(),
-                     f=apply_options(resolve(locale_id), options), emit=emit_all, options=options,
+                     f=resolve(locale_id), emit=emit_all, options=options,
                      boundary=shape(locale.boundary) if locale.boundary else None)
     notes: dict[str, str] = {}
     errors: dict[str, str] = {}
@@ -187,11 +188,14 @@ def run_plan(locale_id: str, prompt: str, plan_id: str, emit: Callable[[AgentEve
         pre = ctx.pre
         plan = Plan(id=plan_id, locale=locale, infrastructure=p.get("infrastructure", []),
                     readiness=p.get("readiness", []),
-                    transit=p.get("transit") or TransitPlan(routes=[], stops=[], measurements=[], budget_usd=0),
+                    transit=p.get("transit") or TransitPlan(routes=[], stops=[], measurements=[], coverage_goal_pct=0,
+                                                            coverage_baseline_pct=0, coverage_pct=0,
+                                                            annual_operating_cost_usd=0),
                     parcels=p.get("parcels", []), buildings=p.get("buildings", []), envelopes=p.get("envelopes", []),
                     conversions=p.get("conversions", []), sites=p.get("sites", []), deals=p.get("deals", []),
                     stacks=p.get("stacks", []), targets=p.get("targets", []), created_at=datetime.now(timezone.utc),
                     prompt=prompt, notes=notes, agent_errors=errors, options=options, llm_run=llm_run,
+                    goals_report=p.get("goals_report"),
                     precomputed=Precomputed(walk_m=pre.get("walk_m", {}), in_flood=pre.get("in_flood", {}),
                                             centroid=pre.get("centroid", {}),
                                             homes_by_parcel=pre.get("homes_by_parcel", {}),

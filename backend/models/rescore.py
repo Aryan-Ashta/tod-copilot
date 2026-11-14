@@ -11,7 +11,7 @@ from typing import Optional
 
 from backend.data.geo import M2_PER_ACRE, SQFT_PER_M2, lonlat_dist_m
 from backend.models import deal as deal_model
-from backend.models import finance
+from backend.models import finance, goals
 from backend.models.targets import build_targets, embodied_co2_saved, walk_gaps
 from backend.schemas import (CapitalStack, Citation, ConversionCandidate, DealStrategy, Edit, InfraFeature, Parcel,
                              Plan, Provenance, Rejection, RescoreResponse, Scoreboard, Site, Stop, TargetScore)
@@ -37,12 +37,17 @@ def parcel_basis(parcels: list[Parcel]) -> Optional[float]:
     return None if not vals or any(v is None for v in vals) else sum(vals)
 
 
-def new_build_stack(site: Site, parcels_by_id: dict[str, Parcel], f: dict, locale_id: str
-                    ) -> Optional[tuple[CapitalStack, dict]]:
+def new_build_stack(site: Site, parcels_by_id: dict[str, Parcel], f: dict, locale_id: str,
+                    affordable_units: Optional[int] = None) -> Optional[tuple[CapitalStack, dict]]:
+    """affordable_units: keep this many affordable homes (capped at the site's homes); None: the default share."""
     basis = parcel_basis([parcels_by_id[p] for p in site.parcel_ids if p in parcels_by_id])
     inc = finance.incentive_per_unit(locale_id, f)
     pf = finance.new_build_pro_forma(site.homes, basis, f, inc)
-    return None if pf is None else finance.capital_stack(site.id, pf, f, inc)
+    if pf is None:
+        return None
+    if affordable_units is not None:
+        pf = finance.with_affordable(pf, affordable_units, f)
+    return finance.capital_stack(site.id, pf, f, inc)
 
 
 def conversion_pro_forma_for(use: str, units: Optional[int], rentable: Optional[float], typical_floor: Optional[float],
@@ -68,8 +73,8 @@ def conversion_homes(use: str, units: Optional[int], f: dict) -> int:
 
 
 def in_plan(site: Site) -> bool:
-    """Sites the plan proposes: pursued (pencils) and watched (funding gap open). 'pass' lost to another option."""
-    return site.status != "pass"
+    """Funded (priced) and watch sites; pass and reserve are out."""
+    return site.status in ("pursue", "watch")
 
 
 def score_plan(sites: list[Site], stacks: list[CapitalStack], conversions: dict[str, ConversionCandidate],
@@ -94,14 +99,15 @@ def score_plan(sites: list[Site], stacks: list[CapitalStack], conversions: dict[
             roofs.append(acres * SQFT_PER_ACRE * f["site_lot_coverage_ratio"])
     targets = build_targets(homes_by_target, walk_m, in_flood, conv_area, roofs, kwh_per_kw_year, f)
     tv = {t.key: t.value for t in targets}
-    pursued_ids = {s.id for s in pursued}
-    st = [x for x in stacks if x.site_id in pursued_ids]
+    funded = {s.id for s in sites if s.status == "pursue"}
+    fs = [x for x in stacks if x.site_id in funded]   # matches the goals report's funded sites
     total = sum(homes_by_target.values())
     gaps = walk_gaps(homes_by_target, walk_m, f)
     board = Scoreboard(homes=total, walk_access_pct=tv["walk_access"],
                        transport_co2_tonnes_per_year=tv["transport_co2"],
                        embodied_co2_saved_tonnes=tv["embodied_co2_saved"],
-                       pencils_yes=sum(1 for x in st if x.pencils), pencils_total=len(st),
+                       affordable_homes=sum(x.affordable_units for x in fs),
+                       funding_gap_usd=round(sum(max(x.gap_usd, 0.0) for x in fs), 2),
                        walk_by_amenity_pct={k: round(100 * (total - n) / total, 1) if total else 0.0
                                             for k, n in gaps.items()})
     return targets, board
@@ -185,7 +191,8 @@ def _apply(st: _State, e: Edit) -> None:
                 if v > 0:
                     tid = site_target(s)
                     st.walk_m[tid] = {**st.walk_m.get(tid, {}), "park": 0.0}
-                res = new_build_stack(s, L["parcels"], f, lid)
+                prev = next((x for x in st.stacks if x.site_id == s.id), None)
+                res = new_build_stack(s, L["parcels"], f, lid, affordable_units=prev.affordable_units if prev else None)
                 if res:
                     st.stacks = [x for x in st.stacks if x.site_id != s.id] + [res[0]]
             new_sites.append(s)
@@ -269,7 +276,7 @@ def _apply(st: _State, e: Edit) -> None:
         else:
             stack, _ = finance.capital_stack(sid, pf, f, finance.incentive_per_unit(lid, f) if use != "hotel" else 0.0)
             st.stacks.append(stack)
-            site = site.model_copy(update={"status": "pursue" if stack.pencils else "watch"})
+            site = site.model_copy(update={"status": "pursue"})
         st.sites.append(site)
         st.deals.append(_deal_for(site, parcel, f, b.vacancy_pct.value))
         return
@@ -335,6 +342,9 @@ def rescore(base: Plan, edits: list[Edit], f: dict) -> RescoreResponse:
         patch["conversions"] = [st.conversions[c.building_id] for c in base.conversions]
     if st.transit_changed:
         patch["transit"] = base.transit.model_copy(update={"stops": st.stops})
+    if base.goals_report is not None:
+        patch["goals_report"] = goals.report(st.sites, st.stacks, base.options.goals, base.transit,
+                                             base.goals_report.existing_affordable)
     return RescoreResponse(plan_patch={k: _dump(v) for k, v in patch.items()}, scoreboard=board, deltas=deltas,
                            rejected=rejected)
 

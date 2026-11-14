@@ -44,6 +44,7 @@ const SOURCE_LABELS: Record<string, string> = {
   derived: 'derived',
   osm: 'OSM',
   fema: 'FEMA',
+  hud_lihtc: 'HUD LIHTC',
   gtfs: 'GTFS',
   corpus: 'corpus',
   census_lodes_acs: 'Census LODES/ACS',

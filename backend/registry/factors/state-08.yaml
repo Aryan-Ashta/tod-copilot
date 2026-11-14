@@ -1,0 +1,10 @@
+# Managed by backend/onboard (docs/12 §14). Agent-researched or derived local factors; every value is verified: false until a person checks it.
+conversion_cost_usd_per_sqft:
+  value: 685
+  unit: USD/sqft
+  source_url: https://www.brianmccririe.com/denver-office-to-residential-conversion/
+  verified: false
+  note: 'agent-found for Colorado: "Purchasing and converting an office building to residential runs an average of about $685
+    per square foot" (brokerage_report, as of 2026; agent-found, code-verified)'
+  retrieved_at: '2026-11-14T20:38:05.209785+00:00'
+  scope: state-08

@@ -6,7 +6,7 @@ docs' own requirements need are marked "Addition".
 from datetime import datetime
 from typing import Any, Generic, Literal, Optional, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 T = TypeVar("T")
 Confidence = Literal["high", "medium", "low", "missing"]
@@ -125,7 +125,8 @@ class ConversionCandidate(BaseModel):
 
 class InfraFeature(BaseModel):
     kind: Literal["rail", "bus_route", "bus_stop", "sidewalk", "bike_lane", "water_main", "sewer_main",
-                  "power_substation", "ev_charger", "broadband", "school", "clinic", "park", "grocery", "flood_zone"]
+                  "power_substation", "ev_charger", "broadband", "school", "clinic", "park", "grocery", "flood_zone",
+                  "affordable_housing"]
     geometry: dict
     attrs: dict
     prov: Provenance
@@ -167,7 +168,10 @@ class TransitPlan(BaseModel):
     routes: list[Route]
     stops: list[Stop]
     measurements: list[MeasurementSuggestion]
-    budget_usd: float
+    coverage_goal_pct: float            # % of transit demand the plan aims to put within a frequent stop
+    coverage_baseline_pct: float        # % covered by rail + existing frequent buses before any new service
+    coverage_pct: float                 # % covered with the selected network
+    annual_operating_cost_usd: float    # operating funding the new network needs per year
 
 
 class Citation(BaseModel):
@@ -203,7 +207,7 @@ class Site(BaseModel):
     geometry: dict
     homes: int
     height_ft: float
-    status: Literal["pursue", "pass", "watch"]
+    status: Literal["pursue", "pass", "watch", "reserve"]   # reserve: priced but not needed for the goals
 
 
 class DealStrategy(BaseModel):
@@ -225,6 +229,8 @@ class GapToPencil(BaseModel):  # Addition: what would close an open funding gap 
 
 class CapitalStack(BaseModel):
     site_id: str
+    units: int
+    affordable_units: int
     total_cost_usd: float
     debt_usd: float
     tax_credit_equity_usd: float
@@ -244,6 +250,36 @@ class TargetScore(BaseModel):
     factor_keys: list[str]
 
 
+GoalKey = Literal["affordable_homes", "total_homes", "conversions", "transit_coverage"]
+
+
+class GoalProgress(BaseModel):
+    key: GoalKey
+    goal: Optional[float]      # None: no goal set
+    achieved: float
+    unit: str                  # "homes" | "buildings" | "% of demand"
+    met: Optional[bool]        # None when no goal
+
+
+class ExistingAffordable(BaseModel):   # HUD LIHTC properties in the area
+    properties: int
+    affordable_homes: int      # sum of LI_UNITS
+    total_homes: int           # sum of N_UNITS
+    prov: Provenance
+
+
+class GoalReport(BaseModel):
+    goals: list[GoalProgress]
+    sites_funded: int
+    total_cost_usd: float
+    housing_gap_usd: float            # one-time: sum of positive gaps over funded sites (no cross-subsidy)
+    tax_credit_equity_usd: float
+    incentive_usd: float
+    transit_operating_usd_per_year: float
+    existing_affordable: Optional[ExistingAffordable]   # None: no HUD LIHTC data for this area
+    notes: list[str]
+
+
 class Precomputed(BaseModel):   # Addition: everything rescore needs, built with the plan
     walk_m: dict[str, dict[str, Optional[float]]]   # target id -> {park, clinic, grocery, school, frequent_stop}
     in_flood: dict[str, bool]
@@ -257,10 +293,19 @@ AgentName = Literal["infrastructure", "transit_network", "zoning_legislation", "
                     "land_deal", "funding", "sustainability_health", "coordinator"]
 
 
-class PlanOptions(BaseModel):   # Addition: steering options, parsed from the prompt or set with the UI sliders
+class PlanGoals(BaseModel):   # Addition: numeric goals the user sets; None = no goal
+    affordable_homes: Optional[int] = Field(None, ge=0)        # new affordable homes
+    total_homes: Optional[int] = Field(None, ge=0)             # new homes
+    conversions: Optional[int] = Field(None, ge=0)             # buildings converted
+    transit_coverage_pct: Optional[float] = Field(None, ge=0, le=100)  # None: factor transit_coverage_goal_pct
+
+    def housing(self) -> bool:
+        return any(v is not None for v in (self.affordable_homes, self.total_homes, self.conversions))
+
+
+class PlanOptions(BaseModel):   # Addition: fixed steering options from the prompt
     focus: Literal["all", "conversions", "new_build"] = "all"
-    transit_budget_multiplier: float = Field(1.0, gt=0, le=10)    # × the locale's transit_budget_usd
-    affordable_share: Optional[float] = Field(None, ge=0, le=1)   # None: factors.yaml affordable_share
+    goals: PlanGoals = PlanGoals()
 
 
 class StockPrompt(BaseModel):   # Addition
@@ -303,6 +348,7 @@ class Plan(BaseModel):
     precomputed: Precomputed          # Addition
     options: PlanOptions = PlanOptions()   # Addition
     llm_run: Optional[LlmRun] = None       # Addition
+    goals_report: Optional[GoalReport] = None   # Addition: None only when the funding agent failed
 
 
 class Edit(BaseModel):          # from meeting mode or the slider
@@ -329,8 +375,8 @@ class Scoreboard(BaseModel):
     walk_access_pct: float
     transport_co2_tonnes_per_year: float
     embodied_co2_saved_tonnes: float
-    pencils_yes: int
-    pencils_total: int
+    affordable_homes: int
+    funding_gap_usd: float
     walk_by_amenity_pct: dict[str, float] = {}  # Addition: % of new homes within the walk of a park / clinic / grocery
 
 
@@ -367,3 +413,174 @@ class Factor(BaseModel):
     verified: bool
     note: Optional[str] = None
     label: Optional[str] = None  # Addition: human name shown in the UI; the key stays in the tooltip
+
+
+# ---- Additions: agent research (docs/12-agent-research.md) -------------------------------------
+
+class ResearchedFact(BaseModel):
+    field: str                      # a key in backend/research/fields.yaml, e.g. "vacancy_pct"
+    value: float | int | str        # what the LLM read; the verifier re-derives it and the two must match
+    source_url: str
+    quote: str                      # verbatim span from the page, 20-400 chars, containing the value
+    source_type: Optional[str] = None   # Addition: a sources.yaml source type; picks the confidence (docs/12 §7)
+    as_of: Optional[str] = None     # date or quarter the source says the value applies to ("Q3 2026")
+    page: Optional[int] = None      # PDF page (1-based), when the source is a PDF
+
+
+class ResearchedBuilding(BaseModel):
+    job_id: str
+    building_id: str                # from the queue; the agent never makes one up
+    name: Optional[ResearchedFact] = None
+    address: Optional[ResearchedFact] = None
+    facts: list[ResearchedFact]     # empty is a valid answer
+    not_found: list[str]            # fields searched for and not found, with no guesses
+
+
+class ResearchedFactor(BaseModel):
+    factor_key: str                 # a market factor key in backend/research/fields.yaml (`market_factors`)
+    scope: str                      # locale id or submarket name the value applies to
+    fact: ResearchedFact
+
+
+class ResearchedMarket(BaseModel):  # Addition: the market researcher's structured answer
+    factors: list[ResearchedFactor]
+    not_found: list[str]
+
+
+class ResearchJob(BaseModel):
+    job_id: str
+    building_id: str
+    parcel_id: Optional[str]
+    label: str                      # common.building_label(); what the agent searches for
+    address: Optional[str]
+    lonlat: tuple[float, float]
+    fields: list[str]               # missing fields worth researching, best first
+    swing: float                    # max change in ConversionCandidate.overall if those fields were known
+
+
+# ---- Additions: US-wide onboarding agents (docs/12 §14) ----------------------------------------------------
+# Structured answers of the onboarding agents in backend/onboard/. Code verifies each against the live source before
+# anything is written to backend/registry/.
+
+LandUse = Literal["office", "retail", "hotel", "industrial", "parking_garage", "surface_parking", "residential",
+                  "public", "vacant", "other"]
+FIELD_OPERATORS = ("field", "number", "sum", "join", "epoch_ms_year", "year", "first")
+
+
+class FieldExpr(BaseModel):
+    """One parcel property from the raw layer's fields (backend/onboard/parcels.py): exactly one operator."""
+    field: Optional[str] = None            # the raw value
+    number: Optional[str] = None           # a finite number
+    sum: Optional[list[str]] = None        # sum of numbers; None when all are missing
+    join: Optional[list[str]] = None       # space-joined non-empty values (an address)
+    epoch_ms_year: Optional[str] = None    # year of an epoch-milliseconds date
+    year: Optional[str] = None             # a 4-digit year field
+    first: Optional[list[str]] = None      # first non-empty field
+    strip: Optional[bool] = None
+    zero_is_null: Optional[bool] = None
+    null_values: Optional[list[str]] = None
+    append: Optional[str] = None
+    append_separator: Optional[str] = None
+    min_exclusive: Optional[int] = None
+    require: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _one_operator(self):
+        n = sum(getattr(self, k) is not None for k in FIELD_OPERATORS)
+        if n != 1:
+            raise ValueError(f"exactly one of {FIELD_OPERATORS} is required, got {n}")
+        return self
+
+
+class ParcelSourceProposal(BaseModel):
+    status: Literal["found", "not_found"]
+    layer_url: Optional[str] = None        # ArcGIS MapServer/FeatureServer layer URL (ends in /<layer id>)
+    where: str = "1=1"
+    fields: dict[str, FieldExpr] = {}      # parcel prop -> expression (backend/onboard/parcels.PARCEL_PROPS)
+    notes: dict[str, str] = {}             # e.g. assessed_value_usd: "Assessor total market value"
+    evidence_url: Optional[str] = None
+    reason: Optional[str] = None           # why not found
+
+
+class LandUseProposal(BaseModel):
+    field: Literal["raw_use", "raw_use_desc"]
+    map: dict[str, LandUse]
+    default: LandUse
+    vacant_code_suffix: Optional[str] = None
+    building_type_reliable: bool
+    code_list_url: str                     # the fetched page listing the county's use codes
+
+
+class LayerRef(BaseModel):
+    url: str
+    field: str
+    label: str
+    prefix: str = ""
+
+
+class ZoningProposal(BaseModel):
+    status: Literal["found", "no_zoning", "not_found"]
+    layers: list[LayerRef] = []
+    evidence_url: Optional[str] = None     # no_zoning: the official page saying so
+    quote: Optional[str] = None
+
+
+class UtilityLayerRef(BaseModel):
+    kind: Literal["water_main", "sewer_main"]
+    url: str
+    where: str = "1=1"
+    label: str
+
+
+class UtilitiesProposal(BaseModel):
+    layers: list[UtilityLayerRef]
+    not_found: list[str]
+
+
+class AssessorProposal(BaseModel):
+    card_url: Optional[str]
+    parcel_id: Optional[str]
+    url_pattern: Optional[str]             # card URL with {parcel_id}
+    non_disclosure: Optional[bool] = None
+    non_disclosure_url: Optional[str] = None
+    non_disclosure_quote: Optional[str] = None
+
+
+class ProposedSection(BaseModel):
+    heading: str
+    text: str                              # verbatim from the page
+    page: Optional[int] = None
+
+
+class ProposedDoc(BaseModel):
+    doc_id: str
+    title: str
+    url: str
+    path_name: Optional[str]
+    sections: list[ProposedSection]
+
+
+class ProposedCite(BaseModel):
+    doc_id: str
+    section: str
+    quote: str
+
+
+class ProposedRule(BaseModel):
+    path: str
+    rule: str
+    applies_if: dict = {}
+    value: Any
+    cite: ProposedCite
+
+
+class ProposedPath(BaseModel):
+    name: str
+    kind: Literal["new_construction", "conversion", "both"]
+
+
+class CorpusProposal(BaseModel):
+    documents: list[ProposedDoc]
+    rules: list[ProposedRule]
+    paths: list[ProposedPath]
+    not_covered: list[str]

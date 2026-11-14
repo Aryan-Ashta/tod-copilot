@@ -4,12 +4,12 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Dark th
 
 ## Screens
 
-1. **Prompt:** three locale cards, each with its name, data tier badge (CoStar full / Public only) and its one-sentence purpose from `docs/11-test-locales.md`; clicking one scrolls to the map and flies to that area. The map is held to the lower 48 states and draws state lines (US Census Bureau; `frontend/public/geo/us-states.geojson`, built by `scripts/build_us_reference.py`). It shows each recorded area as a pin in its card's colour; areas are drawn freehand (traced as an open line while the button is held, closed into a polygon on release, as on Zillow), as a rectangle (press, drag, release) or as a polygon (click corners). A text box, Focus (segmented control), transit budget and affordable-homes sliders in real units ($/yr from the locale's `transit_budget_usd`; % of homes), and "Plan it." Header note: "Concept · estimates, not legal or financial advice."
+1. **Prompt:** three locale cards, each with its name, data tier badge (CoStar full / Public only) and its one-sentence purpose from `docs/11-test-locales.md`; clicking one scrolls to the map and flies to that area. The map is held to the lower 48 states and draws state lines (US Census Bureau; `frontend/public/geo/us-states.geojson`, built by `scripts/build_us_reference.py`). It shows each recorded area as a pin in its card's colour; areas are drawn freehand (traced as an open line while the button is held, closed into a polygon on release, as on Zillow), as a rectangle (press, drag, release) or as a polygon (click corners). A text box, Focus (segmented control), a transit coverage goal slider (% of demand, resting on `transit_coverage_goal_pct`), three housing goal fields (new affordable homes, new homes total, buildings converted; blank = no goal), and "Plan it." Header note: "Concept · estimates, not legal or financial advice."
 2. **Plan view (main):**
    - Left column (30% by default, resizable with a draggable divider, kept per browser): agent checklist (8 rows: pending / running / done / error), then a detail card for the selected agent.
    - Right: map, full height, with a layer toggle panel.
    - Bottom of the map: targets strip (bars side by side) and the homes ↔ green-space slider. The map frames the plan in the area the panels leave free, and card rows (sites, deals, conversion candidates, uncertainty items) fly the map to what they select.
-3. **Meeting mode:** projector-friendly map with large type. Left panel (26% by default, same divider): changes with Undo and Reset, targets, and the homes ↔ green-space slider. A tile tray (Homes, Park, Stop, Convert to housing, Convert to hotel) sits on the map just above a bottom bar with homes, walk access, CO₂, embodied carbon saved and "pencils?" with animated deltas.
+3. **Meeting mode:** projector-friendly map with large type. Left panel (26% by default, same divider): changes with Undo and Reset, targets, and the homes ↔ green-space slider. A tile tray (Homes, Park, Stop, Convert to housing, Convert to hotel) sits on the map just above a bottom bar with homes, affordable homes, walk access, CO₂, embodied carbon saved and the funding gap with animated deltas.
 
 ## Map layers (bottom → top), each toggleable
 
@@ -37,7 +37,7 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Dark th
 - **Site:** underused parcel count, top sites.
 - **Building reuse:** ranked table (building, current use, best use, overall, units); click → radar or bar chart of the five fit scores, blockers list with the input and threshold behind each, and source badges (CoStar / Matterport / derived).
 - **Land deal:** strategy tag per site, reasons, draft letter.
-- **Funding:** capital stack bars; for parcels with both options, "New build vs Convert" comparison; pencils verdict; "Show math."
+- **Funding:** goals table (target vs reached), the one-time housing funding gap, yearly transit operating funding and the existing HUD LIHTC baseline; capital stack bars for funded and watch sites (reserve sites as a count); for parcels with both options, "New build vs Convert" comparison; "Show math."
 - **Sustainability:** target bars including embodied carbon saved.
 
 ## Provenance UI (required)

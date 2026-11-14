@@ -1,0 +1,14 @@
+# Market factor PROPOSALS (docs/12 §5.3): verified: false. A person checks each one before copying it into
+# backend/data/factors.yaml; nothing reads this file at plan time.
+market_office_vacancy_pct:
+  label: market office vacancy pct
+  value: 18.5
+  unit: '%'
+  source_url: https://kidder.com/market-reports/los-angeles-office-market-report/
+  verified: false
+  scope: Mid-Wilshire
+  note: 'agent-found market proposal for Mid-Wilshire: "Mid-Wilshire
+
+    15,204,523
+
+    18.5%" (brokerage_report, as of Q3 2026; agent-found, code-verified)'

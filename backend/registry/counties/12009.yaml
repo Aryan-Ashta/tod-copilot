@@ -1,85 +1,34 @@
-# Raw county land-use codes -> TOD Copilot vocabulary (plan Phase 2 step 10).
-# Vocabulary: surface_parking | vacant | retail_1story | office | retail | hotel | industrial | parking_garage | residential | public | other
-# Overlays applied after this map (backend/agents/common.py classify step):
-#   - surface_parking when OSM surface parking covers >= 50% of the parcel's area
-#   - retail_1story when the use is retail and the tallest building on the parcel has <= 1 story
-houston_downtown:
-  field: raw_use
-  source_url: https://hcad.org/hcad-resources/hcad-appraisal-codes/
-  note: HCAD state class codes. F1 'Real, Commercial' does not separate office from retail; it maps to retail and buildings refine it.
-  building_type_reliable: false  # do not give buildings a property_type from these codes
-  default: other
-  map:
-    A1: residential
-    A2: residential
-    A3: residential
-    A4: residential
-    B1: residential
-    B2: residential
-    B3: residential
-    B4: residential
-    O1: residential
-    C1: vacant
-    C2: vacant
-    C3: vacant
-    F1: retail
-    F2: industrial
-    HH: residential
-    J1: public
-    J2: public
-    J3: public
-    J4: public
-    J5: public
-    J6: public
-    J7: public
-    X1: public
-    X2: public
-    X3: other
-    X4: public
-    XE: public
-    XG: public
-    XI: public
-    XJ: public
-    XV: public
-la_wilshire_koreatown:
-  field: raw_use_desc
-  vacant_code_suffix: V
-  source_url: https://assessor.lacounty.gov/
-  note: LA County Assessor use description; a use code ending in V marks vacant land.
-  default: other
-  map:
-    Athletic & Amusement Facilities: retail
-    Auto, Recreation EQPT, Construction EQPT, Sales & Service: retail
-    Banks Savings & Loan: retail
-    Bowling Alleys: retail
-    Churches: other
-    Clubs., Lodge Halls, Fraternal Organizations: other
-    Colleges, Universities (Private): other
-    Commercial: retail
-    Five or more apartments: residential
-    Four Units (Any Combination): residential
-    Government Parcel: public
-    Homes For Aged & Others: residential
-    Hotel & Motels: hotel
-    Irrigated Farm: other
-    Lgt Manf.Sm. EQPT. Manuf Sm.Shps Instr.Manuf. Prnt Plnts: industrial
-    Office Buildings: office
-    Parking Lots (Commercial Use Properties): surface_parking
-    Professional Buildings: office
-    Restaurants, Cocktail Lounges: retail
-    Rooming Houses: residential
-    Schools (Private): other
-    Service Stations: retail
-    Shopping Centers (Neighborhood, community): retail
-    Single: residential
-    Store Combination: retail
-    Stores: retail
-    Supermarkets: retail
-    Three Units (Any Combination): residential
-    Two Units: residential
-    Warehousing, Distribution, Storage: industrial
-    Wholesale & Manufacturing Outlets: industrial
-brevard_cocoa:
+# Managed by backend/onboard (docs/12 §14). status: reviewed = checked by a person; agent_verified = code checks passed; not_found = no public source found.
+fips: '12009'
+name: Brevard County
+state: '12'
+jurisdiction: fl_brevard_county
+recorded_locale: brevard_cocoa
+sample_lonlat: [-80.7003334, 28.2983112]
+transit_feeds:
+  status: reviewed
+  feeds:
+  - {id: ntd-40063, url: 'https://files.mobilitydatabase.org/ntd-40063/latest.zip', provider: Space Coast Area Transit}
+parcels:
+  status: reviewed
+  url: https://gis.brevardfl.gov/gissrv/rest/services/Base_Map/Parcel_New_WKID2881/MapServer/5
+  where: 1=1
+  fields:
+    id: {first: [PARCEL_ID, TaxAcct]}
+    address: {join: [STREET_NUMBER, STREET_DIRECTION_PREFIX, STREET_NAME, STREET_TYPE], null_values: [UNKNOWN],
+              require: STREET_NAME, append: CITY}
+    owner: {field: OWNER_NAME1}
+    assessed_value_usd: {sum: [LAND_VALUE, BLDG_VALUE]}
+    area_acres: {number: ACRES}
+    raw_use: {field: USE_CODE}
+    raw_use_desc: {field: USE_CODE_DESCRIPTION}
+    building_sqft: {number: LIV_AREA, zero_is_null: true}
+    city: {field: CITY}
+  notes:
+    assessed_value_usd: Property Appraiser land + building value
+  evidence_url: https://gis.brevardfl.gov/gissrv/rest/services/Base_Map/Parcel_New_WKID2881/MapServer/5
+land_use:
+  status: reviewed
   field: raw_use_desc
   source_url: https://www.bcpao.us/
   note: Brevard County Property Appraiser use code description (whitespace normalized).
@@ -191,3 +140,11 @@ brevard_cocoa:
     WAREHOUSE - FLEX SPACE: industrial
     WAREHOUSE DISCOUNT STORE: industrial
     WAREHOUSING, DISTRIBUTION AND TRUCKING TERMINAL,: industrial
+zoning:
+  status: reviewed
+  layers:
+  - {url: 'https://gis.brevardfl.gov/gissrv/rest/services/Planning_Development/Zoning_WKID2881/MapServer/0', field: ZONING,
+     label: Brevard County zoning, prefix: 'Brevard County '}
+research:
+  preferred_domains: []
+  notes: county parcels carry no year built; the appraiser card may

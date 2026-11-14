@@ -1,0 +1,200 @@
+# Field registry for agent research (docs/12 §6.1): the single place the verifier gets units, parsers and ranges.
+#
+#   target      building | parcel: which fixture record the accepted value lands on
+#   parse       parser in backend/research/verify.py: percent | usd | usd_per_sqft_yr | integer | sqft | year | enum | text
+#   keywords    words that anchor the number in the quote ("29 stories", "PARKING: 1,300"); when a quote holds
+#               several numbers, exactly one must sit next to a keyword
+#   range       hard bounds; outside -> rejected
+#   plausible   low/high used only by the gap queue's score swing (models/research.py), never for verification;
+#               omitted -> the field cannot move the reuse score, so its swing is 0
+#   max_age_years   an older `as_of` is rejected; a missing `as_of` caps confidence at low
+#   cross_checks    pure checks in verify.py against the merged building
+#   blocked_by_policies   state policies (backend/registry/states/<fips2>.yaml) that drop the field from the queue and the verifier
+#   confidence_by_source_type   capped at medium; unknown source types get `low`
+#
+# Numbers here are team design choices for screening (not factors used by the plan's math); ranges are loose
+# sanity bounds.
+
+defaults:
+  confidence_by_source_type: {assessor_card: medium, brokerage_report: medium, building_profile_study: medium,
+                              city_filing: medium, sec_filing: medium, press: low, listing: low}
+
+fields:
+  vacancy_pct:
+    target: building
+    unit: "%"
+    parse: percent
+    keywords: [vacant, vacancy, vacancies]
+    range: [0, 100]
+    plausible: [5, 95]
+    max_age_years: 3
+  asking_rent_usd_sqft_yr:
+    target: building
+    unit: USD/sqft/yr
+    parse: usd_per_sqft_yr
+    keywords: [rent, rents, rental, asking, psf, "/sf", per square foot, full service, nnn]
+    range: [8, 500]   # below $8/SF/yr is almost always a monthly rent (West Coast reports quote $/SF/month)
+    plausible: [12, 60]
+    max_age_years: 3
+  parking_spaces:
+    target: building
+    unit: spaces
+    parse: integer
+    keywords: [parking, spaces, space, stalls, garage]
+    range: [0, 20000]
+  building_class:
+    target: building
+    parse: enum
+    values: [A, B, C]
+    keywords: [class]
+    confidence_by_source_type: {brokerage_report: medium, building_profile_study: medium, listing: low, press: low}
+  year_built:
+    target: building
+    unit: year
+    parse: year
+    keywords: [built, constructed, completed, opened, erected, "year built"]
+    range: [1800, 2030]
+    plausible: [1920, 2015]
+    confidence_by_source_type: {assessor_card: medium, building_profile_study: medium, city_filing: medium,
+                                brokerage_report: medium, press: low, listing: low}
+  year_renovated:
+    target: building
+    unit: year
+    parse: year
+    keywords: [renovated, renovation, remodeled, modernized, redeveloped]
+    range: [1850, 2030]
+  stories:
+    target: building
+    unit: stories
+    parse: integer
+    keywords: [story, stories, storey, storeys, floor, floors, level, levels]
+    range: [1, 120]
+    plausible: [1, 40]
+    cross_checks: [osm_levels_within_2]
+  rentable_area_sqft:
+    target: building
+    unit: sqft
+    parse: sqft
+    range: [1000, 5000000]
+    plausible: [20000, 800000]
+    cross_checks: [area_vs_footprint]
+  typical_floor_sqft:
+    target: building
+    unit: sqft
+    parse: sqft
+    keywords: [typical, floor, floorplate, floor plate, plates]
+    range: [500, 200000]
+    plausible: [5000, 40000]
+    cross_checks: [typical_floor_le_footprint]
+  owner:
+    target: parcel
+    parse: text
+    range: null
+    max_age_years: 5
+  last_sale_usd:
+    target: parcel
+    unit: USD
+    parse: usd
+    keywords: [sold, sale, sells, purchased, bought, acquired, price, paid]
+    range: [10000, 5000000000]
+    plausible: [1000000, 100000000]
+    blocked_by_policies: [non_disclosure]
+    confidence_by_source_type: {assessor_card: medium, sec_filing: medium, press: low, brokerage_report: low}
+  last_sale_year:
+    target: parcel
+    unit: year
+    parse: year
+    keywords: [sold, sale, purchased, bought, acquired, closed, closing]
+    range: [1900, 2030]
+
+# The researcher's `name` and `address` answers (ResearchedBuilding.name / .address): verified as text in the quote.
+identity_fields:
+  name: {target: building, parse: text}
+  address: {target: parcel, parse: text}
+
+# Market researcher (docs/12 §5.3): accepted values become verified: false proposals for backend/data/factors.yaml,
+# never resolver values.
+market_factors:
+  market_office_vacancy_pct:
+    unit: "%"
+    parse: percent
+    keywords: [vacant, vacancy]
+    range: [0, 100]
+    max_age_years: 2
+    confidence_by_source_type: {brokerage_report: medium, press: low}
+  market_office_asking_rent_usd_sqft_yr:
+    unit: USD/sqft/yr
+    parse: usd_per_sqft_yr
+    keywords: [rent, rents, asking, psf, "/sf", full service, nnn]
+    range: [8, 500]   # below $8/SF/yr is almost always a monthly rent (West Coast reports quote $/SF/month)
+    max_age_years: 2
+    confidence_by_source_type: {brokerage_report: medium, press: low}
+
+# Local factor researcher (backend/onboard/factors.py, docs/12 §14): per-locale factors.yaml keys for a state or
+# county outside the recorded locales. Accepted values are written to backend/registry/factors/<scope>.yaml with
+# verified: false. `level` is the scope researched (state or county); units follow factors.yaml.
+local_factors:
+  conversion_cost_usd_per_sqft:
+    unit: USD/sqft
+    parse: usd_per_sqft
+    keywords: [conversion, cost, per square foot, psf, "/sf"]
+    range: [50, 1500]
+    max_age_years: 5
+    level: state
+    confidence_by_source_type: {city_filing: medium, building_profile_study: medium, brokerage_report: medium, press: low}
+  hotel_conversion_cost_usd_per_sqft:
+    unit: USD/sqft
+    parse: usd_per_sqft
+    keywords: [hotel, conversion, cost, psf, "/sf"]
+    range: [50, 1500]
+    max_age_years: 5
+    level: state
+    confidence_by_source_type: {city_filing: medium, building_profile_study: medium, brokerage_report: medium, press: low}
+  construction_cost_usd_per_unit:
+    unit: USD/unit
+    parse: usd
+    keywords: [per unit, unit, construction, cost]
+    range: [50000, 1500000]
+    max_age_years: 4
+    level: state
+    confidence_by_source_type: {city_filing: medium, building_profile_study: medium, press: low}
+  retail_rent_usd_sqft_yr:
+    unit: USD/sqft/yr
+    parse: usd_per_sqft_yr
+    keywords: [retail, rent, asking, nnn, psf]
+    range: [8, 200]
+    max_age_years: 2
+    level: state
+    confidence_by_source_type: {brokerage_report: medium, press: low}
+  hotel_value_usd_per_key:
+    unit: USD/key
+    parse: usd
+    keywords: [per key, per room, key, room]
+    range: [20000, 2000000]
+    max_age_years: 4
+    level: state
+    confidence_by_source_type: {brokerage_report: medium, press: low}
+  per_unit_credit_equity_usd:
+    unit: USD/unit
+    parse: usd
+    keywords: [equity, per unit, credit]
+    range: [10000, 600000]
+    max_age_years: 4
+    level: state
+    confidence_by_source_type: {city_filing: medium, press: low}
+  bus_operating_cost_usd_per_revenue_hour:
+    unit: USD/revenue hour
+    parse: usd
+    keywords: [revenue hour, per hour, hour]
+    range: [40, 500]
+    max_age_years: 3
+    level: state
+    confidence_by_source_type: {city_filing: medium, press: low}
+  affordable_rent_usd_per_unit_month:
+    unit: USD/unit/month
+    parse: usd
+    keywords: ["60%", rent, 1-bedroom, one bedroom]
+    range: [300, 4000]
+    max_age_years: 2
+    level: county
+    confidence_by_source_type: {city_filing: medium, press: low}

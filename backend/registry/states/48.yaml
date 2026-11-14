@@ -1,0 +1,7 @@
+# Managed by backend/onboard (docs/12 §14). status: reviewed = checked by a person; agent_verified = code checks passed; not_found = no public source found.
+fips: '48'
+jurisdiction: texas
+policies:
+  non_disclosure: true   # no sale prices in public records; last_sale_usd is never queued or accepted
+policy_sources:
+  non_disclosure: {status: reviewed, url: null, quote: null}

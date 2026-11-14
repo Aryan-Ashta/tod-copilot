@@ -141,7 +141,10 @@ class TransitPlan(BaseModel):
     routes: list[Route]
     stops: list[Stop]
     measurements: list[MeasurementSuggestion]
-    budget_usd: float
+    coverage_goal_pct: float            # % of transit demand within a frequent stop the plan aims for
+    coverage_baseline_pct: float        # rail + existing frequent buses
+    coverage_pct: float                 # with the selected network
+    annual_operating_cost_usd: float    # operating funding the new network needs per year
 
 class Citation(BaseModel):
     doc_id: str
@@ -169,7 +172,7 @@ class Site(BaseModel):
     geometry: dict
     homes: int
     height_ft: float
-    status: Literal["pursue", "pass", "watch"]
+    status: Literal["pursue", "pass", "watch", "reserve"]   # reserve: priced, not needed for the goals
 
 class DealStrategy(BaseModel):
     site_id: str
@@ -179,6 +182,8 @@ class DealStrategy(BaseModel):
 
 class CapitalStack(BaseModel):
     site_id: str
+    units: int
+    affordable_units: int       # exact count; raised above affordable_share only to reach a goal
     total_cost_usd: float
     debt_usd: float
     tax_credit_equity_usd: float
@@ -223,7 +228,7 @@ class Edit(BaseModel):          # from meeting mode or the slider
 | Method | Path | Body / result |
 | --- | --- | --- |
 | GET | `/api/locales` | The three `Locale`s |
-| POST | `/api/plan` | `{locale_id?, boundary?, area_name?, prompt, options?}` → `{plan_id}`; starts the run. No boundary: whole recorded locale. Boundary inside a recorded bbox: sub-area plan on recorded data (parcels, buildings and demand clipped). Elsewhere in Harris County or Los Angeles County: recorded live into `cache/areas/<id>/` first (409 when `DEMO_OFFLINE=1`); legal rules follow the city the area mostly lies in. 422 for invalid, too large (`area_max_km2`) or unsupported boundaries. `options` default to `parse_prompt(prompt)` |
+| POST | `/api/plan` | `{locale_id?, boundary?, area_name?, prompt, options?}` → `{plan_id}`; starts the run. No boundary: whole recorded locale. Boundary inside a recorded bbox: sub-area plan on recorded data (parcels, buildings and demand clipped). Elsewhere in any US county: the county is onboarded if needed (docs/12 §15), then the area is recorded live into `cache/areas/<id>/` (409 when `DEMO_OFFLINE=1`); legal rules follow the city the area mostly lies in, else the county. 422 for invalid, too large (`area_max_km2`) or unsupported boundaries. `options` default to `parse_prompt(prompt)` |
 | GET | `/api/plan/{id}/stream` | SSE events; `?replay=1` replays a recorded run |
 | GET | `/api/plan/{id}` | Full `Plan` |
 | POST | `/api/plan/{id}/rescore` | `{edits: Edit[]}` → `{plan, deltas}` in under 1 s |

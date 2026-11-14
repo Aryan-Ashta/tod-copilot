@@ -3,6 +3,8 @@
 
 Field mapping and derivations: backend/data/costar_fields.md.
 """
+from datetime import datetime
+
 from backend.data.providers._base import fx, load_json, prov, retrieved
 from backend.data.resolver import Capability
 from backend.schemas import Locale, Sourced
@@ -12,7 +14,8 @@ FILES = {Capability.PARCELS: "parcels.json", Capability.OWNERSHIP_SALES: "parcel
 
 
 class FixtureRecordProvider:
-    """Records shaped `{"id", "parcel_id"?, "fields": {field: {"value", "source_url", "note"}}}`."""
+    """Records shaped `{"id", "parcel_id"?, "fields": {field: {"value", "source_url", "note", "confidence"?,
+    "retrieved_at"?}}}`; a field's own confidence and retrieval time override the provider's."""
     name = ""
     folder = ""
     confidence = "medium"
@@ -34,8 +37,9 @@ class FixtureRecordProvider:
             if rec.get("geometry"):
                 row["geometry"] = rec["geometry"]
             for field, v in rec.get("fields", {}).items():
-                row[field] = Sourced(value=v["value"], prov=prov(self.name, self.confidence, at, v.get("source_url"),
-                                                                 v.get("note")))
+                t = datetime.fromisoformat(v["retrieved_at"]) if v.get("retrieved_at") else at
+                row[field] = Sourced(value=v["value"], prov=prov(self.name, v.get("confidence") or self.confidence, t,
+                                                                 v.get("source_url"), v.get("note")))
             out.append(row)
         return out
 
