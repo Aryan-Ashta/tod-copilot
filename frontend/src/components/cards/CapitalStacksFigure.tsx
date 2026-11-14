@@ -29,10 +29,11 @@ export const CapitalStacksFigure = memo(function CapitalStacksFigure({ stacks, n
   const cols = stacks.map((s, i) => ({ x: i * STEP, y: 0, w: W, d: W, h: height(s) * k }))
   // room for the direct slice labels left of column 1 and the numbers in front of every column
   const vb = isoViewBox([...cols, { x: -STEP * 2.2, y: W, w: 1, d: 1, h: cols[0]?.h ?? 0 }, { x: 0, y: W + 8, w: cols.length * STEP, d: 1, h: 0 }], 6)
-  const fs = Math.max(4, Number(vb.split(' ')[2]) * 0.022)
+  const [, , vbW, vbH] = vb.split(' ').map(Number)
+  const fs = Math.max(4, Math.max(vbW, vbH) * 0.03)
   const first = stacks[0]
   return (
-    <svg viewBox={vb} className="block h-auto w-full" role="group" aria-label="Capital stacks per site">
+    <svg viewBox={vb} className="mx-auto block h-auto max-h-[380px] w-full" role="group" aria-label="Capital stacks per site">
       {stacks.map((s, i) => {
         const layers: StackLayer[] = SLICES.map((p) => ({ h: s[p.key] * k, color: p.color, title: `${p.label} ${fmtUsd(s[p.key])}` }))
         const funded = SLICES.reduce((a, p) => a + s[p.key] * k, 0)

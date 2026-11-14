@@ -102,6 +102,10 @@ const INFRA_COLORS: Partial<Record<InfraKind, Color>> = {
 const AMBER: Color = [227, 180, 72]
 const NO_SIDEWALK_COLOR: Color = [185, 58, 46]
 const FT_TO_M = 0.3048 // unit conversion, not a planning factor
+// Ground-plane layers draw in layer order without depth testing or writing: the iso camera's narrow field of view
+// puts the eye far away, and coplanar polygons (flood zones, parcels) z-fight at that depth precision. Extruded
+// buildings still depth-test, and draw after these, so they correctly hide what is behind them.
+const FLAT = { depthWriteEnabled: false, depthCompare: 'always' } as const
 
 type Feat<P> = Feature<GJGeometry, P>
 const feature = <P>(geometry: Geometry, properties: P) =>
@@ -119,6 +123,7 @@ export function transitExistingLayer(infra: InfraFeature[], stations: Station[],
   return [
     new GeoJsonLayer<InfraFeature>({
       id: 'transit_existing',
+      parameters: FLAT,
       data: feats,
       visible,
       stroked: true,
@@ -133,6 +138,7 @@ export function transitExistingLayer(infra: InfraFeature[], stations: Station[],
     }),
     new ScatterplotLayer<Station>({
       id: 'stations',
+      parameters: FLAT,
       data: stations,
       visible,
       getPosition: (s) => s.lonlat,
@@ -152,6 +158,7 @@ export function walkBikeLayer(infra: InfraFeature[], visible: boolean) {
   const feats = infra.filter((f) => f.kind === 'sidewalk' || f.kind === 'bike_lane').map((f) => feature(f.geometry, f))
   return new GeoJsonLayer<InfraFeature>({
     id: 'walk_bike',
+    parameters: FLAT,
     data: feats,
     visible,
     lineWidthUnits: 'pixels',
@@ -172,12 +179,14 @@ export function utilitiesLayer(infra: InfraFeature[], visible: boolean) {
     .map((f) => feature(f.geometry, f))
   return new GeoJsonLayer<InfraFeature, { getDashArray?: unknown; dashJustified?: boolean }>({
     id: 'utilities',
+    parameters: FLAT,
     data: feats,
     visible,
     lineWidthUnits: 'pixels',
     getLineWidth: 1,
     getLineColor: (f) => withAlpha(INFRA_COLORS[f.properties.kind] ?? [150, 150, 150], 200),
-    getFillColor: (f) => withAlpha(INFRA_COLORS[f.properties.kind] ?? [150, 150, 150], 200),
+    // Some counties publish service areas (polygons) rather than mains: a light wash, not a solid sheet.
+    getFillColor: (f) => withAlpha(INFRA_COLORS[f.properties.kind] ?? [150, 150, 150], f.geometry.type === 'Point' ? 200 : 30),
     pointRadiusUnits: 'pixels',
     getPointRadius: 4,
     getDashArray: [4, 3],
@@ -191,6 +200,7 @@ export function amenitiesLayer(infra: InfraFeature[], added: InfraFeature[], vis
   const feats = [...infra, ...added].filter((f) => kinds[f.kind]).map((f) => feature(f.geometry, f))
   return new GeoJsonLayer<InfraFeature>({
     id: 'amenities',
+    parameters: FLAT,
     data: feats,
     visible,
     stroked: true,
@@ -211,6 +221,7 @@ export function floodLayer(infra: InfraFeature[], visible: boolean) {
   const feats = infra.filter((f) => f.kind === 'flood_zone').map((f) => feature(f.geometry, f))
   return new GeoJsonLayer<InfraFeature>({
     id: 'flood',
+    parameters: FLAT,
     data: feats,
     visible,
     filled: true,
@@ -231,6 +242,7 @@ export function proposedTransitLayer(routes: Route[], stops: Stop[], visible: bo
   return [
     new GeoJsonLayer<Route, { getDashArray?: unknown; dashJustified?: boolean }>({
       id: 'proposed_routes',
+      parameters: FLAT,
       data: feats,
       visible,
       pickable: true,
@@ -246,6 +258,7 @@ export function proposedTransitLayer(routes: Route[], stops: Stop[], visible: bo
     }),
     new ScatterplotLayer<Stop>({
       id: 'proposed_stops',
+      parameters: FLAT,
       data: stops,
       visible,
       pickable: true,
@@ -273,6 +286,7 @@ export function parcelsLayer(parcels: Parcel[], visible: boolean, selectedId?: s
   )
   return new GeoJsonLayer<ParcelDatum>({
     id: 'parcels',
+    parameters: FLAT,
     data: feats,
     visible,
     pickable: true,
@@ -291,6 +305,7 @@ export function selectedParcelLayer(parcels: Parcel[], selectedId?: string) {
   const p = selectedId ? parcels.find((x) => x.id === selectedId) : undefined
   return new GeoJsonLayer<ParcelDatum>({
     id: 'selected-parcel',
+    parameters: FLAT,
     data: p ? [feature<ParcelDatum>(p.geometry, { parcel: p, underused: false })] : [],
     pickable: false,
     filled: true,
