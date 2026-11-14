@@ -13,7 +13,7 @@ only for keys the team approves.
 
 | key | value | unit | source | where it appears | verdict | comment |
 |---|---|---|---|---|---|---|
-| rent_usd_per_unit_month | HOU 2288 · LA 2218 · BRE 1757 | USD/unit/month | rentcafe.com average rent pages | quotes in note ("The average rent for an apartment in Downtown Houston is $2,288") | source unreachable | All three pages return 403; no Wayback snapshots. |
+| rent_usd_per_unit_month | HOU 2288 · LA 2218 · BRE 1757 | USD/unit/month | rentcafe.com average rent pages | quotes in note ("The average rent for an apartment in Downtown Houston is $2,288") | source unreachable | All three pages return 403; no Wayback snapshots. Replaced 2026-11-14 by Zillow ZORI (see sign-off). |
 | cap_rate | 0.0525 | fraction | CBRE U.S. Cap Rate Survey H1 2026 (PDF via 1031buyerrep.com) | p.11 Multifamily Infill Class A: Houston 5%–5.25%, LA 4.75%–5.5%, Orlando 4.75%–5.5% | **mismatch** | Range midpoints are 5.125% each, so the "midpoint across the three markets" is **0.05125**; 0.0525 is Houston's top. |
 | debt_ratio | 0.87 | fraction of cost | hud.gov Mortgagee Letter 2025-03 | p.2 table, Market Rate "221(d)(4) NC/SR 85% 87%" | matches | |
 | interest_rate | 0.0705 | fraction/yr | skylatus.com Multifamily Loan Rates 2026 | "HUD / FHA 221(d)(4) ~6.8% – 7.3% before MIP" | derived correctly | (6.8 + 7.3) / 2 = 7.05%. |
@@ -71,5 +71,9 @@ Their `source_url` is "team choice". "Verified" for these can only mean the team
   choices by the team), and `cap_rate` after the correction below.
 - `cap_rate`: value changed 0.0525 → 0.05125 (approved); demo plans re-precomputed.
 - Notes reworded, values unchanged: `reuse_floor_sqft_range_residential`, LA `construction_cost_usd_per_unit`.
-- Still `verified: false`: `rent_usd_per_unit_month` (RentCafe 403), `reuse_min_ceiling_height_ft`,
-  `reuse_min_window_wall_pct` (ICC 403).
+- Still `verified: false`: `reuse_min_ceiling_height_ft`, `reuse_min_window_wall_pct` (ICC 403).
+- `rent_usd_per_unit_month`: source switched from RentCafe (403) to the Zillow Observed Rent Index, a public CSV,
+  derived per locale by `scripts/rent_from_zori.py` (median Sep 2026 ZORI over the ZIPs inside the locale bbox plus
+  the ZIP nearest each station): HOU 2288 → 1920, LA 2218 → 2499, BRE 1757 → 1279 (approved); `verified: true`;
+  demo plans re-precomputed. ZORI covers all rentals, not only new apartments, so it likely understates new-build
+  rents.

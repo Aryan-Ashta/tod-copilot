@@ -83,13 +83,13 @@ avg_unit_sqft_residential:
 rent_usd_per_unit_month:
   label: monthly rent per home
   value:
-    houston_downtown: 2288
-    la_wilshire_koreatown: 2218
-    brevard_cocoa: 1757
+    houston_downtown: 1920
+    la_wilshire_koreatown: 2499
+    brevard_cocoa: 1279
   unit: USD/unit/month
-  source_url: https://www.rentcafe.com/average-rent-market-trends/us/tx/houston/downtown-houston
-  verified: false
-  note: "RentCafe (Yardi Matrix) average apartment rent. Houston: 'The average rent for an apartment in Downtown Houston is $2,288' (Oct 30, 2026). LA: https://www.rentcafe.com/average-rent-market-trends/us/ca/los-angeles/koreatown 'The average rent for an apartment in Koreatown is $2,218' (Sep 30, 2026). Brevard: https://www.rentcafe.com/average-rent-market-trends/us/fl/cocoa 'The average rent for an apartment in Cocoa is $1,757' (Oct 30, 2026)."
+  source_url: https://files.zillowstatic.com/research/public_csvs/zori/Zip_zori_uc_sfrcondomfr_sm_month.csv
+  verified: true
+  note: "Zillow Observed Rent Index (ZORI, all homes plus multifamily, smoothed, ZIP level), Sep 2026, median over the locale's ZIPs: every ZIP whose Census ZCTA internal point is inside the locale bbox plus the ZIP nearest each station (2024 Gazetteer). Derived by scripts/rent_from_zori.py. Houston: 77002 $1,920, 77006 $1,649, 77010 $2,856 -> 1,920. LA: 90005 $2,499, 90010 $3,268, 90020 $1,926 -> 2,499. Brevard: 32922 $1,279 (only ZIP). ZORI covers all rentals in the 35th-65th percentile of listings, not only new apartments, so it likely understates what a new building would charge. Replaces RentCafe (Yardi Matrix) figures 2,288 / 2,218 / 1,757, which could not be re-checked (HTTP 403 to scripted access)."
 retail_rent_usd_sqft_yr:
   label: retail rent per sqft
   value:

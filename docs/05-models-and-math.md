@@ -27,7 +27,7 @@ Keys the code expects (all start `verified: false` until a human checks them):
 | `conversion_cost_usd_per_sqft` | finance | Published conversion cost studies; by city if possible |
 | `construction_cost_usd_per_unit` | finance | By city |
 | `avg_unit_sqft_residential` | reuse, zoning | Market data (CoStar may provide in Houston/LA) |
-| `rent_usd_per_unit_month` | finance | CoStar multifamily rents where available |
+| `rent_usd_per_unit_month` | finance | Zillow Observed Rent Index by ZIP (`scripts/rent_from_zori.py`); CoStar fixtures carry office rents only |
 | `cap_rate`, `debt_ratio`, `interest_rate`, `vacancy_rate`, `opex_ratio` | finance | Label as assumptions |
 | `houston_downtown_per_unit_incentive_usd` | finance | Past Downtown Living Initiative ($15,000/unit) as a reference; **status: program being shaped, verify** |
 | `embodied_co2_kg_per_sqft_new` | targets | Embodied carbon databases (e.g. EC3) or published studies |
