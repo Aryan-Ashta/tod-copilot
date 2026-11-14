@@ -17,7 +17,7 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Dark th
 | --- | --- | --- |
 | Base | Dark base map (`TODO(kickoff)`: tile provider key) | |
 | Base | Aerial imagery | off by default |
-| Infrastructure | Rail and bus routes (existing) | each line in its GTFS feed colour over a white casing (grey, black or pale feed colours fall back to ink for rail, slate for bus); rail bold, bus thin; drawn above parcels and sidewalks, under buildings. Stops sized in metres (thin out when zoomed out) |
+| Infrastructure | Rail and bus routes (existing) | each line in its GTFS feed colour over a white casing (grey, black or pale feed colours fall back to ink for rail, mid blue for bus); rail bold in its true colour; bus thin, its colour lifted to mid lightness so dark navy does not read as a parcel or building outline; drawn above parcels and sidewalks, under buildings. Stops sized in metres (thin out when zoomed out) |
 | Infrastructure | Sidewalks / bike lanes | thin lines; missing sidewalk frontages in amber |
 | Infrastructure | Utilities (where public) | thin dashed lines; "not public here" note when missing |
 | Infrastructure | EV chargers, schools, clinics, parks, grocery | small icons |
