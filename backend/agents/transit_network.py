@@ -1,4 +1,4 @@
-"""2. Transit network agent: a phased network within an annual operating budget."""
+"""2. Transit network agent: a phased network that reaches a frequent-transit coverage goal, priced per year."""
 from pyproj import Transformer
 from shapely.geometry import Point
 
@@ -11,7 +11,8 @@ from backend.models.rescore import in_plan
 from backend.schemas import TransitPlan
 
 NAME = "transit_network"
-GOAL = "Design a phased transit network (on-demand, frequent bus, BRT) within an annual operating budget."
+GOAL = ("Design a phased transit network (on-demand, frequent bus, BRT) that reaches the frequent-transit coverage "
+        "goal, and price its annual operating cost.")
 
 
 def tools(ctx: RunContext):
@@ -49,16 +50,18 @@ def tools(ctx: RunContext):
                f"{common.stations_text(ctx)}"
 
     def optimize_network() -> str:
-        """Pick frequency upgrades, feeders, BRT and on-demand zones greedily by covered demand per dollar within
-        the annual operating budget. Returns the selected route ids, phases and spend."""
+        """Pick frequency upgrades, feeders, BRT and on-demand zones greedily by covered demand per dollar until the
+        frequent-transit coverage goal is met. Returns the selected route ids, phases, coverage and operating cost."""
         if "grid" not in ctx.cache or "existing" not in ctx.cache:
             raise ValueError("run get_demand and get_existing_transit first")
-        budget = float(f["transit_budget_usd"])
+        g = ctx.options.goals.transit_coverage_pct
+        goal = float(g) if g is not None else float(f["transit_coverage_goal_pct"])
+        ctx.cache["coverage_goal"] = goal
         ctx.step(NAME, "Generating frequency upgrades and station feeders")
         stations = [{"name": s.name, "lonlat": s.lonlat} for s in loc.stations]
         cands = transit.candidates(ctx.cache["existing"], ctx.cache["grid"], ctx.graph, stations, f, epsg, to_lonlat)
-        ctx.step(NAME, f"Selecting from {len(cands)} candidates within ${budget:,.0f}/yr")
-        res = transit.optimize_network(ctx.cache["existing"], ctx.cache["grid"], cands, budget, f, epsg, loc.id, to_lonlat)
+        ctx.step(NAME, f"Selecting from {len(cands)} candidates to reach {goal:g}% of demand within a frequent stop")
+        res = transit.optimize_network(ctx.cache["existing"], ctx.cache["grid"], cands, goal, f, epsg, loc.id, to_lonlat)
         ctx.cache["net"] = res
         def describe(c):
             what = {"upgrade": f"route {c.get('name') or c['id']} from every {c.get('old_headway_min') or 0:.0f} to "
@@ -67,9 +70,12 @@ def tools(ctx: RunContext):
                     "brt": f"BRT on {c.get('name') or c['id']} every {c['headway_min']} min",
                     "on_demand": "an on-demand zone"}.get(c["type"], c["type"])
             return f"{what} (phase {c['phase']}, ${c['cost']:,.0f}/yr)"
-        sel = "; ".join(describe(c) for c in res["selected"]) or "nothing fits the budget"
+        sel = "; ".join(describe(c) for c in res["selected"]) or \
+            "nothing needed: existing frequent service already meets the goal"
         notes = " ".join(n[0].upper() + n[1:] + "." for n in res["notes"])
-        return f"Selected: {sel}. Annual cost ${res['spent']:,.0f} of ${budget:,.0f}. {notes}".strip()
+        return (f"Selected: {sel}. Frequent stops reach {res['coverage_pct']}% of demand (from "
+                f"{res['coverage_baseline_pct']}%, goal {goal:g}%); annual operating funding needed "
+                f"${res['spent']:,.0f}. {notes}").strip()
 
     def estimate_ridership() -> str:
         """Ridership range (low-high riders/day) per stop from covered demand. Returns the stop count."""
@@ -108,8 +114,12 @@ def tools(ctx: RunContext):
         if "stops" not in ctx.cache:
             raise ValueError("run estimate_ridership first")
         ms = transit.suggest_measurements(ctx.cache["stops"], ctx.cache["covered"], ctx.cache["stop_names"], f)
-        ctx.plan_parts["transit"] = TransitPlan(routes=ctx.cache["net"]["routes"], stops=ctx.cache["stops"],
-                                                measurements=ms, budget_usd=float(f["transit_budget_usd"]))
+        net = ctx.cache["net"]
+        ctx.plan_parts["transit"] = TransitPlan(routes=net["routes"], stops=ctx.cache["stops"], measurements=ms,
+                                                coverage_goal_pct=ctx.cache["coverage_goal"],
+                                                coverage_baseline_pct=net["coverage_baseline_pct"],
+                                                coverage_pct=net["coverage_pct"],
+                                                annual_operating_cost_usd=round(net["spent"], 2))
         ctx.step(NAME, f"{len(ms)} measurements would narrow ridership ranges most")
         return ("Ridership counts to narrow the ranges are chosen once sites are picked, favouring stops whose "
                 "catchment holds planned homes")
@@ -141,5 +151,6 @@ def explain(ctx: RunContext) -> str:
     cost = sum(r.annual_operating_cost_usd for r in new)
     notes = " ".join(n[0].upper() + n[1:] + "." for n in ctx.cache.get("net", {}).get("notes", []))
     return (f"{len(new)} new or upgraded services ({len(upg)} frequency upgrades of existing routes) for "
-            f"${cost:,.0f}/yr of a ${tp.budget_usd:,.0f} budget; existing rail kept. "
+            f"${cost:,.0f}/yr of operating funding; frequent stops reach {tp.coverage_pct}% of demand (goal "
+            f"{tp.coverage_goal_pct:g}%, from {tp.coverage_baseline_pct}%); existing rail kept. "
             f"Ridership is a low-high range per stop. {notes}").strip()

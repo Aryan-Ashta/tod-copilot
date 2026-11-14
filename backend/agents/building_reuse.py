@@ -89,7 +89,8 @@ def tools(ctx: RunContext):
         if ctx.options.focus == "new_build":
             picked = []
         sites = []
-        for c in picked[: f["sites_top_n"]]:
+        n = f["goal_sites_top_n"] if ctx.options.goals.housing() else f["sites_top_n"]
+        for c in picked[:n]:
             b = bmap[c.building_id]
             sites.append(Site(id=f"conv-{b.id}", kind="conversion", parcel_ids=[b.parcel_id] if b.parcel_id else [],
                               building_id=b.id, geometry=b.footprint, homes=conversion_homes(c.best_use, c.est_units, f),

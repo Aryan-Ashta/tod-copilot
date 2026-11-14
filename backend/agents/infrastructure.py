@@ -58,7 +58,8 @@ def tools(ctx: RunContext):
         feats: list[InfraFeature] = []
         layers: dict = {}
         for cap in (Capability.TRANSIT_EXISTING, Capability.STREETS, Capability.UTILITIES, Capability.EV_CHARGING,
-                    Capability.BROADBAND, Capability.AMENITIES, Capability.FLOOD, Capability.WALK_NETWORK):
+                    Capability.BROADBAND, Capability.AMENITIES, Capability.FLOOD, Capability.WALK_NETWORK,
+                    Capability.AFFORDABLE_INVENTORY):
             got = r.get(loc, cap)
             layers[cap] = got
             if got.prov.confidence == "missing":
@@ -94,6 +95,18 @@ def tools(ctx: RunContext):
             g = shape(z["geometry"]).intersection(box(*loc.bbox)).simplify(0.00005)
             if not g.is_empty:
                 feats.append(_feat("flood_zone", mapping(g), {"FLD_ZONE": z["properties"]["FLD_ZONE"]}, fl.prov))
+        hud = layers[Capability.AFFORDABLE_INVENTORY]
+        b = loc.bbox
+        for h in hud.value or []:
+            lon, lat = h["geometry"]["coordinates"][:2]
+            if not (b[0] <= lon <= b[2] and b[1] <= lat <= b[3]):
+                continue
+            if ctx.boundary is not None and not ctx.boundary.contains(Point(lon, lat)):
+                continue
+            p = h["properties"]
+            feats.append(_feat("affordable_housing", h["geometry"],
+                               {"name": p.get("project"), **{k: p.get(k) for k in
+                                ("hud_id", "address", "units", "li_units", "year_placed_in_service")}}, hud.prov))
         wn = layers[Capability.WALK_NETWORK]
         if wn.value:
             nodes = {n[0]: (n[1], n[2]) for n in wn.value["nodes"]}

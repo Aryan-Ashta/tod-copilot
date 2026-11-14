@@ -18,7 +18,7 @@ from backend.data.locales import LOCALE_IDS, get_locale, locale_dir
 from backend.onboard import geo, registry
 
 COUNTY_EDGE_TOLERANCE_DEG = 0.005   # outlines are simplified to ~50 m; allow drawing right up to the county line
-METRO_STEPS = ("osm", "county", "gtfs", "demand", "fema", "afdc", "pvwatts", "local_factors", "utilities", "fcc",
+METRO_STEPS = ("osm", "county", "gtfs", "demand", "fema", "hud", "afdc", "pvwatts", "local_factors", "utilities", "fcc",
                "costar", "matterport", "vexcel")
 LICENSED_STEPS = ("costar", "matterport", "vexcel")
 # Last step, gated by AREA_RESEARCH (off by default): agent research (docs/12 §8.2). It runs after the area's plan is

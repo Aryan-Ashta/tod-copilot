@@ -4,7 +4,12 @@ import { siteLetters, UNDERUSED_LAND_USES } from '../../mapLayers'
 import { CardShell, Empty, Section, td, th } from './common'
 import FactorHover from '../FactorHover'
 
-const STATUS_CLS = { pursue: 'text-emerald-300', watch: 'text-amber-300', pass: 'text-neutral-500' } as const
+const STATUS_CLS = {
+  pursue: 'text-emerald-300',
+  watch: 'text-amber-300',
+  reserve: 'text-slate',
+  pass: 'text-neutral-500',
+} as const
 
 export default function SiteCard() {
   const { state, dispatch } = usePlan()

@@ -1,7 +1,7 @@
 """Record public data for a recorded locale (backend/fixtures/<id>/) or a drawn metro area (cache/areas/<id>/).
 
 Usage:
-  uv run python scripts/record_fixtures.py --locale <id> [--only county,osm,gtfs,demand,fema,afdc,pvwatts,utilities,station,costar]
+  uv run python scripts/record_fixtures.py --locale <id> [--only county,osm,gtfs,demand,fema,hud,afdc,pvwatts,utilities,station,costar]
   doppler run -- uv run python scripts/record_fixtures.py --locale <id> --only agent_research   # LLM + search (docs/12)
   doppler run -- uv run python scripts/record_fixtures.py --locale <id> --only agent_market     # factors.yaml proposals
   doppler run -- uv run python scripts/onboard.py --outlines   # onboarded county/city outlines (backend/fixtures/metros/)

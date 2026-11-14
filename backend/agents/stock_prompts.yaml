@@ -14,21 +14,21 @@
   title: Parking lots to homes
   prompt: Where can we build new homes on parking lots and vacant land near transit?
   options: {focus: new_build}
-- id: tight_budget
+- id: transit_coverage
   locale_id: null
-  title: Tight transit budget
-  prompt: Plan the transit network on a tight budget and show what we give up
-  options: {transit_budget: half}
+  title: Frequent transit for most riders
+  prompt: Plan frequent transit so most riders are a short walk from a frequent stop, and show the yearly operating funding it needs
+  options: {goals: {transit_coverage_pct: 80}}
 - id: expand_transit
   locale_id: null
   title: Expand transit
   prompt: Expand frequent bus service and phase in BRT where demand supports it
-  options: {transit_budget: double}
+  options: {goals: {transit_coverage_pct: 95}}
 - id: max_affordable
   locale_id: null
-  title: Maximize affordable homes
-  prompt: Maximize affordable housing near transit and show which sites still pencil
-  options: {affordable: high}
+  title: 300 affordable homes
+  prompt: Reach 300 new affordable homes near transit and show the funding it needs
+  options: {goals: {affordable_homes: 300}}
 - id: hou_towers
   locale_id: houston_downtown
   title: Downtown towers first
@@ -52,8 +52,8 @@
 - id: brv_station_bus
   locale_id: brevard_cocoa
   title: Bus for the new station
-  prompt: Design bus service for the future Brightline station on a small budget
-  options: {transit_budget: half}
+  prompt: Design bus service for the future Brightline station and show the yearly operating funding it needs
+  options: {}
 - id: brv_flood_safe
   locale_id: brevard_cocoa
   title: Flood-safe homes

@@ -1,0 +1,7 @@
+{
+ "source": "hud_lihtc",
+ "urls": [
+  "https://services.arcgis.com/VTyQ9soqVukalItT/arcgis/rest/services/LIHTC/FeatureServer/0"
+ ],
+ "retrieved_at": "2026-11-14T20:53:35.684597+00:00"
+}

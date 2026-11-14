@@ -46,6 +46,7 @@ FCC_BDC_ITEM = "https://www.arcgis.com/home/item.html?id=e1343efcefc344709057260
 FCC_BDC_H3 = ("https://services8.arcgis.com/peDZJliSvYims39Q/arcgis/rest/services/"
               "FCC_Broadband_Data_Collection_December_2024_View/FeatureServer/5")
 FEMA = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28"
+HUD_LIHTC = "https://services.arcgis.com/VTyQ9soqVukalItT/arcgis/rest/services/LIHTC/FeatureServer/0"
 TIGER = "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer"
 ACS_VEHICLES = "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/ACS_Vehicle_Availability_Boundaries/FeatureServer/2"
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
@@ -674,6 +675,35 @@ def record_fema(lid: str) -> None:
     print(f"fema: {len(out)} SFHA polygons")
 
 
+# ---------------------------------------------------------------- HUD LIHTC
+def _year(v) -> Optional[int]:
+    """HUD codes unknown years as 8888/9999."""
+    try:
+        y = int(v)
+    except (TypeError, ValueError):
+        return None
+    return y if y < 8888 else None
+
+
+def record_hud(lid: str) -> None:
+    b = tuple(load_locale_yaml(lid)["bbox"])
+    feats = arcgis_query(HUD_LIHTC, b, out_fields="HUD_ID,PROJECT,PROJ_ADD,PROJ_CTY,N_UNITS,LI_UNITS,YR_PIS")
+    out = []
+    for f in feats:
+        if not f.get("geometry"):
+            continue
+        p = f["properties"]
+        out.append({"type": "Feature", "geometry": f["geometry"], "properties": {
+            "hud_id": p.get("HUD_ID"), "project": p.get("PROJECT"), "address": p.get("PROJ_ADD"),
+            "city": p.get("PROJ_CTY"), "units": p.get("N_UNITS"), "li_units": p.get("LI_UNITS"),
+            "year_placed_in_service": _year(p.get("YR_PIS"))}})
+    d = fixture_dir(lid, "hud")
+    write_geojson(d / "lihtc.geojson", out)
+    write_meta(d, "hud_lihtc", [HUD_LIHTC])
+    li = sum(int(x["properties"]["li_units"] or 0) for x in out)
+    print(f"hud: {len(out)} LIHTC properties, {li} low-income homes")
+
+
 # ---------------------------------------------------------------- NREL (AFDC, PVWatts)
 def record_afdc(lid: str) -> None:
     b = tuple(load_locale_yaml(lid)["bbox"])
@@ -1227,7 +1257,7 @@ def record_vexcel(lid: str) -> None:
 
 
 STEPS = {"station": record_station, "county": record_county, "osm": record_osm, "gtfs": record_gtfs,
-         "demand": record_demand, "fema": record_fema, "afdc": record_afdc, "pvwatts": record_pvwatts,
+         "demand": record_demand, "fema": record_fema, "hud": record_hud, "afdc": record_afdc, "pvwatts": record_pvwatts,
          "local_factors": record_local_factors,
          "utilities": record_utilities, "fcc": record_fcc, "research": record_research, "costar": record_costar,
          "matterport": record_matterport, "vexcel": record_vexcel, "agent_research": record_agent_research,

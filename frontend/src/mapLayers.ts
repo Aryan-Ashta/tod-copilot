@@ -98,6 +98,7 @@ const INFRA_COLORS: Partial<Record<InfraKind, Color>> = {
   clinic: [185, 58, 46],
   park: [46, 125, 91],
   grocery: [192, 112, 58],
+  affordable_housing: [123, 63, 160],
 }
 const AMBER: Color = [227, 180, 72]
 const NO_SIDEWALK_COLOR: Color = [185, 58, 46]
@@ -196,7 +197,14 @@ export function utilitiesLayer(infra: InfraFeature[], visible: boolean) {
 }
 
 export function amenitiesLayer(infra: InfraFeature[], added: InfraFeature[], visible: boolean) {
-  const kinds: Partial<Record<InfraKind, true>> = { ev_charger: true, school: true, clinic: true, park: true, grocery: true }
+  const kinds: Partial<Record<InfraKind, true>> = {
+    ev_charger: true,
+    school: true,
+    clinic: true,
+    park: true,
+    grocery: true,
+    affordable_housing: true,
+  }
   const feats = [...infra, ...added].filter((f) => kinds[f.kind]).map((f) => feature(f.geometry, f))
   return new GeoJsonLayer<InfraFeature>({
     id: 'amenities',

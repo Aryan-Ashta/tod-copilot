@@ -14,7 +14,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from backend import settings, store
 from backend.agents.coordinator import run_plan
-from backend.agents.plan_options import apply_options, parse_prompt, stock_prompts
+from backend.agents.plan_options import parse_prompt, stock_prompts
 from backend.corpus.loader import load_index, load_sections
 from backend.data.areas import METRO_BACKGROUND_STEPS, AreaError, AreaResolution, record_area, resolve_area
 from backend.data.factors import load_factors, resolve
@@ -249,7 +249,7 @@ def get_plan(plan_id: str) -> Plan:
 @app.post("/api/plan/{plan_id}/rescore")
 def plan_rescore(plan_id: str, req: RescoreRequest) -> RescoreResponse:
     p = _plan(plan_id)
-    return rescore(p, req.edits, apply_options(resolve(p.locale.id), p.options))
+    return rescore(p, req.edits, resolve(p.locale.id))
 
 
 @app.post("/api/plan/{plan_id}/simulate_count")
