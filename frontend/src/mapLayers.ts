@@ -148,7 +148,8 @@ export interface TransitLine {
 }
 
 const WHITE: Color = [255, 255, 255]
-const BUS_FALLBACK: Color = [70, 96, 140]
+type RGB = [number, number, number]
+const BUS_FALLBACK: RGB = [74, 128, 214]
 const PROPOSED_COLORS: Record<'frequent_bus' | 'brt' | 'on_demand_zone', Color> = {
   frequent_bus: TEAL,
   brt: [46, 125, 91],
@@ -159,14 +160,34 @@ const PROPOSED_COLORS: Record<'frequent_bus' | 'brt' | 'on_demand_zone', Color> 
  * A feed colour ('#EF0000') as RGB; null when missing, malformed, so pale it would vanish on the paper base, or a
  * neutral grey/black (agencies paint whole bus networks #8A8A8A or #000000, which reads as base-map streets).
  */
-function feedColor(v: unknown): Color | null {
+function feedColor(v: unknown): RGB | null {
   const m = typeof v === 'string' ? /^#?([0-9a-f]{6})$/i.exec(v.trim()) : null
   if (!m) return null
   const n = parseInt(m[1], 16)
-  const c: [number, number, number] = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+  const c: RGB = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
   const pale = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 200
   const neutral = Math.max(...c) - Math.min(...c) < 40
   return pale || neutral ? null : c
+}
+
+/**
+ * A bus colour lifted to mid lightness and some saturation: agencies' navy and indigo at bus width read as the ink
+ * outlines of parcels and buildings. Rail keeps its true colour; it is bold enough to read either way.
+ */
+function vivid([r, g, b]: RGB): Color {
+  const [R, G, B] = [r / 255, g / 255, b / 255]
+  const max = Math.max(R, G, B)
+  const min = Math.min(R, G, B)
+  const d = max - min
+  const h = d === 0 ? 0 : max === R ? ((G - B) / d + 6) % 6 : max === G ? (B - R) / d + 2 : (R - G) / d + 4
+  const l = Math.min(Math.max((max + min) / 2, 0.48), 0.6)
+  const s = Math.max(d === 0 ? 0 : d / (1 - Math.abs(max + min - 1)), 0.55)
+  // HSL → RGB
+  const c = (1 - Math.abs(2 * l - 1)) * s
+  const x = c * (1 - Math.abs((h % 2) - 1))
+  const [r1, g1, b1] = h < 1 ? [c, x, 0] : h < 2 ? [x, c, 0] : h < 3 ? [0, c, x] : h < 4 ? [0, x, c] : h < 5 ? [x, 0, c] : [c, 0, x]
+  const m = l - c / 2
+  return [Math.round((r1 + m) * 255), Math.round((g1 + m) * 255), Math.round((b1 + m) * 255)]
 }
 
 export function transitLines(infra: InfraFeature[]): TransitLine[] {
@@ -180,7 +201,7 @@ export function transitLines(infra: InfraFeature[]): TransitLine[] {
       key,
       name: typeof short === 'string' && short ? short : key,
       mode,
-      color: feedColor(color) ?? (mode === 'rail' ? INK : BUS_FALLBACK),
+      color: mode === 'rail' ? (feedColor(color) ?? INK) : vivid(feedColor(color) ?? BUS_FALLBACK),
       headwayMin: typeof hw === 'number' ? Math.round(hw) : null,
       geometry: f.geometry,
     })
