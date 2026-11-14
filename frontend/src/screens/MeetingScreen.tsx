@@ -208,7 +208,7 @@ function Meeting() {
           style={{ left: ghost.x, top: ghost.y }}
         >
           <TileGlyph kind={ghost.tile} ghost className="h-20 w-20" />
-          <span className="bg-paper/90 px-1">{tileInfo(ghost.tile).label}</span>
+          <span className="rounded-md bg-paper/90 px-1.5">{tileInfo(ghost.tile).label}</span>
         </div>
       )}
     </div>

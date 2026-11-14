@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 /*
- * Visual language of aryanashta.me: paper, ink, hairlines, three flat accents, Archivo, no radius, no shadows.
+ * Visual language of aryanashta.me: paper, ink, hairlines, three flat accents, Archivo, no shadows. Corners are
+ * rounded everywhere: 10-16px on panels, cards and buttons, smaller on badges and swatches (the radius scale below).
  * The dark theme is gone. Existing components use Tailwind's neutral / sky / emerald / rose / amber scales, so those
  * scales are remapped here to light-theme values (low numbers = ink, high numbers = paper tints): every card reads
  * correctly on paper without touching its markup, and new markup uses the named tokens (paper, ink, rule, ...).
@@ -77,12 +78,12 @@
   --color-amber-900: #f0dca8;
   --color-amber-950: #f5e9c8;
 
-  --radius-xs: 0;
-  --radius-sm: 0;
-  --radius-md: 0;
-  --radius-lg: 0;
-  --radius-xl: 0;
-  --radius-2xl: 0;
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
 
   --shadow-sm: 0 0 #0000;
   --shadow-md: 0 0 #0000;
@@ -297,7 +298,11 @@ input[type="range"] {
   color: var(--color-ink) !important;
 }
 .maplibregl-ctrl-group {
-  border-radius: 0 !important;
+  border-radius: 10px !important;
+  overflow: hidden;
   box-shadow: none !important;
   border: 1px solid var(--color-rule);
+}
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  border-radius: 12px;
 }

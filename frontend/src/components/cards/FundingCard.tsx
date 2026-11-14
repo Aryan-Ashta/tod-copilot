@@ -20,7 +20,7 @@ const PARTS: { key: keyof CapitalStack; label: string }[] = [
 function MathRow({ s }: { s: CapitalStack }) {
   const label = useFactorLabel()
   return (
-    <div className="bg-ink/[0.03] p-2 text-xs">
+    <div className="rounded-lg bg-ink/[0.03] p-2 text-xs">
       <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 tabular-nums">
         <span className="text-slate">Total cost</span>
         <span>{fmtUsd(s.total_cost_usd)}</span>
@@ -143,7 +143,7 @@ export default function FundingCard() {
             </span>
             <span className="text-slate"> · columns are each site's capital stack; dashed red is the gap.</span>
           </p>
-          <figure className="border border-rule p-3">
+          <figure className="rounded-xl border border-rule p-3">
             <CapitalStacksFigure stacks={stacks} names={names} selected={sel?.site_id ?? null} onSelect={setPicked} />
             <figcaption className="mt-2 grid grid-cols-2 gap-x-4 text-[13px] text-slate">
               {stacks.map((s, i) => (

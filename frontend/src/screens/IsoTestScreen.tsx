@@ -29,7 +29,7 @@ function Swatch({ base }: { base: string }) {
   return (
     <div className="flex items-center gap-3 text-sm">
       {[f.top, f.left, f.right].map((c) => (
-        <span key={c} className="inline-block h-6 w-10 border border-rule" style={{ background: c }} title={c} />
+        <span key={c} className="inline-block h-6 w-10 rounded-md border border-rule" style={{ background: c }} title={c} />
       ))}
       <code className="text-slate">{base}</code>
     </div>
@@ -45,12 +45,12 @@ export default function IsoTestScreen() {
       <section className="mt-10 border-t-2 border-ink pt-4">
         <h2 className="wide text-xl font-bold">Figure: RMSNorm scene</h2>
         <div className="mt-4 grid grid-cols-2 gap-6">
-          <figure className="border border-rule">
+          <figure className="overflow-hidden rounded-xl border border-rule">
             <svg viewBox={VB} className="block h-auto w-full" role="img" aria-label="Rebuilt RMSNorm figure">
               <RmsScene />
             </svg>
           </figure>
-          <img src="/iso-ref/rmsnorm-figure.png" alt="Reference: RMSNorm figure on aryanashta.me" className="w-full border border-rule" />
+          <img src="/iso-ref/rmsnorm-figure.png" alt="Reference: RMSNorm figure on aryanashta.me" className="w-full rounded-xl border border-rule" />
         </div>
       </section>
 
@@ -77,7 +77,7 @@ export default function IsoTestScreen() {
               ]} />],
             ['IsoTile', <g key="t">{[0, 1, 2].map((i) => <IsoTile key={i} x={i * 18} y={0} w={16} d={30} color={ISO.mustard} />)}</g>],
           ].map(([name, node]) => (
-            <figure key={name as string} className="border border-rule p-2">
+            <figure key={name as string} className="rounded-xl border border-rule p-2">
               <svg viewBox={isoViewBox([{ x: 0, y: 0, w: 52, d: 30, h: 34 }], 10)} className="block h-40 w-full" role="img" aria-label={name as string}>
                 {node}
               </svg>

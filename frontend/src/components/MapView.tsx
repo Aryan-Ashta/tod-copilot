@@ -167,6 +167,7 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
                 background: '#EDEFEA',
                 color: '#1C2230',
                 border: '1px solid #D3D7D0',
+                borderRadius: '10px',
                 fontFamily: 'inherit',
                 fontSize: large ? '16px' : '12px',
                 whiteSpace: 'pre',

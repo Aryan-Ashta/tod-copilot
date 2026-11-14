@@ -49,7 +49,7 @@ export default function FactorHover({ keys, children }: { keys: string[]; childr
         <span
           ref={pop}
           style={placement(rect, height)}
-          className="z-[200] block border border-rule bg-paper p-2.5 text-left text-xs leading-snug"
+          className="z-[200] block rounded-xl border border-rule bg-paper p-2.5 text-left text-xs leading-snug shadow-[0_8px_24px_rgb(28_34_48/.12)]"
         >
           <span className="mb-1 block text-xs text-slate">Factors behind this number</span>
           {keys.map((k) => {

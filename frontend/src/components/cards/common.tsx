@@ -72,8 +72,8 @@ export function CiteList({ citations, label }: { citations: Citation[]; label?: 
 export function Bar({ value, max, color = 'bg-sky-500' }: { value: number; max: number; color?: string }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0
   return (
-    <div className="h-2 w-full overflow-hidden bg-rule">
-      <div className={`h-full ${color} transition-[width] duration-500`} style={{ width: `${pct}%` }} />
+    <div className="h-2 w-full overflow-hidden rounded-full bg-rule">
+      <div className={`h-full rounded-full ${color} transition-[width] duration-500`} style={{ width: `${pct}%` }} />
     </div>
   )
 }

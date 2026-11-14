@@ -260,7 +260,7 @@ export default function PromptScreen() {
               {searching ? 'Searching…' : 'Search'}
             </button>
             {results && (
-              <ul className="absolute top-full right-0 left-0 z-20 mt-1 border border-rule bg-paper">
+              <ul className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-xl border border-rule bg-paper shadow-[0_8px_24px_rgb(28_34_48/.12)]">
                 {results.length === 0 && <li className="px-3 py-2 text-sm text-slate">No matches in Harris County or Los Angeles County</li>}
                 {results.map((r, i) => (
                   <li key={`${r.label}-${i}`} className="border-b border-rule last:border-b-0">
@@ -326,7 +326,7 @@ export default function PromptScreen() {
             rows={3}
             aria-label="Prompt"
             placeholder="e.g. Plan transit-oriented development around the rail stations"
-            className="mb-6 w-full border border-rule bg-transparent p-3 text-[18px] placeholder:text-slate/70 focus:border-ink focus:outline-none"
+            className="mb-6 w-full rounded-xl border border-rule bg-transparent p-3 text-[18px] placeholder:text-slate/70 focus:border-ink focus:outline-none"
           />
 
           <div className="mb-8 grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.7fr)]">
