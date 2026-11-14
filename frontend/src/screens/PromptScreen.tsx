@@ -16,14 +16,6 @@ import {
 
 const REPLAY_HINT = 'Replays exist only for whole recorded areas with default options; this runs live'
 
-/** Recorded locale whose stock prompts also apply to a drawn metro area, by the city named in the area_check label. */
-function metroLocaleId(label: string | null): string | null {
-  if (!label) return null
-  if (label.includes('Houston')) return 'houston_downtown'
-  if (label.includes('Los Angeles')) return 'la_wilshire_koreatown'
-  return null
-}
-
 const OPTION_GROUPS: { key: keyof PlanOptions; legend: string; choices: [string, string][] }[] = [
   { key: 'focus', legend: 'Focus', choices: [['all', 'All'], ['conversions', 'Conversions only'], ['new_build', 'New construction only']] },
   { key: 'transit_budget', legend: 'Transit budget', choices: [['default', 'Default'], ['half', 'Half'], ['double', 'Double']] },
@@ -109,7 +101,7 @@ export default function PromptScreen() {
   const areaOk = wholeLocale !== null || (check !== null && check.kind !== null && !check.error)
   const canSubmit = areaOk && !submitting && (replayOn || prompt.trim().length > 0)
 
-  const chipLocaleId = areaLocaleId ?? (check?.kind === 'metro' ? metroLocaleId(check.label) : null)
+  const chipLocaleId = areaLocaleId ?? (check?.kind === 'metro' ? check.sources_from : null)
   const visibleStock = stock.filter((p) => p.locale_id === null || p.locale_id === chipLocaleId)
 
   const onBoundary = (b: PolygonGeometry | null) => {
@@ -226,11 +218,11 @@ export default function PromptScreen() {
             }}
           >
             <label className="flex-1">
-              <span className="block text-sm text-slate">Place in Harris County or Los Angeles County</span>
+              <span className="block text-sm text-slate">Place in any US county</span>
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search Houston or Los Angeles"
+                placeholder="Search a US city or address"
                 className="w-full border-0 border-b border-ink bg-transparent py-1.5 text-[18px] placeholder:text-slate/70 focus:outline-none focus-visible:outline-2"
               />
             </label>
@@ -239,7 +231,7 @@ export default function PromptScreen() {
             </button>
             {results && (
               <ul className="absolute top-full right-0 left-0 z-20 mt-1 border border-rule bg-paper">
-                {results.length === 0 && <li className="px-3 py-2 text-sm text-slate">No matches in Harris County or Los Angeles County</li>}
+                {results.length === 0 && <li className="px-3 py-2 text-sm text-slate">No matches in a US county</li>}
                 {results.map((r, i) => (
                   <li key={`${r.label}-${i}`} className="border-b border-rule last:border-b-0">
                     <button

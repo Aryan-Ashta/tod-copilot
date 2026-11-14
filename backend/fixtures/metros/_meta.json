@@ -4,6 +4,6 @@
   "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/1",
   "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/4"
  ],
- "retrieved_at": "2026-11-14T09:58:49.269971+00:00",
- "note": "Census TIGERweb current counties and incorporated places, maxAllowableOffset 0.0005 deg"
+ "retrieved_at": "2026-11-14T20:13:22.882636+00:00",
+ "note": "Census TIGERweb current counties and incorporated places of every backend/registry entry, maxAllowableOffset 0.0005 deg"
 }

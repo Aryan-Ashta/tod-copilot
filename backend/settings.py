@@ -16,6 +16,12 @@ MODEL = os.getenv("TOD_MODEL", "anthropic:claude-haiku-5-5")   # docs/model-eval
 NREL_API_KEY = os.getenv("NREL_API_KEY", "DEMO_KEY")
 REPLAY_DELAY_S = float(os.getenv("REPLAY_DELAY_S", "0.25"))
 
+# Agent research (docs/12): runs only while recording, never at plan time.
+RESEARCH_MODEL = os.getenv("RESEARCH_MODEL") or MODEL                    # building/market researcher subagents
+RESEARCH_SEARCH = os.getenv("RESEARCH_SEARCH") or "anthropic"           # anthropic | fixture:<path.yaml>
+RESEARCH_SEARCH_MODEL = os.getenv("RESEARCH_SEARCH_MODEL") or "anthropic:claude-haiku-5-5"
+AREA_RESEARCH = os.getenv("AREA_RESEARCH") == "1"   # also research drawn metro areas, in the background after the plan
+
 # LangSmith tracing (optional): on when a key is set and not offline. Inputs and outputs are hidden so licensed
 # CoStar/Matterport/Vexcel values in tool calls never leave this machine; traces keep structure, timing and tokens.
 LANGSMITH_ENABLED = bool(os.getenv("LANGSMITH_API_KEY")) and not OFFLINE

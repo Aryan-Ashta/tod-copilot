@@ -1,6 +1,6 @@
 # 12: Agent research (filling building and market data where CoStar has none)
 
-Status: **spec, not built.** This is a handoff for an implementing agent. Read `AGENTS.md`, `docs/02-architecture.md`, `docs/03-data-layer.md` and `docs/04-agents.md` first. Where this spec and those docs conflict, they win; tell the human.
+Status: **built** (build-order steps 1-4 and 6-7 in code; step 5 started: real runs on 1 Brevard and 3 Houston jobs, output in `agent_research/` awaiting human review). Originally a handoff spec; read `AGENTS.md`, `docs/02-architecture.md`, `docs/03-data-layer.md` and `docs/04-agents.md` first. Where this spec and those docs conflict, they win. How the build differs from the text below is in §14.
 
 ## 1. Problem
 
@@ -269,7 +269,7 @@ Model: use `settings.MODEL` (see `docs/model-eval.md`), with a cheaper model all
 ## 11. Acceptance criteria
 
 - [ ] Runs on all three recorded locales with no code changes between them.
-- [ ] Runs on a drawn Harris County or LA County area with `AREA_RESEARCH=1`, and the plan does not wait on it.
+- [ ] Runs on a drawn area in any US county with `AREA_RESEARCH=1`, and the plan does not wait on it.
 - [ ] Every accepted value: the quote is in the cached page, the value was parsed by code, and the provenance names its URL and quote.
 - [ ] Zero accepted facts from denylisted domains. Zero `last_sale_usd` facts in Texas.
 - [ ] `DEMO_OFFLINE=1 uv run uvicorn backend.app:app` works with the new fixtures and needs no key.
@@ -289,3 +289,51 @@ Model: use `settings.MODEL` (see `docs/model-eval.md`), with a cheaper model all
 ## 13. Related deterministic fix (do separately, first)
 
 `norm_brevard` in `backend/data/record.py` hard-codes `year_built: None`, which is why Brevard has year built for 0/228 buildings. If the Brevard Property Appraiser parcel layer has a year-built field, map it there. That needs no agent and no LLM. `TODO(kickoff)`: confirm the field name from the layer's ArcGIS field list. Don't guess it.
+
+## 14. As built (2026-11-14)
+
+Commands: `doppler run -- uv run python scripts/record_fixtures.py --locale <id> --only agent_research` (and `--only agent_market` for the market proposals); both run only when named, never in the default step list. Coverage: `DEMO_OFFLINE=1 uv run python scripts/research_coverage.py`.
+
+Differences from the text above, and why:
+
+- **No LLM coordinator.** The gap queue already decides what to research, so `backend/research/agent.py` drives the jobs in Python (4 threads) and gives each its own building-researcher deep agent (isolated context, one LangGraph thread per job, SQLite checkpointer in `cache/research/<locale>/checkpoints.sqlite`). There is no `prompts/coordinator.md`.
+- **`submit_facts` is `check_facts`.** It dry-runs the verifier and saves nothing; the answer is the final `ResearchedBuilding` / `ResearchedMarket` tool call (`ToolStrategy`). With the original name, Haiku kept "submitting" and never answered.
+- **Hard budgets in the tools**: 6 searches, 8 fetches, 3 checks per job (`research/tools.py`); the prompt alone did not stop the model.
+- **Agent research only fills gaps.** A fact for a field any other source already has (CoStar, hand research, county, OSM name or levels) is rejected as `already_known`, with the existing value in `rejects.jsonl`. That is the conflict log; agent values never override anything, even the county below it.
+- `ResearchedFact` has a `source_type` (the confidence table needs it) and there is a `ResearchedMarket` answer model.
+- **Parsing:** when a quote holds several values of the field's kind, the one closest to a field keyword (`fields.yaml` `keywords`) wins, so `PARKING: 1,300 spaces between 2 decks` parses. A range or alternative (`between 1857 and 1869`, `$24 - $28`) is always rejected. Identity runs before the cross-checks.
+- A missing `as_of` caps confidence at `low` only for time-varying fields (those with `max_age_years`).
+- **Market proposals** go to `<locale_dir>/agent_research/factor_proposals.yaml` (factors.yaml entry shape, `verified: false`) for a person to copy in, rather than being written into `factors.yaml` automatically.
+- **Drawn areas:** `areas.METRO_BACKGROUND_STEPS` (set only when `AREA_RESEARCH=1`) holds the step. `backend/app.py` runs it after "Plan ready" and keeps the SSE stream open. It streams one `building_reuse` event per accepted fact, rebuilds the plan deterministically under the same id, and sends a final coordinator `done` event; the UI reloads the plan and re-applies its edits through `rescore`.
+- **Search:** Anthropic server-side web search through the `anthropic` SDK (`RESEARCH_SEARCH=anthropic`, existing key, CoStar domains in `blocked_domains`), cached by query in `cache/research/search/`; `fixture:<path.yaml>` for tests. Confirmed by the team 2026-11-14.
+- §13: the Brevard parcel layer (`Parcel_New_WKID2881/MapServer/5`) has no year-built field (field list checked 2026-11-14), so the Brevard registry entry maps no `year_built`. The appraiser card is the source, through agent research.
+
+## 15. US-wide onboarding agents (2026-11-14)
+
+Drawn areas work in any US county. Per-place configuration that used to be hand-written in `record.py`, `land_use_maps.yaml` and the providers now lives in a committed registry, `backend/registry/`:
+
+- `us_states.yaml` (Census FIPS → USPS, name); `states/<fips2>.yaml` (state jurisdiction id, `policies` such as `non_disclosure`);
+- `counties/<fips5>.yaml`: `transit_feeds`, `parcels` (layer URL, `where`, field-expression DSL in `backend/onboard/parcels.py`, value `notes`, `coverage`), `land_use` (code map), `zoning` (county layers for unincorporated land), `utilities`, `research` (preferred domains, `assessor_card`), plus `recorded_locale` and `licensed_sources` (CoStar, Matterport, Vexcel run only where listed);
+- `places/<geoid7>.yaml`: city `jurisdiction` (the corpus id), `zoning` (`layers`, or `none: true` with the official note), `utilities`;
+- `factors/<scope>.yaml`: local values of the per-locale factors (`national`, `state-<fips2>`, `county-<fips5>`), all `verified: false`.
+
+Every section carries `status`: `reviewed` (a person checked it; the three recorded counties), `agent_verified` (code checks passed) or `not_found`, with `verified_at` and `model`.
+
+Agents (`backend/onboard/`, prompts in `onboard/prompts/`, skills in `onboard/skills/` plus the research skills): the LLM proposes a structured answer; code verifies it against the live source before writing anything.
+
+| Agent | Writes | Code checks |
+|---|---|---|
+| transit (no LLM) | `transit_feeds` | Mobility Database `feeds_v2.csv`: active US GTFS, bbox intersects the county, span ≤ 5°, GTFS-Flex variants dropped |
+| 1 parcel source scout | `parcels` | polygon layer; every DSL field exists; id, address and a use field mapped; ≥ `onboard_parcel_min_sample` parcels in the sample box; id/address/use shares; plausible years and values |
+| 2 use-code mapper | `land_use` | code list page fetched; ≥ `onboard_land_use_code_page_share` of sampled parcels (count-weighted) have a code on it; `extend` maps new codes from drawn areas (new keys only) |
+| 3 zoning layer scout | `zoning` (place and county) | polygon layer, field exists and is filled on ≥ `onboard_zoning_field_share`, ≥ 2 codes; `no_zoning` needs a fetched official page quoting "zoning"; county layers get a `<County> ` prefix |
+| 5 utilities scout | `utilities` | line/polygon layer, `where` runs, ≥ 1 feature in the area; failing layers dropped |
+| 6 local factor researcher | `factors/state-*`, `factors/county-*` | the research verifier (quote on a fetched page, value parsed from it, range, age, scope named near it) |
+| 7 assessor-card scout | `research.assessor_card`, state `non_disclosure` | the fetched card shows the sample parcel's id and address; non-disclosure needs an official quote naming disclosure and the state |
+| 4 legal corpus builder | `backend/corpus/proposed/<jurisdiction>/` only | official https host (`onboard/legal_domains.yaml`), sections verbatim on the page, quotes verbatim in their section, numbers in their quote, known rule kinds/attributes/uses |
+
+Rejected final answers go to `cache/onboard/<key>/rejects.jsonl` and the section stays absent, so the next run retries. Thresholds are `onboard_*` factors (`verified: false`, team choice).
+
+When agents run: `areas.record_area` calls `onboard.run.onboard_county` before recording a drawn area (sections already present are skipped; LLM sections need `ANTHROPIC_API_KEY` and network), and `scripts/onboard.py` (`--county`, `--assessor`, `--corpus`, `--seed-national-factors`, `--outlines`). The building researcher runs the assessor-card scout once per county. Legal rules are never used until a person runs `scripts/review_corpus.py <jurisdiction> --approve` (ground rule 3); state law applies to every city and county in the state (`corpus/loader.py`), and legal path kinds (`new_construction | conversion | both`) live in `backend/corpus/paths.yaml`.
+
+Factor resolution for per-locale keys: the area's own `factors.yaml` (ZORI rent and PVWatts solar from the `local_factors` step) → the recorded locale (counties with `recorded_locale`) → county → state → national. `national.yaml` holds the median of the three recorded locales, labelled as a placeholder rather than a national statistic.

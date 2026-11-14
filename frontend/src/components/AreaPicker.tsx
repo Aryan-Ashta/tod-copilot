@@ -79,7 +79,8 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     map.on('error', () => {})
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left')
     map.on('load', () => {
-      // Supported counties (thin grey) and their principal cities (dashed, brighter), under the recorded boxes.
+      // Onboarded counties (thin grey) and cities (dashed, brighter), under the recorded boxes. A guide only: any US
+      // county can be drawn in; area_check validates the drawing.
       map.addSource('metros', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addLayer({
         id: 'metros-fill',

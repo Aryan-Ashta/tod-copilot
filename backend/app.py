@@ -16,9 +16,10 @@ from backend import settings, store
 from backend.agents.coordinator import run_plan
 from backend.agents.plan_options import apply_options, parse_prompt, stock_prompts
 from backend.corpus.loader import load_index, load_sections
-from backend.data.areas import AreaError, AreaResolution, metro_county, metro_outlines, record_area, resolve_area
+from backend.data.areas import METRO_BACKGROUND_STEPS, AreaError, AreaResolution, record_area, resolve_area
 from backend.data.factors import load_factors, resolve
 from backend.data.http_cache import OfflineCacheMiss, cached_get
+from backend.onboard import geo
 from backend.data.locales import LOCALE_IDS, load_locales
 from backend.models.rescore import rescore
 from backend.models.transit import simulate_count
@@ -88,7 +89,7 @@ async def start_plan(req: PlanRequest) -> dict:
     def notify(e: AgentEvent) -> None:
         run.events.append(e)
         if e.agent == "coordinator" and e.status in ("done", "error") and e.step != \
-                "LLM coordinator unavailable; deterministic driver used":
+                "LLM coordinator unavailable; deterministic driver used" and not run.research_pending:
             run.finished = True
         run.changed.set()
 
@@ -103,14 +104,40 @@ async def start_plan(req: PlanRequest) -> dict:
                     emit(AgentEvent(agent="coordinator", status="running", step=text))
                 locale_id = await asyncio.to_thread(record_area, req.area_name or "Drawn area", area, step)
                 boundary = None   # the recorded area's locale already carries its boundary
+                run.research_pending = "agent_research" in METRO_BACKGROUND_STEPS
             plan = await asyncio.to_thread(run_plan, locale_id, req.prompt, plan_id, emit, boundary=boundary,
                                            area_name=req.area_name, options=options)
             store.put_plan(plan)
         except Exception as ex:  # already emitted as a coordinator error event
+            run.research_pending = False
             notify(AgentEvent(agent="coordinator", status="error", step=f"Plan failed: {ex}"[:300]))
+            return
+        if run.research_pending:
+            await _area_research(locale_id, plan, run, emit, notify)
 
     asyncio.create_task(go())
     return {"plan_id": plan_id}
+
+
+async def _area_research(locale_id: str, plan: Plan, run: store.Run, emit, notify) -> None:
+    """docs/12 §8.2: research a drawn area after its plan is shown; the stream stays open until it finishes, then a
+    coordinator `done` event tells the UI to reload the rebuilt plan and re-apply its edits via rescore."""
+    from backend.research.area import research_area
+    emit(AgentEvent(agent="building_reuse", status="done",
+                    step="Agent research started in the background: looking up public facts for the buildings "
+                         "where they would change the scores most"))
+    try:
+        new, report = await asyncio.to_thread(research_area, locale_id, plan, emit)
+        if new is not None:
+            store.put_plan(new)
+        step = (f"Agent research finished: {report.accepted} facts accepted for {report.jobs} buildings; "
+                + ("plan updated" if new is not None else "plan unchanged"))
+        payload = {"plan_id": plan.id, "research": {"jobs": report.jobs, "accepted": report.accepted,
+                                                    "proposed": report.proposed, "rejects": dict(report.rejects)}}
+    except Exception as ex:   # research is extra: the plan already stands
+        step, payload = f"Agent research failed, plan unchanged: {type(ex).__name__}: {ex}"[:300], {"plan_id": plan.id}
+    run.research_pending = False
+    notify(AgentEvent(agent="coordinator", status="done", step=step, payload=payload))
 
 
 @app.post("/api/area_check")
@@ -121,18 +148,18 @@ def area_check(req: AreaCheckRequest) -> dict:
     except AreaError as e:
         return {"kind": None, "error": str(e)}
     return {"kind": a.kind, "locale_id": a.locale_id, "label": a.label, "jurisdiction": a.jurisdiction,
-            "area_km2": a.area_km2, "error": None}
+            "area_km2": a.area_km2, "sources_from": a.sources_from, "error": None}
 
 
 @app.get("/api/metros")
 def metros() -> dict:
-    """Supported county and city outlines (GeoJSON FeatureCollection, Census TIGERweb)."""
-    return metro_outlines()
+    """Onboarded county and city outlines (GeoJSON FeatureCollection, Census TIGERweb)."""
+    return geo.outlines()
 
 
 @app.get("/api/geocode")
 def geocode(q: str) -> list[dict]:
-    """Recorded locales whose aliases match first, then Nominatim hits inside a supported county (cached);
+    """Recorded locales whose aliases match first, then Nominatim hits in a US county (cached);
     offline: recorded only."""
     ql = " ".join(q.lower().replace(",", " ").split())
     out = []
@@ -148,9 +175,13 @@ def geocode(q: str) -> list[dict]:
         hits = []
     for h in hits:
         lon, lat = float(h["lon"]), float(h["lat"])
-        county = metro_county(lon, lat)
-        if county is None:   # outside Harris County and Los Angeles County: not supported
+        try:
+            c = geo.county_at(lon, lat)
+        except (OfflineCacheMiss, httpx.HTTPError):
+            c = None
+        if c is None:   # outside the US counties (or the county lookup is unreachable)
             continue
+        county = c["name"]
         s, n, w, e = (float(v) for v in h["boundingbox"])
         out.append({"label": h["display_name"], "lonlat": [lon, lat], "bbox": [w, s, e, n], "recorded_locale_id": None,
                     "metro": county})

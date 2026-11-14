@@ -12,6 +12,7 @@ class Run:
     events: list[AgentEvent] = field(default_factory=list)
     changed: asyncio.Event = field(default_factory=asyncio.Event)
     finished: bool = False
+    research_pending: bool = False   # drawn-area agent research still running after "Plan ready" (docs/12 §8.2)
 
 
 runs: dict[str, Run] = {}

@@ -1,0 +1,14 @@
+# Source registry for agent research (docs/12 §6.2): the global layer. State policies and county research hints live
+# in backend/registry/ (states/<fips2>.yaml `policies`, counties/<fips5>.yaml `research`) and merge on top; later
+# layers win for scalars and extend lists.
+
+global:
+  # CoStar-owned sites: scraping them would undercut the CoStar extract terms (docs/12 §2).
+  denylist_domains: [loopnet.com, costar.com, apartments.com, homes.com, landsofamerica.com, ten-x.com,
+                     landandfarm.com, showcase.com, bizbuysell.com, cityfeet.com]
+  source_types: [assessor_card, brokerage_report, building_profile_study, press, city_filing, listing, sec_filing]
+  preferred_domains: []
+  search_query_templates:
+    building: ['"{address}" office building', '"{name}" {city} stories square feet', '"{address}" sold']
+    market: ['{submarket} office market report {year} vacancy asking rent']
+  policies: {}

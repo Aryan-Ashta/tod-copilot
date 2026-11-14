@@ -223,7 +223,7 @@ class Edit(BaseModel):          # from meeting mode or the slider
 | Method | Path | Body / result |
 | --- | --- | --- |
 | GET | `/api/locales` | The three `Locale`s |
-| POST | `/api/plan` | `{locale_id?, boundary?, area_name?, prompt, options?}` → `{plan_id}`; starts the run. No boundary: whole recorded locale. Boundary inside a recorded bbox: sub-area plan on recorded data (parcels, buildings and demand clipped). Elsewhere in Harris County or Los Angeles County: recorded live into `cache/areas/<id>/` first (409 when `DEMO_OFFLINE=1`); legal rules follow the city the area mostly lies in. 422 for invalid, too large (`area_max_km2`) or unsupported boundaries. `options` default to `parse_prompt(prompt)` |
+| POST | `/api/plan` | `{locale_id?, boundary?, area_name?, prompt, options?}` → `{plan_id}`; starts the run. No boundary: whole recorded locale. Boundary inside a recorded bbox: sub-area plan on recorded data (parcels, buildings and demand clipped). Elsewhere in any US county: the county is onboarded if needed (docs/12 §15), then the area is recorded live into `cache/areas/<id>/` (409 when `DEMO_OFFLINE=1`); legal rules follow the city the area mostly lies in, else the county. 422 for invalid, too large (`area_max_km2`) or unsupported boundaries. `options` default to `parse_prompt(prompt)` |
 | GET | `/api/plan/{id}/stream` | SSE events; `?replay=1` replays a recorded run |
 | GET | `/api/plan/{id}` | Full `Plan` |
 | POST | `/api/plan/{id}/rescore` | `{edits: Edit[]}` → `{plan, deltas}` in under 1 s |

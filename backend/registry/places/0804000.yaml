@@ -1,0 +1,22 @@
+# Managed by backend/onboard (docs/12 §14). status: reviewed = checked by a person; agent_verified = code checks passed; not_found = no public source found.
+fips: 0804000
+name: Aurora city
+basename: Aurora
+state: 08
+county: 08031
+jurisdiction: co_aurora
+zoning:
+  status: agent_verified
+  layers:
+  - url: https://ags.auroragov.org/aurora/rest/services/OpenData/MapServer/20
+    field: DISTRICT_ID
+    label: City of Aurora zoning
+    prefix: ''
+  verified_at: '2026-11-14T20:36:20+00:00'
+  model: anthropic:claude-haiku-5-5
+utilities:
+  status: not_found
+  layers: []
+  reason: water_main; sewer_main
+  verified_at: '2026-11-14T20:37:24+00:00'
+  model: anthropic:claude-haiku-5-5

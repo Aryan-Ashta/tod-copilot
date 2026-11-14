@@ -1,0 +1,35 @@
+[
+ {
+  "id": "osm:698102751",
+  "parcel_id": "1363420010001",
+  "fields": {
+   "year_built": {
+    "value": 2016,
+    "source_url": "https://downtownhouston.org/investment/marriott-marquis-houston",
+    "note": "\"Project Status Complete Year Completed 2016 Asset Type Hotel\" (unknown source type, as of unknown; agent-found, code-verified)",
+    "confidence": "low",
+    "retrieved_at": "2026-11-14T19:04:02.330127+00:00"
+   },
+   "name": {
+    "value": "Marriott Marquis Houston",
+    "source_url": "https://downtownhouston.org/investment/marriott-marquis-houston",
+    "note": "\"Marriott Marquis Houston Category: Investment Map Address 1777 Walker St\" (unknown source type, as of unknown; agent-found, code-verified)",
+    "confidence": "low",
+    "retrieved_at": "2026-11-14T19:04:02.330127+00:00"
+   }
+  }
+ },
+ {
+  "id": "osm:44130646",
+  "parcel_id": "0010680000009",
+  "fields": {
+   "year_renovated": {
+    "value": 2011,
+    "source_url": "https://jpmctowerhouston.com/601-travis/",
+    "note": "\"The building was renovated in 2011 to include a new lobby design by Ken Harry\" (listing, as of unknown; agent-found, code-verified)",
+    "confidence": "low",
+    "retrieved_at": "2026-11-14T19:03:53.613026+00:00"
+   }
+  }
+ }
+]

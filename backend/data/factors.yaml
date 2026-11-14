@@ -685,3 +685,121 @@ area_max_km2:
   verified: false
   note: "team design choice, labeled: largest drawn boundary accepted. Measured 2026-11-14: ~26 km² areas (Houston
     Montrose-Museum, West LA) recorded live in ~4 min and planned in 6-10 s; rescore 2-4 ms"
+research_max_buildings:
+  label: buildings researched per run
+  value: 30
+  unit: buildings
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §5.1): the gap queue keeps the top N buildings by score swing; caps
+    LLM and search spend per locale or drawn area"
+research_min_swing:
+  label: min score swing worth researching
+  value: 0.05
+  unit: score 0-1 (change in ConversionCandidate.overall)
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §5.1): a building whose missing fields could move its overall reuse
+    score by less than this is not researched"
+research_value_tolerance_rel:
+  label: claimed vs parsed value tolerance
+  value: 0.01
+  unit: fraction of the parsed value
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §7 check 3): the LLM's value must equal the value code parses out of
+    the quote within this relative rounding tolerance (e.g. '$24.62M' vs 24,620,000); the parsed value is stored"
+research_identity_window_chars:
+  label: identity check window
+  value: 1500
+  unit: characters of page text on each side of the quote
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §7 check 7): the building's address (number and street) or name must
+    appear within this many characters of the quote on the cached page"
+research_osm_levels_max_diff:
+  label: max stories difference vs OSM
+  value: 2
+  unit: stories
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §7 cross-check osm_levels_within_2): a researched story count more
+    than this far from OSM building:levels is rejected"
+research_area_ratio_range:
+  label: rentable area / (footprint x stories) range
+  value: [0.3, 1.3]
+  unit: ratio
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §7 cross-check area_vs_footprint): rentable area is usually 80-90%
+    of gross; podium footprints and setback towers widen the range. Outside it, the area likely belongs to
+    another building or a campus"
+research_footprint_slack:
+  label: typical floor vs footprint slack
+  value: 1.25
+  unit: ratio
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §7 cross-check typical_floor_le_footprint): a typical floor may
+    exceed the mapped footprint by at most this factor (OSM outlines and overhangs are approximate)"
+onboard_parcel_min_sample:
+  label: min parcels in an onboarding sample
+  value: 20
+  unit: parcels
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §14 parcel verifier): a proposed parcel layer must return at least this
+    many parcels in the sample box"
+onboard_parcel_id_share:
+  label: min share of sampled parcels with a unique id
+  value: 0.95
+  unit: share
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §14 parcel verifier): ids must be present and unique on nearly every parcel"
+onboard_parcel_address_share:
+  label: min share of sampled parcels with an address
+  value: 0.5
+  unit: share
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §14 parcel verifier): vacant and right-of-way parcels often lack an
+    address, so half is enough"
+onboard_parcel_use_share:
+  label: min share of sampled parcels with a use code
+  value: 0.8
+  unit: share
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §14 parcel verifier): the land-use map needs a code on most parcels"
+onboard_land_use_code_page_share:
+  label: min parcel share whose use code is on the code-list page
+  value: 0.8
+  unit: share
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §14 land-use verifier): count-weighted share of sampled parcels whose
+    code or description appears verbatim on the fetched code list"
+onboard_land_use_extend_share:
+  label: unmapped parcel share that triggers a land-use map extension
+  value: 0.05
+  unit: share
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §14): a drawn area whose parcels carry this share of codes missing from
+    the map runs the use-code mapper on those codes"
+onboard_zoning_field_share:
+  label: min share of zoning polygons with a code
+  value: 0.9
+  unit: share
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §14 zoning verifier): sampled polygons with a non-empty zoning field"
+onboard_sample_box_m:
+  label: onboarding sample box side
+  value: 3000
+  unit: m
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (docs/12 §14): side of the square around the area centre (or county interior
+    point) in which proposed layers are sampled"

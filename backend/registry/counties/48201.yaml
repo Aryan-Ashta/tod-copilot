@@ -1,0 +1,71 @@
+# Managed by backend/onboard (docs/12 §14). status: reviewed = checked by a person; agent_verified = code checks passed; not_found = no public source found.
+fips: '48201'
+name: Harris County
+state: '48'
+jurisdiction: tx_harris_county
+recorded_locale: houston_downtown
+licensed_sources: [costar, matterport, vexcel]
+sample_lonlat: [-95.3930371, 29.857273]
+transit_feeds:
+  status: reviewed
+  feeds:
+  - {id: mdb-2060, url: 'https://files.mobilitydatabase.org/mdb-2060/latest.zip', provider: METRO}
+parcels:
+  status: reviewed
+  url: https://www.gis.hctx.net/arcgis/rest/services/HCAD/Parcels/MapServer/0
+  where: Stacked=0 OR Stacked IS NULL
+  fields:
+    id: {field: HCAD_NUM}
+    address: {join: [site_str_pfx, site_str_num, site_str_name, site_str_sfx, site_str_sfx_dir]}
+    owner: {field: owner_name_1}
+    last_sale_year: {epoch_ms_year: new_owner_date}
+    assessed_value_usd: {number: total_market_val}
+    area_acres: {number: Acreage}
+    raw_use: {field: state_class}
+    raw_use_desc: {field: land_use}
+    city: {field: site_city}
+  notes:
+    assessed_value_usd: HCAD total market value
+    last_sale_year: HCAD new_owner_date (ownership transfer)
+  evidence_url: https://www.gis.hctx.net/arcgis/rest/services/HCAD/Parcels/MapServer/0
+land_use:
+  status: reviewed
+  field: raw_use
+  source_url: https://hcad.org/hcad-resources/hcad-appraisal-codes/
+  note: HCAD state class codes. F1 'Real, Commercial' does not separate office from retail; it maps to retail and buildings refine it.
+  building_type_reliable: false  # do not give buildings a property_type from these codes
+  default: other
+  map:
+    A1: residential
+    A2: residential
+    A3: residential
+    A4: residential
+    B1: residential
+    B2: residential
+    B3: residential
+    B4: residential
+    O1: residential
+    C1: vacant
+    C2: vacant
+    C3: vacant
+    F1: retail
+    F2: industrial
+    HH: residential
+    J1: public
+    J2: public
+    J3: public
+    J4: public
+    J5: public
+    J6: public
+    J7: public
+    X1: public
+    X2: public
+    X3: other
+    X4: public
+    XE: public
+    XG: public
+    XI: public
+    XJ: public
+    XV: public
+research:
+  preferred_domains: []

@@ -1,5 +1,6 @@
 id: brevard_cocoa
 name: 'Brevard County, FL: Cocoa'
+market_scope: Brevard County   # office market name for the market researcher (docs/12 §5.3)
 purpose: 'Fallback and greenfield transit: plan with no CoStar data, in a car-dependent
   county, around a station that doesn''t exist yet, with flood risk'
 data_tier: public_only

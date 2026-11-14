@@ -1,0 +1,8 @@
+{
+ "source": "agent_research",
+ "urls": [
+  "backend/fixtures/houston_downtown/agent_research/buildings_source.yaml"
+ ],
+ "retrieved_at": "2026-11-14T19:08:43.739690+00:00",
+ "note": "agent-found, code-verified public facts (docs/12); each field carries its quote, confidence and retrieval time"
+}

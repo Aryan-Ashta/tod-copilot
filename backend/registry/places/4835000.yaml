@@ -1,0 +1,21 @@
+# Managed by backend/onboard (docs/12 §14). status: reviewed = checked by a person; agent_verified = code checks passed; not_found = no public source found.
+fips: '4835000'
+name: Houston city
+basename: Houston
+state: '48'
+county: '48201'
+jurisdiction: houston
+zoning: {status: reviewed, none: true, note: Houston has no zoning}
+utilities:
+  status: reviewed
+  layers:
+  - kind: sewer_main
+    url: https://geohwp.houstontx.gov/arcgis/rest/services/01_BaseData_Infrastructure/Sewer_Network/FeatureServer/11
+    where: 1=1
+    label: City of Houston Public Works public gravity sewer mains
+  # existing potable distribution (1) and transmission (2) mains; drops private service connections and "do not tap"
+  # mains, which cannot serve a building
+  - kind: water_main
+    url: https://geogimsms.houstontx.gov/arcgis/rest/services/HW/OutsideWater_gx/MapServer/37
+    where: SUBTYPECD IN (1,2) AND LIFECYCLESTATUS = 'E' AND WATERTYPE = 'POT' AND (PIPETYPE IS NULL OR PIPETYPE NOT IN ('PSC','NOTAP'))
+    label: City of Houston Public Works water distribution and transmission mains

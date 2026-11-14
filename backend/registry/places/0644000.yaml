@@ -1,0 +1,17 @@
+# Managed by backend/onboard (docs/12 §14). status: reviewed = checked by a person; agent_verified = code checks passed; not_found = no public source found.
+fips: '0644000'
+name: Los Angeles city
+basename: Los Angeles
+state: '06'
+county: '06037'
+jurisdiction: los_angeles
+zoning:
+  status: reviewed
+  layers:
+  - {url: 'https://maps.lacity.org/lahub/rest/services/City_Planning_Department/MapServer/8', field: ZONE_CMPLT,
+     label: City of LA Generalized Zoning, prefix: ''}
+utilities:
+  status: reviewed
+  layers:
+  - {kind: sewer_main, url: 'https://maps.lacity.org/lahub/rest/services/Sewer_Information/MapServer/9', where: 1=1,
+     label: LA Sanitation sewer pipes}

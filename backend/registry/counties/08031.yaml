@@ -1,0 +1,96 @@
+# Managed by backend/onboard (docs/12 §14). status: reviewed = checked by a person; agent_verified = code checks passed; not_found = no public source found.
+fips: 08031
+name: Denver County
+state: 08
+jurisdiction: co_denver_county
+sample_lonlat:
+- -104.8811054
+- 39.7618502
+transit_feeds:
+  status: agent_verified
+  feeds:
+  - id: mdb-172
+    url: https://files.mobilitydatabase.org/mdb-172/latest.zip
+    provider: Colorado Mountain Express
+  - id: mdb-178
+    url: https://files.mobilitydatabase.org/mdb-178/latest.zip
+    provider: Regional Transportation District (RTD)
+  - id: mdb-2280
+    url: https://files.mobilitydatabase.org/mdb-2280/latest.zip
+    provider: Regional Transportation District (RTD)
+  - id: mdb-2395
+    url: https://files.mobilitydatabase.org/mdb-2395/latest.zip
+    provider: Via Mobility
+  - id: mdb-607
+    url: https://files.mobilitydatabase.org/mdb-607/latest.zip
+    provider: Home James
+  source_url: https://files.mobilitydatabase.org/feeds_v2.csv
+  verified_at: '2026-11-14T20:30:17+00:00'
+  model: mobility-database-catalog
+parcels:
+  status: agent_verified
+  url: https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0
+  where: countyName = 'Denver'
+  fields:
+    id:
+      field: parcel_id
+    address:
+      field: situsAdd
+      strip: true
+    owner:
+      field: owner
+      strip: true
+    last_sale_usd:
+      number: salePrice
+      zero_is_null: true
+    assessed_value_usd:
+      number: apprValTot
+    area_acres:
+      number: landAcres
+    raw_use:
+      field: landUseDsc
+      strip: true
+    raw_use_desc:
+      field: landUseDsc
+      strip: true
+    city:
+      field: sitAddCty
+      strip: true
+  notes:
+    id: parcel_id is the state parcel number (Parcel Number)
+    address: situsAdd is the street address
+    owner: owner is the primary surface owner
+    last_sale_usd: salePrice is price of last sale; 0 treated as unknown
+    assessed_value_usd: apprValTot is the parcel total value (assessor market value)
+    area_acres: landAcres is parcel acres
+    raw_use: landUseDsc is the tax land use description
+    raw_use_desc: landUseDsc is the tax land use description
+    city: sitAddCty is the situs city name
+  coverage:
+    id: 1.0
+    address: 1.0
+    owner: 1.0
+    last_sale_usd: 0.77
+    assessed_value_usd: 1.0
+    area_acres: 0.0
+    raw_use: 1.0
+    raw_use_desc: 1.0
+    city: 0.99
+  evidence_url: https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0
+  verified_at: '2026-11-14T20:34:33+00:00'
+  model: anthropic:claude-haiku-5-5
+zoning:
+  status: agent_verified
+  layers:
+  - url: https://denvergov.org/maps/data/Zoning/MapServer/1
+    field: ZONE_DISTRICT
+    label: City and County of Denver zoning
+    prefix: 'Denver County '
+  verified_at: '2026-11-14T20:36:10+00:00'
+  model: anthropic:claude-haiku-5-5
+utilities:
+  status: not_found
+  layers: []
+  reason: water_main; sewer_main
+  verified_at: '2026-11-14T20:36:51+00:00'
+  model: anthropic:claude-haiku-5-5

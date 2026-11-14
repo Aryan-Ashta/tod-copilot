@@ -54,6 +54,8 @@ class Resolver:
 | BROADBAND | `FccBroadbandProvider` · medium | same |
 | FLOOD | `FemaProvider` · high | same |
 
+**Gap filling for building and parcel facts** (all locales and drawn areas): after CoStar and Matterport/Vexcel, `PublicResearchProvider` (hand-entered `research/`, medium) then `AgentResearchProvider` (`agent_research/`, found by the agent research pipeline at recording time and verified in code, low or medium per fact, quote in the note; `docs/12-agent-research.md`) sit above `CountyParcelProvider`. Agent research only fills fields no other source has.
+
 `TODO(kickoff)` for CoStar: endpoint, auth, rate limits, and the **exact field names** for each `Building` attribute in `schemas.py`. Write a mapping table in `backend/data/costar_fields.md` once known. Until then, implement against `fixtures/<locale>/costar/*.json` shaped like our schema, and mark the mapping as unconfirmed.
 
 `TODO(kickoff)` for utilities: check each city's open data portal for water, sewer and power layers. If none is public, the capability is missing for that locale and the infrastructure agent says so.
@@ -66,7 +68,7 @@ When there is no Matterport scan, estimate floor depth from the footprint: for a
 
 - **Provenance on everything.** Each `Sourced` value records source, confidence, `retrieved_at`, and URL when available.
 - **Missing is a value.** Agents must handle `confidence="missing"` and say what's missing.
-- **Locale-scoped.** Providers only fetch within `locale.bbox`. Drawn areas in Harris County or Los Angeles County get their own data directory (`cache/areas/<id>/`) and reuse their metro locale's sources (`Locale.sources_from`); supported county and city outlines are in `fixtures/metros/` (`record_fixtures.py --metros`).
+- **Locale-scoped.** Providers only fetch within `locale.bbox`. Drawn areas in any US county get their own data directory (`cache/areas/<id>/`) and read the county's registry sources (`backend/registry/`, filled by the onboarding agents in `backend/onboard/`, docs/12 §15); onboarded county and city outlines are in `fixtures/metros/` (`scripts/onboard.py --outlines`).
 - **Cache by request** in `cache/`. With `DEMO_OFFLINE=1`, a cache miss raises instead of calling out.
 - **Record fixtures early** with `scripts/record_fixtures.py --locale <id>`.
 - **Coordinates:** GeoJSON in WGS84; distance and area math in the locale's UTM zone.

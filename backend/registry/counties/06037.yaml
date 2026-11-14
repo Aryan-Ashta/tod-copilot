@@ -1,0 +1,74 @@
+# Managed by backend/onboard (docs/12 §14). status: reviewed = checked by a person; agent_verified = code checks passed; not_found = no public source found.
+fips: '06037'
+name: Los Angeles County
+state: '06'
+jurisdiction: ca_los_angeles_county
+recorded_locale: la_wilshire_koreatown
+licensed_sources: [costar, matterport, vexcel]
+sample_lonlat: [-118.2618616, 34.1963983]
+transit_feeds:
+  status: reviewed
+  feeds:
+  - {id: lacmta-rail, url: 'https://gitlab.com/LACMTA/gtfs_rail/-/raw/master/gtfs_rail.zip', provider: LA Metro}
+  - {id: lacmta-bus, url: 'https://gitlab.com/LACMTA/gtfs_bus/-/raw/master/gtfs_bus.zip', provider: LA Metro}
+parcels:
+  status: reviewed
+  url: https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0
+  where: 1=1
+  fields:
+    id: {field: AIN}
+    address: {field: SitusFullAddress, strip: true}
+    last_sale_year: {year: Roll_LandBaseYear, min_exclusive: 1975}
+    assessed_value_usd: {sum: [Roll_LandValue, Roll_ImpValue], require: Roll_LandValue}
+    raw_use: {field: UseType}
+    raw_use_desc: {field: UseDescription}
+    raw_code: {field: UseCode}
+    year_built: {year: YearBuilt1, min_exclusive: 1800}
+    building_sqft: {number: SQFTmain1, zero_is_null: true}
+    units: {number: Units1, zero_is_null: true}
+    city: {field: SitusCity}
+  notes:
+    assessed_value_usd: Assessor roll land + improvement (Prop 13 limited)
+    last_sale_year: Prop 13 land base year (last change in ownership)
+  evidence_url: https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer/0
+land_use:
+  status: reviewed
+  field: raw_use_desc
+  vacant_code_suffix: V
+  source_url: https://assessor.lacounty.gov/
+  note: LA County Assessor use description; a use code ending in V marks vacant land.
+  default: other
+  map:
+    Athletic & Amusement Facilities: retail
+    Auto, Recreation EQPT, Construction EQPT, Sales & Service: retail
+    Banks Savings & Loan: retail
+    Bowling Alleys: retail
+    Churches: other
+    Clubs., Lodge Halls, Fraternal Organizations: other
+    Colleges, Universities (Private): other
+    Commercial: retail
+    Five or more apartments: residential
+    Four Units (Any Combination): residential
+    Government Parcel: public
+    Homes For Aged & Others: residential
+    Hotel & Motels: hotel
+    Irrigated Farm: other
+    Lgt Manf.Sm. EQPT. Manuf Sm.Shps Instr.Manuf. Prnt Plnts: industrial
+    Office Buildings: office
+    Parking Lots (Commercial Use Properties): surface_parking
+    Professional Buildings: office
+    Restaurants, Cocktail Lounges: retail
+    Rooming Houses: residential
+    Schools (Private): other
+    Service Stations: retail
+    Shopping Centers (Neighborhood, community): retail
+    Single: residential
+    Store Combination: retail
+    Stores: retail
+    Supermarkets: retail
+    Three Units (Any Combination): residential
+    Two Units: residential
+    Warehousing, Distribution, Storage: industrial
+    Wholesale & Manufacturing Outlets: industrial
+research:
+  preferred_domains: []

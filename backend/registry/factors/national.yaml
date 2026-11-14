@@ -1,0 +1,113 @@
+# Managed by backend/onboard (docs/12 §14). Agent-researched or derived local factors; every value is verified: false until a person checks it.
+conversion_cost_usd_per_sqft:
+  value: 360
+  unit: USD/sqft
+  source_url: https://centercityphila.org/uploads/attachments/cm5vpxmcw24izdtqdzc8e3hkk-bid-class-downtown-houston-office-conversion-study-optimized-11302023.pdf
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 360, la_wilshire_koreatown 434, brevard_cocoa
+    238); not a national statistic; replace with a national source'
+hotel_conversion_cost_usd_per_sqft:
+  value: 360
+  unit: USD/sqft
+  source_url: https://www.cbre.com/insights/briefs/more-office-conversions-underway-to-revitalize-downtowns
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 360, la_wilshire_koreatown 450, brevard_cocoa
+    250); not a national statistic; replace with a national source'
+construction_cost_usd_per_unit:
+  value: 327500
+  unit: USD/unit
+  source_url: https://nmrk.imgix.net/uploads/fields/pdf-market-reports/4Q25-Houston-Multifamily-Market-Report.pdf
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 327500, la_wilshire_koreatown 429996, brevard_cocoa
+    190517); not a national statistic; replace with a national source'
+rent_usd_per_unit_month:
+  value: 1920
+  unit: USD/unit/month
+  source_url: https://files.zillowstatic.com/research/public_csvs/zori/Zip_zori_uc_sfrcondomfr_sm_month.csv
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 1920, la_wilshire_koreatown 2499, brevard_cocoa
+    1279); not a national statistic; replace with a national source'
+retail_rent_usd_sqft_yr:
+  value: 28.16
+  unit: USD/sqft/yr
+  source_url: https://partnersrealestate.com/wp-content/uploads/2026/10/Q3-2026-Houston-Retail-Quarterly-Market-Report_FINAL.pdf
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 28.16, la_wilshire_koreatown 36.6, brevard_cocoa
+    18.58); not a national statistic; replace with a national source'
+hotel_value_usd_per_key:
+  value: 187500
+  unit: USD/key
+  source_url: https://therealdeal.com/la/2026/01/03/see-las-2025-top-hotel-deals
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 207000, la_wilshire_koreatown 177000, brevard_cocoa
+    187500); not a national statistic; replace with a national source'
+per_unit_credit_equity_usd:
+  value: 133256
+  unit: USD per affordable unit
+  source_url: https://lihtcsanitycheck.com/benchmarks/
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 91668, la_wilshire_koreatown 200533, brevard_cocoa
+    133256); not a national statistic; replace with a national source'
+vmt_reduction_per_household_near_transit:
+  value: 1884
+  unit: miles/household/year
+  source_url: https://ww2.arb.ca.gov/sites/default/files/2025-09/Residential%20Transit%20Access%20-%202025%20Policy%20Brief.pdf
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 1884, la_wilshire_koreatown 1884, brevard_cocoa
+    869); not a national statistic; replace with a national source'
+bus_operating_cost_usd_per_revenue_hour:
+  value: 195.15
+  unit: USD/revenue hour
+  source_url: https://data.transportation.gov/resource/ekg5-frzt.json?mode=MB&type_of_service=DO&report_year=2025
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 195.15, la_wilshire_koreatown 246.35, brevard_cocoa
+    109.17); not a national statistic; replace with a national source'
+bus_avg_speed_kmh:
+  value: 20.17
+  unit: km/h
+  source_url: https://data.transportation.gov/resource/ekg5-frzt.json?mode=MB&type_of_service=DO&report_year=2025
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 20.17, la_wilshire_koreatown 16.21, brevard_cocoa
+    30.7); not a national statistic; replace with a national source'
+on_demand_cost_usd_per_zone_year:
+  value: 1093333
+  unit: USD/zone/year
+  source_url: http://www.golynx.com/core/fileparse.php/97315/urlt/10-23-2025-Board-Report-Pkg.pdf
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 1093333, la_wilshire_koreatown 3875000,
+    brevard_cocoa 257437); not a national statistic; replace with a national source'
+solar_kwh_per_kw_year:
+  value: 1543.1
+  unit: kWh/kW/yr
+  source_url: https://developer.nlr.gov/api/pvwatts/v8.json
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 1421.4, la_wilshire_koreatown 1678.3, brevard_cocoa
+    1543.1); not a national statistic; replace with a national source'
+affordable_rent_usd_per_unit_month:
+  value: 1137
+  unit: USD/unit/month (gross rent, includes utility allowance)
+  source_url: https://www.floridahousing.org/docs/default-source/developers-and-property-managers/compliance/limits/rent-limits/2025_rent_limits/florida-housing-rental-programs---2025-income-and-rent-limits--eff--4-1-2025-.pdf
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 1137, la_wilshire_koreatown 1704, brevard_cocoa
+    1125); not a national statistic; replace with a national source'
+transit_budget_usd:
+  value: 10000000
+  unit: USD/year
+  source_url: team choice
+  verified: false
+  scope: national
+  note: 'national fallback: median of the three recorded locales (houston_downtown 10000000, la_wilshire_koreatown 10000000,
+    brevard_cocoa 3000000); not a national statistic; replace with a national source'

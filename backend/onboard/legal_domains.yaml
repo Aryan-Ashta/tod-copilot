@@ -1,0 +1,9 @@
+# Hosts whose pages count as official legal text (docs/12 §14): a host matches when it equals or ends with an entry
+# (research.registry.domain(url), "www." stripped). Government sites (.gov, .us) plus the municipal code publishers.
+- .gov
+- .us
+- municode.com
+- amlegal.com
+- ecode360.com
+- codepublishing.com
+- generalcode.com

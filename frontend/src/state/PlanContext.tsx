@@ -186,7 +186,8 @@ function reducer(s: PlanState, a: PlanAction): PlanState {
       const agentStatus = { ...s.agentStatus }
       for (const ag of AGENTS) agentStatus[ag] = p.agent_errors[ag] ? 'error' : 'done'
       if (agentStatus.coordinator !== 'error') agentStatus.coordinator = 'done'
-      return { ...s, basePlan: p, plan: p, locale: p.locale, agentStatus, loadError: null }
+      // scoredKey reset: a reloaded plan (drawn-area agent research rebuilt it) re-applies the current edits via rescore.
+      return { ...s, basePlan: p, plan: p, locale: p.locale, agentStatus, loadError: null, scoredKey: null }
     }
     case 'load_error':
       return { ...s, loadError: a.message }
@@ -309,7 +310,13 @@ export function PlanProvider({
         .catch((e: Error) => alive && dispatch({ type: 'load_error', message: e.message }))
     const stream = (asReplay: boolean) => {
       close = openStream(planId, asReplay, {
-        onEvent: (event) => alive && dispatch({ type: 'event', event }),
+        onEvent: (event) => {
+          if (!alive) return
+          dispatch({ type: 'event', event })
+          // "Plan ready", and the later "Agent research finished" on drawn areas: the stream may stay open while
+          // research runs in the background, so load (or reload) the plan now rather than at stream end.
+          if (event.agent === 'coordinator' && event.status === 'done' && event.payload?.plan_id) loadFull()
+        },
         onEnd: () => {
           if (!alive) return
           dispatch({ type: 'stream_ended' })

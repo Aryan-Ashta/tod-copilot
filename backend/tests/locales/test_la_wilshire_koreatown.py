@@ -42,7 +42,7 @@ def test_jamison_backtest_feasible_and_units_within_25pct(plans):
     env = next(e for e in p.envelopes if e.parcel_id == b.parcel_id)
     parcel = next(x for x in p.parcels if x.id == b.parcel_id)
     acq = acquisition_basis(parcel.last_sale_usd.value, parcel.assessed_value_usd.value)
-    c, f = backtest_candidate("la_jamison_wilshire", p, conversion_paths("los_angeles", env.paths), acq,
+    c, f = backtest_candidate("la_jamison_wilshire", p, conversion_paths(env.paths), acq,
                               same_building=b)
     assert use_overall(c, "residential", f) >= f["reuse_feasible_threshold"]
     assert abs(c.est_units - bt["actual_units"]) / bt["actual_units"] <= 0.25

@@ -1,0 +1,19 @@
+# Managed by backend/onboard (docs/12 §14). status: reviewed = checked by a person; agent_verified = code checks passed; not_found = no public source found.
+fips: '1213150'
+name: Cocoa city
+basename: Cocoa
+state: '12'
+county: '12009'
+jurisdiction: brevard   # the corpus folder predates the registry; Cocoa's land development code lives there
+zoning:
+  status: reviewed
+  layers:
+  - {url: 'https://services1.arcgis.com/Tex1uhbqnOZPx6qT/arcgis/rest/services/Public_View_Cocoa_Zoning_with_Split_Lots_June_2023_view/FeatureServer/1',
+     field: Zoning, label: City of Cocoa zoning, prefix: ''}
+utilities:
+  status: reviewed
+  layers:
+  - {kind: sewer_main, url: 'https://gis.brevardfl.gov/gissrv/rest/services/Utility_Services/Other_Service_Area_WKID2881/MapServer/0',
+     where: 1=1, label: City of Cocoa sewer service area}
+  - {kind: water_main, url: 'https://gis.brevardfl.gov/gissrv/rest/services/Utility_Services/Other_Service_Area_WKID2881/MapServer/1',
+     where: 1=1, label: City of Cocoa water service area}
