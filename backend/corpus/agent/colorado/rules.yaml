@@ -1,0 +1,127 @@
+# Structured rules for Colorado (agent-built, code-checked, not reviewed).
+- path: Colorado HB 24-1304 parking minimums near transit
+  rule: eligible
+  applies_if:
+    distance_to_stop_mi:
+      lte: 0.25
+  value: true
+  cite:
+    doc_id: co_hb24_1304_signed
+    section: 29-36-106. Applicable transit service areas map.
+    quote: '(a) ONE-QUARTER MILE OF EXISTING STATIONS SERVED BY ROUTES
+
+      IDENTIFIED IN AN APPLICABLE TRANSIT PLAN FOR:
+
+      (I) COMMUTER BUS RAPID TRANSIT;
+
+      (II) COMMUTER RAIL WITH PLANNED OR SCHEDULED SERVICE THAT
+
+      IS SCHEDULED TO RUN EVERY THIRTY MINUTES OR MORE FREQUENT
+
+      BETWEEN SEVEN A.M. AND TEN A.M. AND BETWEEN FOUR P.M. AND SEVEN
+
+      P.M.;
+
+      (III) LIGHT RAIL WITH PLANNED OR SCHEDULED SERVICE THAT IS
+
+      SCHEDULED TO RUN EVERY THIRTY MINUTES OR MORE FREQUENT BETWEEN
+
+      SEVEN A.M. AND TEN A.M. AND BETWEEN FOUR P.M. AND SEVEN P.M.'
+- path: Colorado HB 24-1304 parking minimums near transit
+  rule: parking_min_per_unit
+  applies_if:
+    est_units:
+      gte: 20
+  value: 1
+  cite:
+    doc_id: co_hb24_1304_signed
+    section: 29-36-104. Limitations on minimum parking requirements for housing developments of 20+ units.
+    quote: 'NOTWITHSTANDING SECTION 29-36-103, A LOCAL GOVERNMENT MAY
+
+      IMPOSE OR ENFORCE A MINIMUM PARKING REQUIREMENT IN CONNECTION
+
+      WITH A HOUSING DEVELOPMENT PROJECT THAT IS INTENDED TO CONTAIN
+
+      TWENTY UNITS OR MORE OR CONTAIN REGULATED AFFORDABLE HOUSING BY
+
+      REQUIRING NO MORE THAN ONE PARKING SPACE PER DWELLING UNIT IN THE
+
+      HOUSING DEVELOPMENT.
+
+      (2) (a) IN ORDER TO IMPOSE A MINIMUM PARKING REQUIREMENT
+
+      PURSUANT TO SUBSECTION (1) OF THIS SECTION IN CONNECTION WITH A
+
+      HOUSING DEVELOPMENT PROJECT, A LOCAL GOVERNMENT MUST, NO LATER
+
+      THAN NINETY DAYS AFTER RECEIVING A COMPLETED APPLICATION FOR THE
+
+      HOUSING DEVELOPMENT PROJECT, PUBLICLY PUBLISH WRITTEN FINDINGS
+
+      THAT FIND THAT NOT IMPOSING OR ENFORCING A MINIMUM PARKING
+
+      REQUIREMENT IN CONNECTION WITH THE HOUSING DEVELOPMENT PROJECT
+
+      WOULD HAVE A SUBSTANTIAL NEGATIVE IMPACT.'
+- path: Colorado HB 24-1304 parking minimums near transit
+  rule: allows_uses
+  applies_if: {}
+  value:
+  - residential
+  - mixed_use
+  cite:
+    doc_id: co_hb24_1304_signed
+    section: 29-36-103. Limitations on minimum parking requirements.
+    quote: 'A MUNICIPALITY SHALL NEITHER ENACT
+
+      NOR ENFORCE LOCAL LAWS THAT ESTABLISH A MINIMUM PARKING
+
+      REQUIREMENT THAT APPLIES TO A LAND USE APPROVAL FOR A MULTIFAMILY
+
+      RESIDENTIAL DEVELOPMENT, ADAPTIVE RE-USE FOR RESIDENTIAL PURPOSES,
+
+      OR ADAPTIVE RE-USE MIXED-USE PURPOSES WHICH INCLUDE AT LEAST FIFTY
+
+      PERCENT OF USE FOR RESIDENTIAL PURPOSES'
+- path: Colorado HB 24-1304 parking minimums near transit
+  rule: approval_steps
+  applies_if: {}
+  value: TODO
+  cite:
+    doc_id: co_hb24_1304_signed
+    section: 29-36-104. Limitations on minimum parking requirements for housing developments of 20+ units.
+    quote: 'A LOCAL GOVERNMENT MUST, NO LATER
+
+      THAN NINETY DAYS AFTER RECEIVING A COMPLETED APPLICATION FOR THE
+
+      HOUSING DEVELOPMENT PROJECT, PUBLICLY PUBLISH WRITTEN FINDINGS
+
+      THAT FIND THAT NOT IMPOSING OR ENFORCING A MINIMUM PARKING
+
+      REQUIREMENT IN CONNECTION WITH THE HOUSING DEVELOPMENT PROJECT
+
+      WOULD HAVE A SUBSTANTIAL NEGATIVE IMPACT.'
+- path: Colorado HB 24-1304 parking minimums near transit
+  rule: note
+  applies_if: {}
+  value: Colorado HB 24-1304 bans minimum parking requirements for multifamily residential development and adaptive reuse
+    for residential purposes at or partially within applicable transit service areas (within 0.25 mi of qualifying transit
+    stations and bus routes) on or after June 30, 2025.
+  cite:
+    doc_id: co_hb24_1304_signed
+    section: 29-36-103. Limitations on minimum parking requirements.
+    quote: 'ON OR AFTER JUNE 30, 2025, A MUNICIPALITY SHALL NEITHER ENACT
+
+      NOR ENFORCE LOCAL LAWS THAT ESTABLISH A MINIMUM PARKING
+
+      REQUIREMENT THAT APPLIES TO A LAND USE APPROVAL FOR A MULTIFAMILY
+
+      RESIDENTIAL DEVELOPMENT, ADAPTIVE RE-USE FOR RESIDENTIAL PURPOSES,
+
+      OR ADAPTIVE RE-USE MIXED-USE PURPOSES WHICH INCLUDE AT LEAST FIFTY
+
+      PERCENT OF USE FOR RESIDENTIAL PURPOSES THAT IS WITHIN THE
+
+      MUNICIPALITY, A METROPOLITAN PLANNING ORGANIZATION, AND AT LEAST
+
+      PARTIALLY WITHIN AN APPLICABLE TRANSIT SERVICE AREA.'

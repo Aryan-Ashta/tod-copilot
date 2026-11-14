@@ -47,7 +47,8 @@ def stop_tier(attrs: dict, rules: list[dict]) -> Optional[int]:
 
 def citation(rule: dict, urls: dict[str, str]) -> Citation:
     c = rule["cite"]
-    return Citation(doc_id=c["doc_id"], section=str(c["section"]), quote=c["quote"], url=urls.get(c["doc_id"]))
+    return Citation(doc_id=c["doc_id"], section=str(c["section"]), quote=c["quote"], url=urls.get(c["doc_id"]),
+                    status=rule.get("status", "reviewed"))
 
 
 def apply_rules(target_attrs: dict, rules: list[dict], path_names: list[str],

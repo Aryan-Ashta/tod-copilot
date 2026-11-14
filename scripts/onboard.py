@@ -25,7 +25,7 @@ def main() -> None:
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--county", help="5-digit county FIPS")
     g.add_argument("--assessor", help="5-digit county FIPS: find its property-card host")
-    g.add_argument("--corpus", help="state:<fips2> | place:<geoid7> | county:<fips5>: stage a legal corpus")
+    g.add_argument("--corpus", help="state:<fips2> | place:<geoid7> | county:<fips5>: build a legal corpus")
     g.add_argument("--seed-national-factors", action="store_true")
     g.add_argument("--outlines", action="store_true")
     ap.add_argument("--only", help=f"comma-separated sections of {', '.join(SECTIONS)}")
@@ -34,7 +34,9 @@ def main() -> None:
     if a.county:
         if a.county[:2] not in registry.us_states():
             ap.error(f"{a.county}: not a US state FIPS prefix")
-        out = onboard_county(a.county, only=set(a.only.split(",")) if a.only else None, force=a.force)
+        places = [f"place:{p}" for p in registry.place_geoids() if registry.place(p).get("county") == a.county]
+        out = onboard_county(a.county, only=set(a.only.split(",")) if a.only else None, force=a.force,
+                             corpus_targets=[f"state:{a.county[:2]}", *places, f"county:{a.county}"])
     elif a.assessor:
         from backend.onboard.assessor import ensure
         out = ensure(a.assessor)

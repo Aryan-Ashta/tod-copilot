@@ -179,6 +179,7 @@ class Citation(BaseModel):
     section: str
     quote: str                  # short verbatim excerpt from the corpus
     url: Optional[str]
+    status: Literal["reviewed", "agent_verified"] = "reviewed"   # agent_verified: code-checked, not reviewed
 
 
 class LegalPath(BaseModel):

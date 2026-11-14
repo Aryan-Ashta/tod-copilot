@@ -27,13 +27,13 @@ def seed_json(url: str, params: dict | None, obj) -> None:
 
 
 def pdf(pages: list[str]) -> bytes:
-    """A minimal valid PDF with one line of Helvetica text per page (no parentheses or backslashes in the text)."""
+    """A minimal valid PDF of Helvetica text, one line per "\\n" (no parentheses or backslashes in the text)."""
     objs: list = ["<</Type/Catalog/Pages 2 0 R>>", None]
     kids = []
     for t in pages:
         pid, cid = len(objs) + 1, len(objs) + 2
         kids.append(f"{pid} 0 R")
-        s = f"BT /F1 10 Tf 40 700 Td ({t}) Tj ET"
+        s = "BT /F1 10 Tf 40 700 Td " + " ".join(f"({line}) Tj 0 -12 Td" for line in t.split("\n")) + " ET"
         objs.append(f"<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents {cid} 0 R"
                     f"/Resources<</Font<</F1 FONT 0 R>>>>>>")
         objs.append(f"<</Length {len(s)}>>stream\n{s}\nendstream")

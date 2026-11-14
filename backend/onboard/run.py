@@ -2,17 +2,18 @@
 each agent once. Called by areas.record_area the first time someone draws in a county, and by scripts/onboard.py.
 
 Order: transit (deterministic) -> parcels -> land_use -> zoning (county, then each city in the area) -> utilities
-(same targets) -> factors. A section already present (any status) is skipped unless `force`; `force` never replaces
-a `reviewed` section. One failing section never stops the others."""
+(same targets) -> corpus (legal corpus builder for each of `corpus_targets`) -> factors. A section already present
+(any status) is skipped unless `force`; `force` never replaces a `reviewed` section. One failing section never stops
+the others."""
 import threading
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
 from backend import settings
 from backend.onboard import geo, registry
 from backend.onboard.common import forget, llm_ready, sample_box, thresholds
 
-SECTIONS = ("transit", "parcels", "land_use", "zoning", "utilities", "factors")   # assessor, corpus: run elsewhere
-LLM_SECTIONS = {"parcels", "land_use", "zoning", "utilities", "factors"}
+SECTIONS = ("transit", "parcels", "land_use", "zoning", "utilities", "corpus", "factors")   # assessor: run elsewhere
+LLM_SECTIONS = {"parcels", "land_use", "zoning", "utilities", "corpus", "factors"}
 _locks: dict[str, threading.Lock] = {}
 _locks_guard = threading.Lock()
 
@@ -51,9 +52,11 @@ def _skip(section: Optional[dict], force: bool) -> bool:
 
 
 def onboard_county(fips5: str, area_bbox: Optional[tuple] = None, *, only: Optional[set[str]] = None,
-                   force: bool = False, step: Callable[[str], None] = print, model=None, search=None) -> dict:
-    """{"done": [...], "skipped": [...], "errors": [...]} for one county."""
-    from backend.onboard import land_use, parcels, transit, utilities, zoning
+                   force: bool = False, step: Callable[[str], None] = print, model=None, search=None,
+                   corpus_targets: Sequence[str] = ()) -> dict:
+    """{"done": [...], "skipped": [...], "errors": [...]} for one county. `corpus_targets` ("state:08",
+    "place:0820000", "county:08031") get a legal corpus built when they have none."""
+    from backend.onboard import corpus, land_use, parcels, transit, utilities, zoning
     from backend.onboard import factors as local_factors
     out = {"done": [], "skipped": [], "errors": []}
     want = [s for s in SECTIONS if only is None or s in only]
@@ -128,6 +131,11 @@ def onboard_county(fips5: str, area_bbox: Optional[tuple] = None, *, only: Optio
                 run(f"{section} {kind} {gid}", data.get(section),
                     lambda kind=kind, gid=gid, name=name, mod=mod: mod(kind, gid, name, fips5, area, **kw),
                     lambda kind=kind, gid=gid, section=section, agent=agent: reset(kind, gid, section, agent))
+        if "corpus" in want:
+            for t in corpus_targets:
+                run(f"corpus {t}", corpus.corpus_section(t),
+                    lambda t=t: corpus.build(t, bbox=area, **kw)["rules"] > 0,
+                    lambda t=t: corpus.forget_corpus(t))
         if "factors" in want:
             have = (local_factors.scoped_exists(f"state-{fips5[:2]}") and
                     local_factors.scoped_exists(f"county-{fips5}"))

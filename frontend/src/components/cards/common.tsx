@@ -45,6 +45,7 @@ export function CiteLink({ c }: { c: Citation }) {
     >
       {sectionLabel(c.section)} cited
       {quotes.length > 1 && <span className="text-slate"> · {quotes.length} provisions</span>}
+      {c.status === 'agent_verified' && <span className="text-amber-300"> · agent-verified, not reviewed</span>}
     </button>
   )
 }

@@ -1,6 +1,18 @@
-- doc_id: co_hb24_1313_part2
-  title: HB 24-1313 Housing in Transit-Oriented Communities (C.R.S. 29-37-101 et seq.)
+- doc_id: co_hb24_1313_signed
+  title: Colorado HB 24-1313 (Signed) - Housing in Transit-Oriented Communities
   jurisdiction: colorado
   path_name: Colorado HB 24-1313 transit-oriented communities
   url: https://content.leg.colorado.gov/sites/default/files/2024a_1313_signed.pdf
+  retrieved_at: '2026-11-14'
+- doc_id: co_hb24_1304_signed
+  title: Colorado HB 24-1304 (Signed) - Minimum Parking Requirements within Metropolitan Planning Organizations
+  jurisdiction: colorado
+  path_name: Colorado HB 24-1304 parking minimums near transit
+  url: https://leg.colorado.gov/sites/default/files/2024a_1304_signed.pdf
+  retrieved_at: '2026-11-14'
+- doc_id: co_crs2024_title29_art20
+  title: Colorado Revised Statutes 2024, Title 29, Art. 20 - Local Government Land Use Control
+  jurisdiction: colorado
+  path_name: null
+  url: https://content.leg.colorado.gov/sites/default/files/images/olls/crs2024-title-29.pdf
   retrieved_at: '2026-11-14'

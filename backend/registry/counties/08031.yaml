@@ -94,3 +94,57 @@ utilities:
   reason: water_main; sewer_main
   verified_at: '2026-11-14T20:36:51+00:00'
   model: anthropic:claude-haiku-5-5
+land_use:
+  status: agent_verified
+  field: raw_use_desc
+  map:
+    RESIDENTIAL-CONDOMINIUM: residential
+    COMMERCIAL-CONDOMINIUM: other
+    COMMERCIAL-OFFICE: office
+    RESIDENTIAL-ROWHOUSE: residential
+    COMMERCIAL-MISC IMPS: other
+    SFR Grade C: residential
+    RESIDENTIAL-MULTI UNIT APTS: residential
+    RESIDENTIAL-APARTMENT: residential
+    VACANT LAND /GENERAL COMMON ELEMENTS: vacant
+    VACANT LAND: vacant
+    COMMERCIAL-RETAIL: retail
+    COMMERCIAL-HOTEL: hotel
+    COMMERCIAL-RESTAURANT: retail
+    INDUSTRIAL-WAREHOUSE: industrial
+    SFR Grade C, D, or E, w/RK: residential
+    RETAIL W/MIXED USE: retail
+    SFR Grade B: residential
+    DENVER PARK: public
+    RESIDENTIAL-4 TO 8 UNITS: residential
+    OTHER COMMERCIAL P.I.: other
+    RESIDENTIAL-DUPLEX: residential
+    COMMERCIAL-PARKING GARAGE: parking_garage
+    RESIDENTIAL LAND CONTIGUOUS: vacant
+    SFR Grade B w/RK: residential
+    INDUSTRIAL-AUTO SERVICE GARAGE: industrial
+    INDUSTRIAL-MEETING HALL: other
+    WAREHOUSE W/MIXED USE: industrial
+    INDUSTRIAL-CHURCH: other
+    RESIDENTIAL-SENIOR CITIZEN APT: residential
+    RESIDENTIAL CONDOMINIUM: residential
+    RESIDENTIAL LAND FOR LAND/ IMPS PARCEL: vacant
+    OFFICE W/MIXED USE: office
+    RESIDENTIAL-MISC IMPS: residential
+    SFR Grade D or E: residential
+    INDUSTRIAL-FACTORY: industrial
+    INDUSTRIAL-CITY CLUB: other
+    INDUSTRIAL-CONV STORE W/PUMPS: retail
+    SFR Grade A: residential
+    POSSESSORY INTEREST: other
+    MEDICAL OFFICE W/MIXED USE: office
+    INDUSTRIAL-MISC RECREATION: other
+    INDUSTRIAL-SCHOOL: public
+    RESTAURANT W/MIXED USE: retail
+  default: other
+  building_type_reliable: false
+  source_url: https://clpropertysearch.org/denver/
+  note: agent-mapped from the code list at https://clpropertysearch.org/denver/
+  unmapped_share: 0.001
+  verified_at: '2026-11-14T23:24:09+00:00'
+  model: anthropic:claude-haiku-5-5

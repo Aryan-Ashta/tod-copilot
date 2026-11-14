@@ -205,6 +205,8 @@ export interface Citation {
   section: string
   quote: string
   url: string | null
+  /** agent_verified: built by the corpus agent and code-checked, not reviewed by a person */
+  status?: 'reviewed' | 'agent_verified'
   /** UI only: every quote when chips for the same (doc_id, section) are merged */
   quotes?: string[]
 }
