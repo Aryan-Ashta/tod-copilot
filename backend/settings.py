@@ -1,4 +1,6 @@
-"""Runtime settings loaded from `.env` (git-ignored). Names only live in `.env.example`."""
+"""Runtime settings from the environment. Secrets come from Doppler (project tod-copilot, config prd), injected by
+`doppler run -- <command>`; a git-ignored `.env` fills only variables Doppler did not set (load_dotenv never
+overrides). Names only live in `.env.example`."""
 import os
 from pathlib import Path
 

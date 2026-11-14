@@ -13,7 +13,7 @@ This is a **software-only** build. There is no hardware. Read `docs/01-product-s
 5. **Never invent API endpoints, fields or credentials.** Anything marked `TODO(kickoff)` is unknown until the team fills it in, especially CoStar field names. Stop and ask, or write an interface plus a fixture-backed fake.
 6. **Every locale has a purpose.** Only the three locales in `docs/11-test-locales.md` are recorded and committed. Users may draw a sub-area inside one of them, or an area anywhere in Harris County (Houston) or Los Angeles County; nothing else is supported. Those metro areas are recorded live into `cache/areas/` (git-ignored) from the same county, CoStar, Matterport and Vexcel sources as their metro's locale, and are never committed.
 7. **Cache every external call** to `cache/` keyed by request. The demo must run with Wi-Fi off (`docs/08-demo-and-fallbacks.md`).
-8. **Secrets** go in `.env` (git-ignored). Commit `.env.example` with names only.
+8. **Secrets** live in Doppler: project `tod-copilot`, config `prd` (pinned in `doppler.yaml`). Run backend commands under `doppler run --`, which injects them as environment variables. Never commit a secret; `.env.example` lists the variable names only. A local `.env` (git-ignored) still works as a fallback, but Doppler's values win when both are set.
 9. **Small, working increments.** Each task ends runnable, with a test or a script that shows it works. Don't refactor beyond the task.
 10. **The demo is the product.** When in doubt, choose what makes the 2-minute demo reliable over what makes the code general.
 
@@ -45,11 +45,14 @@ scripts/              precompute_demo.py, record_fixtures.py
 
 ## Commands (keep these working)
 
-- `uv run uvicorn backend.app:app --reload` starts the API on :8000
-- `cd frontend && npm run dev` starts the UI on :5173
-- `uv run pytest` runs unit and locale tests
-- `uv run python scripts/precompute_demo.py` builds the cached demo runs for all three locales
-- `DEMO_OFFLINE=1` makes every provider read fixtures/cache only
+- `doppler run -- uv run uvicorn backend.app:app --reload` starts the API on :8000
+- `cd frontend && npm run dev` starts the UI on :5173 (needs no secrets)
+- `doppler run -- uv run pytest` runs unit and locale tests
+- `doppler run -- uv run python scripts/precompute_demo.py` builds the cached demo runs for all three locales
+- `doppler run -- uv run python scripts/record_fixtures.py --locale <id>` records fixtures (Matterport/Vexcel keys come from Doppler)
+- `DEMO_OFFLINE=1` makes every provider read fixtures/cache only; the offline demo needs no secrets, so `DEMO_OFFLINE=1 uv run uvicorn backend.app:app` works without Doppler or Wi-Fi
+- First time on a machine: `doppler login`, then `doppler setup` in the repo root (reads `doppler.yaml`)
+- Doppler injects secrets at process start: after changing a secret in Doppler, restart the API
 
 ## Conventions
 

@@ -1,9 +1,10 @@
 # CoStar, Matterport and Vexcel field mapping
 
 Source data: the CoStar HackPrinceton data kit (`cache/costar/`, from `/costar-keys` in the track Discord) and the
-Matterport and Vexcel APIs with the team's keys (`.env`). Recorded by `scripts/record_fixtures.py --only
-costar,matterport,vexcel` into `backend/fixtures/<locale>/{costar,matterport,vexcel}/`. All three are licensed for
-hackathon use only, so those fixture folders are git-ignored.
+Matterport and Vexcel APIs with the team's keys (Doppler `tod-copilot` / `prd`). Recorded by
+`doppler run -- uv run python scripts/record_fixtures.py --only costar,matterport,vexcel` into
+`backend/fixtures/<locale>/{costar,matterport,vexcel}/`. All three are licensed for hackathon use only, so those
+fixture folders are git-ignored.
 
 Only non-housing CoStar properties inside the locale bbox are recorded (land, multifamily, residential and homes are
 skipped: they are not building-reuse candidates). Each is linked to the largest OSM footprint within about 25 m of
