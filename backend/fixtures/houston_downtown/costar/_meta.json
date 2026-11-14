@@ -1,8 +1,0 @@
-{
- "source": "costar_fixture",
- "urls": [
-  "backend/fixtures/houston_downtown/costar/buildings_source.yaml"
- ],
- "retrieved_at": "2026-11-14T06:40:48.257493+00:00",
- "note": "hand-entered from cited public reporting; TODO(kickoff): replace with CoStar export"
-}

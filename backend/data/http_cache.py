@@ -1,6 +1,7 @@
 """Every external call goes through here, cached to cache/http keyed by request (AGENTS.md rule 7)."""
 import hashlib
 import json
+import time
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
@@ -56,3 +57,27 @@ def evict(url: str, params: Optional[dict] = None) -> None:
     """Drop a cached response (e.g. an HTTP-200 body that carries an API error)."""
     for p in (settings.CACHE_DIR / "http").glob(f"{cache_key(url, params)}.*"):
         p.unlink()
+
+
+def cached_post(url: str, body: dict, *, headers: Optional[dict] = None, auth: Optional[tuple] = None,
+                timeout: float = 120.0, retry_429: int = 5) -> Any:
+    """POST JSON with the same cache rules as cached_get. The key is the URL and body only, never credentials."""
+    d = settings.CACHE_DIR / "http"
+    key = hashlib.sha256(f"POST {url} {json.dumps(body, sort_keys=True)}".encode()).hexdigest()
+    path = d / f"{key}.json"
+    if path.exists():
+        return json.loads(path.read_bytes())
+    if settings.OFFLINE:
+        raise OfflineCacheMiss(url)
+    h = {"User-Agent": USER_AGENT, **(headers or {})}
+    for attempt in range(retry_429 + 1):
+        r = httpx.post(url, json=body, headers=h, auth=auth, timeout=timeout)
+        if r.status_code != 429 or attempt == retry_429:
+            break
+        time.sleep(min(2 ** attempt, 30))
+    r.raise_for_status()
+    d.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(r.content)
+    (d / f"{key}.meta.json").write_text(json.dumps(
+        {"url": url, "body": body, "retrieved_at": datetime.now(timezone.utc).isoformat()}))
+    return r.json()

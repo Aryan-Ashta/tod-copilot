@@ -1,9 +1,9 @@
-"""CoStarProvider: reads fixtures/<locale>/costar/*.json shaped like our schema.
+"""CoStarProvider: the CoStar HackPrinceton data extract (Houston and LA), recorded by
+`scripts/record_fixtures.py --only costar` into fixtures/<locale>/costar/*.json (git-ignored: hackathon use only).
 
-TODO(kickoff): CoStar endpoint, auth, rate limits and exact field names (backend/data/costar_fields.md).
-Until then the fixtures are hand-entered from cited public reporting (source "costar_fixture", medium).
+Field mapping and derivations: backend/data/costar_fields.md.
 """
-from backend.data.providers._base import features, fx, load_json, prov, retrieved
+from backend.data.providers._base import fx, load_json, prov, retrieved
 from backend.data.resolver import Capability
 from backend.schemas import Locale, Sourced
 
@@ -11,29 +11,39 @@ FILES = {Capability.PARCELS: "parcels.json", Capability.OWNERSHIP_SALES: "parcel
          Capability.LEASES: "leases.json", Capability.BUILDING_ATTRS: "buildings.json"}
 
 
-class CoStarProvider:
-    name = "costar_fixture"
+class FixtureRecordProvider:
+    """Records shaped `{"id", "parcel_id"?, "fields": {field: {"value", "source_url", "note"}}}`."""
+    name = ""
+    folder = ""
+    confidence = "medium"
+    files = FILES
 
     def covers(self, locale: Locale, cap: Capability) -> bool:
-        if locale.data_tier != "costar_full" or cap not in FILES:
+        if cap not in self.files:
             return False
-        p = fx(locale.id, "costar", FILES[cap])
-        if not p.exists():
-            return False
-        return cap != Capability.LEASES or bool(load_json(p))
+        p = fx(locale.id, self.folder, self.files[cap])
+        return p.exists() and bool(load_json(p))
 
     def fetch(self, locale: Locale, cap: Capability, **kw) -> list[dict]:
-        at = retrieved(locale.id, "costar")
+        at = retrieved(locale.id, self.folder)
         out = []
-        for rec in load_json(fx(locale.id, "costar", FILES[cap])):
+        for rec in load_json(fx(locale.id, self.folder, self.files[cap])):
             row = {"id": rec["id"]}
             if rec.get("parcel_id"):
                 row["parcel_id"] = rec["parcel_id"]
-            for field, v in rec["fields"].items():
-                row[field] = Sourced(value=v["value"], prov=prov(self.name, "medium", at, v.get("source_url"),
+            if rec.get("geometry"):
+                row["geometry"] = rec["geometry"]
+            for field, v in rec.get("fields", {}).items():
+                row[field] = Sourced(value=v["value"], prov=prov(self.name, self.confidence, at, v.get("source_url"),
                                                                  v.get("note")))
             out.append(row)
         return out
 
 
-__all__ = ["CoStarProvider", "features"]
+class CoStarProvider(FixtureRecordProvider):
+    name = "costar"
+    folder = "costar"
+    confidence = "high"
+
+    def covers(self, locale: Locale, cap: Capability) -> bool:
+        return locale.data_tier == "costar_full" and super().covers(locale, cap)

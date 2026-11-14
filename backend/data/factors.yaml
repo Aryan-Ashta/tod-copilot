@@ -547,3 +547,24 @@ broadband_served_share_min:
   verified: false
   note: "team design choice, labeled: a cell counts as served at 100/20 Mbps when more than this share of its FCC
     broadband serviceable locations are served (FCC BDC Dec 2025 via Esri Living Atlas)"
+vexcel_surface_parking_hardscape_min_pct:
+  value: 50
+  unit: pct of parcel area that is hardscape (Vexcel Elements)
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled: a parcel with no structure counts as surface parking when at least this share
+    of it is hardscape, matching the 50% OSM surface-parking overlay rule"
+walk_snap_nodes:
+  value: 8
+  unit: walk-network nodes
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled: a parcel or building enters the walk network at whichever of its this-many
+    nearest nodes gives the shortest walk (one nearest node can be a dead-end driveway that routes around the block)"
+surface_parking_min_share:
+  value: 0.5
+  unit: fraction of parcel area
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled: a parcel is classed as surface parking when imagery or OSM surface-parking
+    flags cover at least this share of its area (plan Phase 2 step 10)"

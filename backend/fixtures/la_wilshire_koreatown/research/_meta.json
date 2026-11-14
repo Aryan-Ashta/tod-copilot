@@ -1,0 +1,8 @@
+{
+ "source": "public_research",
+ "urls": [
+  "backend/fixtures/la_wilshire_koreatown/research/buildings_source.yaml"
+ ],
+ "retrieved_at": "2026-11-14T08:27:19.699843+00:00",
+ "note": "hand-entered from cited public sources (listings, press, assessor, studies); every field has its URL"
+}

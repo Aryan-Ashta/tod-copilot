@@ -1,20 +1,11 @@
-"""MatterportProvider: interiors where scanned.
-
-TODO(kickoff): Matterport access. No scan data is public, so no fixtures exist and this covers nothing.
-"""
-from backend.data.providers._base import fx, load_json, prov, retrieved
+"""MatterportProvider: interiors measured from Matterport scans (Model API), recorded by
+`scripts/record_fixtures.py --only matterport` (git-ignored: hackathon use only)."""
+from backend.data.providers.costar import FixtureRecordProvider
 from backend.data.resolver import Capability
-from backend.schemas import Locale, Sourced
 
 
-class MatterportProvider:
+class MatterportProvider(FixtureRecordProvider):
     name = "matterport"
-
-    def covers(self, locale: Locale, cap: Capability) -> bool:
-        return cap == Capability.INTERIORS and fx(locale.id, "matterport", "interiors.json").exists()
-
-    def fetch(self, locale: Locale, cap: Capability, **kw) -> list[dict]:
-        at = retrieved(locale.id, "matterport")
-        return [{"id": r["id"], **{k: Sourced(value=v["value"], prov=prov(self.name, "high", at, v.get("source_url")))
-                                   for k, v in r["fields"].items()}}
-                for r in load_json(fx(locale.id, "matterport", "interiors.json"))]
+    folder = "matterport"
+    confidence = "high"
+    files = {Capability.INTERIORS: "interiors.json"}

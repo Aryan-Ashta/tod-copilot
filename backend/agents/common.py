@@ -44,7 +44,8 @@ def load_buildings_raw(ctx: RunContext) -> list[dict]:
         return ctx.cache["buildings_raw"]
     loc, r = ctx.locale, ctx.resolver
     merged: dict[str, dict] = {}
-    for cap in (Capability.BUILDING_ATTRS, Capability.INTERIORS, Capability.FOOTPRINTS):
+    # footprints before interiors: a measured roof area (Vexcel) beats one derived from the OSM footprint
+    for cap in (Capability.BUILDING_ATTRS, Capability.FOOTPRINTS, Capability.INTERIORS):
         for rec in r.get_records(loc, cap) if r.covering(loc, cap) else []:
             _merge(merged.setdefault(rec["id"], {"id": rec["id"]}), rec)
     ctx.cache["buildings_raw"] = [m for m in merged.values() if m.get("geometry")]
@@ -63,10 +64,12 @@ def load_parcels(ctx: RunContext) -> list[Parcel]:
         for rec in r.get_records(loc, cap):
             _merge(merged.setdefault(rec["id"], {"id": rec["id"]}), rec)
     recs = [m for m in merged.values() if m.get("geometry")]
-    # overlays: OSM surface parking share and building heights
-    parking = [to_utm(p["geometry"], epsg) for p in (r.get_records(loc, Capability.IMAGERY)
-                                                      if r.covering(loc, Capability.IMAGERY) else [])]
+    # overlays: surface-parking flags (Vexcel parcels, OSM lots) by area share, and building heights
+    flags = r.get_records(loc, Capability.IMAGERY) if r.covering(loc, Capability.IMAGERY) else []
+    parking = [to_utm(p["geometry"], epsg) for p in flags]
+    flag_prov = [p["surface_parking"].prov if isinstance(p.get("surface_parking"), Sourced) else None for p in flags]
     ptree = STRtree(parking) if parking else None
+    min_share = ctx.f["surface_parking_min_share"]
     braw = load_buildings_raw(ctx)
     bpts = [shape(b["geometry"]).representative_point() for b in braw]
     btree = STRtree(bpts) if bpts else None
@@ -76,14 +79,19 @@ def load_parcels(ctx: RunContext) -> list[Parcel]:
         lu = m.get("land_use")
         if lu is not None and lu.value is not None:
             gu = to_utm(g, epsg)
-            share = 0.0
+            share, by_src = 0.0, {}
             if ptree is not None and gu.area > 0:
-                hits = ptree.query(gu, predicate="intersects")
-                if len(hits):
-                    share = sum(parking[i].intersection(gu).area for i in hits) / gu.area
-            if share >= 0.5 and lu.value not in ("public", "residential"):
-                lu = Sourced(value="surface_parking", prov=lu.prov.model_copy(update={
-                    "source": "osm", "note": f"OSM surface parking covers {share:.0%} of the parcel"}))
+                for i in ptree.query(gu, predicate="intersects"):
+                    a = parking[i].intersection(gu).area / gu.area
+                    share += a
+                    if flag_prov[i] is not None:
+                        by_src[flag_prov[i].source] = (by_src.get(flag_prov[i].source, (0.0, flag_prov[i]))[0] + a,
+                                                       flag_prov[i])
+            if share >= min_share and lu.value not in ("public", "residential") and by_src:
+                top = max(by_src.values(), key=lambda t: t[0])[1]
+                lu = Sourced(value="surface_parking", prov=top.model_copy(update={
+                    "note": f"{top.source} surface-parking flags cover {min(share, 1):.0%} of the parcel "
+                            f"(factor surface_parking_min_share); {top.note or ''}".strip("; ")}))
             elif lu.value == "retail" and btree is not None:
                 stories = [braw[i]["stories"].value for i in btree.query(g, predicate="contains")
                            if isinstance(braw[i].get("stories"), Sourced) and braw[i]["stories"].value is not None]

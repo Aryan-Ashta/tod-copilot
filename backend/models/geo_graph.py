@@ -32,6 +32,17 @@ class NodeIndex:
         d, i = self.tree.query(np.asarray(xy))
         return [self.ids[j].item() for j in np.atleast_1d(i)], [float(v) for v in np.atleast_1d(d)]
 
+    def nearest_k(self, xy: list[tuple[float, float]], k: int) -> tuple[list[list], list[list[float]]]:
+        """The k nearest nodes per point (a single nearest node can be a dead-end driveway or plaza path)."""
+        if not len(xy):
+            return [], []
+        k = min(k, len(self.ids))
+        d, i = self.tree.query(np.asarray(xy), k=k)
+        d, i = np.atleast_2d(d), np.atleast_2d(i)
+        if k == 1:
+            d, i = d.T, i.T
+        return [[self.ids[j].item() for j in row] for row in i], [[float(v) for v in row] for row in d]
+
 
 def nearest_nodes(G: nx.Graph, points_xy: list[tuple[float, float]], index: NodeIndex | None = None):
     return (index or NodeIndex(G)).nearest(points_xy)

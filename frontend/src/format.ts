@@ -34,8 +34,9 @@ export function fmtValue(v: unknown): string {
 export const humanize = (s: string) => s.replace(/_/g, ' ')
 
 const SOURCE_LABELS: Record<string, string> = {
-  costar_fixture: 'CoStar (fixture)',
   costar: 'CoStar',
+  public_research: 'public research',
+  city_open_data: 'city open data',
   matterport: 'Matterport',
   vexcel: 'Vexcel',
   county_parcels: 'county records',

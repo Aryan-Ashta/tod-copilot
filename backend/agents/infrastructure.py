@@ -1,4 +1,6 @@
 """1. Infrastructure agent: where infrastructure already is, and how ready each target is to take more people."""
+from typing import Optional
+
 from shapely.geometry import LineString, Point, box, mapping, shape
 from shapely.strtree import STRtree
 
@@ -134,17 +136,21 @@ def tools(ctx: RunContext):
         targets = [(p.id, p.geometry) for p in plan_parcels] + [(b.id, b.footprint) for b in cand_b]
         cents = {tid: pt_of(g) for tid, g in targets}
         tids = list(cents)
-        tnodes, snap = (idx.nearest([lonlat_to_utm(*cents[t], epsg) for t in tids]) if idx else ([None] * len(tids),
-                                                                                                    [0.0] * len(tids)))
+        # Each target enters the network at whichever of its k nearest nodes gives the shortest walk; the single
+        # nearest node can be a dead-end driveway or plaza path that routes far around the block.
+        k = int(f["walk_snap_nodes"])
+        tnodes, snap = (idx.nearest_k([lonlat_to_utm(*cents[t], epsg) for t in tids], k) if idx
+                        else ([[]] * len(tids), [[]] * len(tids)))
+
+        def best(kind: str, nodes: list, d0s: list) -> Optional[float]:
+            vals = [ctx.dists[kind][n] + d0 for n, d0 in zip(nodes, d0s) if n in ctx.dists[kind]]
+            return round(min(vals), 1) if vals else None
+
         walk_m, station_m = {}, {}
-        for t, n, d0 in zip(tids, tnodes, snap):
-            w = {}
-            for k in ("park", "clinic", "grocery", "school", "frequent_stop", "ev"):
-                v = ctx.dists[k].get(n) if n is not None else None
-                w[k] = round(v + d0, 1) if v is not None else None
-            walk_m[t] = w
-            sv = ctx.dists["station"].get(n) if n is not None else None
-            station_m[t] = round(sv + d0, 1) if sv is not None else None
+        for t, nodes, d0s in zip(tids, tnodes, snap):
+            walk_m[t] = {kind: best(kind, nodes, d0s)
+                         for kind in ("park", "clinic", "grocery", "school", "frequent_stop", "ev")}
+            station_m[t] = best("station", nodes, d0s)
         ctx.cache["station_walk_m"] = station_m
         # flood
         flood = layers[Capability.FLOOD].value or []

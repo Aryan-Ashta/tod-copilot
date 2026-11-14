@@ -1,23 +1,11 @@
-"""VexcelProvider: imagery flags and footprints.
-
-TODO(kickoff): Vexcel access. No Vexcel data is public, so no fixtures exist and this covers nothing.
-"""
-from backend.data.providers._base import fx, load_json, prov, retrieved
+"""VexcelProvider: Vexcel API 2.0 Elements, recorded by `scripts/record_fixtures.py --only vexcel`
+(git-ignored: hackathon use only). IMAGERY = surface-parking parcels; FOOTPRINTS = building footprints and roof area."""
+from backend.data.providers.costar import FixtureRecordProvider
 from backend.data.resolver import Capability
-from backend.schemas import Locale, Sourced
-
-FILES = {Capability.IMAGERY: "imagery.json", Capability.FOOTPRINTS: "footprints.json"}
 
 
-class VexcelProvider:
+class VexcelProvider(FixtureRecordProvider):
     name = "vexcel"
-
-    def covers(self, locale: Locale, cap: Capability) -> bool:
-        return cap in FILES and fx(locale.id, "vexcel", FILES[cap]).exists()
-
-    def fetch(self, locale: Locale, cap: Capability, **kw) -> list[dict]:
-        at = retrieved(locale.id, "vexcel")
-        return [{"id": r["id"], "geometry": r.get("geometry"),
-                 **{k: Sourced(value=v["value"], prov=prov(self.name, "high", at, v.get("source_url")))
-                    for k, v in r.get("fields", {}).items()}}
-                for r in load_json(fx(locale.id, "vexcel", FILES[cap]))]
+    folder = "vexcel"
+    confidence = "high"
+    files = {Capability.IMAGERY: "imagery.json", Capability.FOOTPRINTS: "footprints.json"}

@@ -5,3 +5,7 @@ node_modules/
 frontend/dist/
 __pycache__/
 *.pyc
+# CoStar / Matterport / Vexcel data is licensed for hackathon use only: recorded fixtures stay on this machine
+backend/fixtures/*/costar/
+backend/fixtures/*/matterport/
+backend/fixtures/*/vexcel/

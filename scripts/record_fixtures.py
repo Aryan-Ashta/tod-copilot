@@ -10,15 +10,18 @@ import gzip
 import io
 import json
 import math
+import os
+import re
 import statistics
 import sys
-import re
+import time
 import zipfile
-
-import httpx  # noqa: E402
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import Optional
+
+import httpx
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -32,7 +35,7 @@ from shapely.strtree import STRtree  # noqa: E402
 
 from backend import settings  # noqa: E402
 from backend.data.geo import lonlat_to_utm, to_utm  # noqa: E402
-from backend.data.http_cache import cached_get, evict  # noqa: E402
+from backend.data.http_cache import cached_get, cached_post, evict  # noqa: E402
 
 NOW = datetime.now(timezone.utc).isoformat()
 MAX_PARCELS = 6000
@@ -397,8 +400,12 @@ def fetch_osm_xml(lid: str, b, tile: float = 0.01) -> tuple[Path, Path]:
             return False
         t = {c.get("k"): c.get("v") for c in el if c.tag == "tag"}
         hw = t.get("highway")
+        # Street-level network only: downtown Houston's pedestrian tunnels and indoor corridors would otherwise
+        # capture the nearest-node snap of buildings above them and route far around to reach the street.
+        underground = t.get("tunnel") not in (None, "no") or t.get("indoor") not in (None, "no") \
+            or hw == "corridor" or (t.get("layer") or "0").lstrip("-").isdigit() and int(t.get("layer") or 0) < 0
         return bool(hw) and t.get("area") != "yes" and not WALK_EXCLUDE.search(hw) and t.get("foot") != "no" \
-            and t.get("service") != "private" and t.get("access") != "private"
+            and t.get("service") != "private" and t.get("access") != "private" and not underground
 
     full, walk = out / f"{lid}.osm", out / f"{lid}_walk.osm"
     dump(full, lambda el: True)
@@ -829,60 +836,379 @@ def record_fcc(lid: str) -> None:
     write_notes(lid)
 
 
-# ---------------------------------------------------------------- CoStar-shaped fixtures (hand-entered)
-def record_costar(lid: str) -> None:
-    """Link hand-entered buildings_source.yaml to OSM footprints and county parcels; write costar/*.json."""
-    d = settings.FIXTURES_DIR / lid / "costar"
+# ---------------------------------------------------------------- building linking (shared)
+class Linker:
+    """Point -> the locale's OSM building and county parcel ids."""
+
+    def __init__(self, lid: str):
+        self.bfc = json.loads((settings.FIXTURES_DIR / lid / "osm" / "buildings.geojson").read_text())["features"]
+        self.pfc = json.loads((settings.FIXTURES_DIR / lid / "county" / "parcels.geojson").read_text())["features"]
+        self.bgeoms = [shape(f["geometry"]) for f in self.bfc]
+        self.pgeoms = [shape(f["geometry"]) for f in self.pfc]
+        self.btree, self.ptree = STRtree(self.bgeoms), STRtree(self.pgeoms)
+        self.parcel_ids = {f["properties"]["id"] for f in self.pfc}
+
+    def building(self, lon: float, lat: float) -> Optional[int]:
+        """Index of the largest footprint within ~25 m (geocodes land on the street side or small structures)."""
+        pt = Point(lon, lat)
+        hits = [i for i in self.btree.query(pt.buffer(0.00025), predicate="intersects")]
+        if not hits:
+            i = self.btree.nearest(pt)
+            hits = [i] if self.bgeoms[i].distance(pt) < 0.0004 else []
+        return max(hits, key=lambda i: self.bgeoms[i].area) if hits else None
+
+    def building_containing(self, geom) -> Optional[int]:
+        c = geom.representative_point()
+        hits = [i for i in self.btree.query(c, predicate="within")]
+        return max(hits, key=lambda i: self.bgeoms[i].area) if hits else None
+
+    def parcel(self, bi: Optional[int], lon: float, lat: float, numbers: tuple = ()) -> Optional[str]:
+        for n in numbers:  # assessor parcel numbers: HCAD as-is, LA AIN without dashes
+            pid = str(n).replace("-", "").strip()
+            if pid in self.parcel_ids:
+                return pid
+        g = self.bgeoms[bi] if bi is not None else Point(lon, lat)
+        ph = [i for i in self.ptree.query(g.representative_point(), predicate="intersects")]
+        if not ph:
+            return None
+        best = max(ph, key=lambda i: self.pgeoms[i].intersection(g).area) if bi is not None else ph[0]
+        return self.pfc[best]["properties"]["id"]
+
+    def bid(self, bi: int) -> str:
+        return self.bfc[bi]["properties"]["id"]
+
+
+# ---------------------------------------------------------------- hand-entered public research
+def record_research(lid: str) -> None:
+    """Link hand-entered research/buildings_source.yaml (cited public sources) to OSM footprints and parcels."""
+    d = settings.FIXTURES_DIR / lid / "research"
     src = d / "buildings_source.yaml"
     if not src.exists():
-        print("costar: no buildings_source.yaml; skipped")
+        print("research: no buildings_source.yaml; skipped")
         return
     entries = yaml.safe_load(src.read_text()) or []
-    bfc = json.loads((settings.FIXTURES_DIR / lid / "osm" / "buildings.geojson").read_text())["features"]
-    pfc = json.loads((settings.FIXTURES_DIR / lid / "county" / "parcels.geojson").read_text())["features"]
-    bgeoms = [shape(f["geometry"]) for f in bfc]
-    pgeoms = [shape(f["geometry"]) for f in pfc]
-    btree, ptree = STRtree(bgeoms), STRtree(pgeoms)
+    link = Linker(lid)
     buildings, parcels, unlinked = [], [], []
     for e in entries:
-        pt = Point(*e["lonlat"])
-        # Geocodes land on the street side or on small structures; named towers are the largest footprint
-        # within ~25 m of the geocoded point.
-        hits = [i for i in btree.query(pt.buffer(0.00025), predicate="intersects")]
-        if not hits:  # nearest footprint within ~40 m
-            i = btree.nearest(pt)
-            hits = [i] if bgeoms[i].distance(pt) < 0.0004 else []
-        if not hits:
+        bi = link.building(*e["lonlat"])
+        if bi is None:
             unlinked.append(e.get("name") or e["address"])
             continue
-        bi = max(hits, key=lambda i: bgeoms[i].area)
-        bid = bfc[bi]["properties"]["id"]
-        c = bgeoms[bi].representative_point()
-        ph = [i for i in ptree.query(c, predicate="intersects")] or [i for i in ptree.query(pt, predicate="intersects")]
-        pid = max(ph, key=lambda i: pgeoms[i].intersection(bgeoms[bi]).area) if ph else None
+        pid = link.parcel(bi, *e["lonlat"])
         fields = {k: v for k, v in (e.get("fields") or {}).items() if v and v.get("value") is not None}
         if e.get("name"):
             fields["name"] = {"value": e["name"], "source_url": next(iter(fields.values()))["source_url"] if fields
                               else e.get("geocode_url"), "note": e.get("address")}
         if e.get("address"):
             fields["address"] = {"value": e["address"], "source_url": e.get("geocode_url"), "note": "geocoded address"}
-        buildings.append({"id": bid, "parcel_id": pfc[pid]["properties"]["id"] if pid is not None else None,
-                          "fields": fields})
+        buildings.append({"id": link.bid(bi), "parcel_id": pid, "fields": fields})
         pf = {k: v for k, v in (e.get("parcel_fields") or {}).items() if v and v.get("value") is not None}
         if pf and pid is not None:
-            parcels.append({"id": pfc[pid]["properties"]["id"], "fields": pf})
+            parcels.append({"id": pid, "fields": pf})
     (d / "buildings.json").write_text(json.dumps(buildings, indent=1))
     (d / "parcels.json").write_text(json.dumps(parcels, indent=1))
-    if not (d / "leases.json").exists():
-        (d / "leases.json").write_text("[]")
-    write_meta(d, "costar_fixture", [str(src.relative_to(ROOT))],
-               note="hand-entered from cited public reporting; TODO(kickoff): replace with CoStar export")
-    print(f"costar: {len(buildings)} buildings linked, {len(parcels)} parcels; unlinked: {unlinked}")
+    write_meta(d, "public_research", [str(src.relative_to(ROOT))],
+               note="hand-entered from cited public sources (listings, press, assessor, studies); every field has its URL")
+    print(f"research: {len(buildings)} buildings linked, {len(parcels)} parcels; unlinked: {unlinked}")
+
+
+# ---------------------------------------------------------------- CoStar data extract (HackPrinceton kit)
+COSTAR_KIT = settings.CACHE_DIR / "costar"
+COSTAR_TYPES = {5: "office", 6: "retail", 1: "hotel", 2: "industrial", 7: "industrial", 11: "residential",
+                15: "residential", 16: "residential"}
+COSTAR_SKIP_TYPES = {3, 11, 15, 16}  # land and housing: not building-reuse candidates
+
+
+def _jsonl(name: str):
+    with open(COSTAR_KIT / "data" / f"{name}.jsonl") as fh:
+        for line in fh:
+            yield json.loads(line)
+
+
+def _year(s: Optional[str]) -> Optional[int]:
+    return int(s[:4]) if s else None
+
+
+def _field(value, note: str, ref: str) -> dict:
+    return {"value": value, "source_url": None, "note": f"{note} (CoStar extract {ref})"}
+
+
+def record_costar(lid: str) -> None:
+    """CoStar extract (Houston and LA) -> costar/{buildings,parcels,leases}.json for properties inside the bbox.
+
+    Licensed for hackathon use: the outputs are git-ignored and stay on this machine.
+    """
+    data = load_locale_yaml(lid)
+    if data["data_tier"] != "costar_full":
+        print("costar: public-only locale; skipped")
+        return
+    if not (COSTAR_KIT / "data" / "commercial-property.jsonl").exists():
+        print(f"costar: no extract at {COSTAR_KIT}; skipped (run /costar-keys and unzip the kit there)")
+        return
+    b = data["bbox"]
+    today = date.today().isoformat()
+    props = {}
+    for r in _jsonl("commercial-property"):
+        a = r.get("primaryAddress") or {}
+        if a.get("latitude") and in_bbox(a["longitude"], a["latitude"], b) and r["propertyType"] not in COSTAR_SKIP_TYPES:
+            props[r["id"]] = r
+    occ: dict[int, list] = defaultdict(list)
+    for r in _jsonl("location-occupancy"):
+        if r["propertyId"] in props:
+            occ[r["propertyId"]].append(r)
+    lease_listings: dict[int, list] = defaultdict(list)
+    for r in _jsonl("commercial-listing-summary"):
+        fl = r.get("forLeaseSummary")
+        if r.get("propertyId") in props and fl and fl.get("askingRateLow"):
+            lease_listings[r["propertyId"]].append(fl)
+    sales: dict[int, list] = defaultdict(list)
+    for r in _jsonl("commercial-sale-comp"):
+        for ent in r.get("entities") or []:
+            if ent.get("propertyId") in props:
+                sales[ent["propertyId"]].append((r, ent))
+    link = Linker(lid)
+    buildings: dict[str, dict] = {}
+    parcels, leases = {}, {}
+    for pid_c, r in props.items():
+        a = r["primaryAddress"]
+        ref = f"property {pid_c}"
+        bi = link.building(a["longitude"], a["latitude"])
+        parcel_id = link.parcel(bi, a["longitude"], a["latitude"], tuple(r.get("parcelNumbers") or ()))
+        events = r.get("constructionEvents") or []
+        built = [e["year"] for e in events if e["eventType"] == 2]
+        renovated = [e["year"] for e in events if e["eventType"] == 4]
+        converted = [e["year"] for e in events if e["eventType"] == 7]
+        ptype = COSTAR_TYPES.get(r["propertyType"], "other")
+        f = {}
+        if converted:
+            ptype = "residential"
+            f["property_type"] = _field(ptype, f"CoStar records a Converted event in {max(converted)}; treated as "
+                                        f"already converted to housing", ref)
+        else:
+            f["property_type"] = _field(ptype, f"propertyType {r['propertyType']}", ref)
+        street = join(a.get("streetNumber"), a.get("streetName"), a.get("streetType"))
+        f["name"] = _field(r.get("buildingName") or street, "buildingName or street address", ref)
+        f["address"] = _field(f"{street}, {a.get('city')}, {a.get('state')} {a.get('postcode', '')}".strip(),
+                              "primaryAddress", ref)
+        if r.get("buildingClass"):
+            f["building_class"] = _field({1: "A", 2: "B", 3: "C", 4: "F"}[r["buildingClass"]], "buildingClass", ref)
+        if built:
+            f["year_built"] = _field(min(built), "constructionEvents ConstructionComplete", ref)
+        if renovated:
+            f["year_renovated"] = _field(max(renovated), "constructionEvents RenovationFinished (latest)", ref)
+        for key, src in (("stories", "numStoriesAboveGrade"), ("rentable_area_sqft", "rentableBuildingAreaSquareFeet"),
+                         ("typical_floor_sqft", "grossTypicalFloorSquareFeet")):
+            if r.get(src):
+                f[key] = _field(r[src], src, ref)
+        spaces = [p.get("totalSpaces") for p in r.get("parking") or [] if p.get("totalSpaces")]
+        if spaces:
+            f["parking_spaces"] = _field(int(sum(spaces)), "sum of parking[].totalSpaces", ref)
+        rba = r.get("rentableBuildingAreaSquareFeet")
+        cur = [o for o in occ[pid_c] if not o.get("toDate") and (o.get("fromDate") or "") <= today]
+        if rba and ptype in ("office", "retail", "industrial"):
+            sf = sum((s.get("squareFeetOccupied") or 0) for o in cur for s in o.get("spaces") or [])
+            no_sf = sum(1 for o in cur if not any(s.get("squareFeetOccupied") for s in o.get("spaces") or []))
+            vac = round(max(0.0, 100 * (rba - sf) / rba), 1)
+            note = (f"100 x (RBA - SF occupied by {len(cur)} current tenancies) / RBA, per the kit's vacancy "
+                    f"definition (occupied, not leased)")
+            if no_sf:
+                note += f"; {no_sf} current tenancies record no area, so this overstates vacancy"
+            f["vacancy_pct"] = _field(vac, note, ref)
+        ll = [x for x in lease_listings[pid_c] if x.get("askingRateMeasurementType") == 1 and x.get("askingRateBasis") in (1, 2)]
+        if ll:
+            per_yr = [((x["askingRateLow"] + (x.get("askingRateHigh") or x["askingRateLow"])) / 2)
+                      * (12 if x["askingRateBasis"] == 1 else 1) for x in ll]
+            wts = [x.get("totalAvailableSquareFeet") or 1 for x in ll]
+            f["asking_rent_usd_sqft_yr"] = _field(round(sum(p * w for p, w in zip(per_yr, wts)) / sum(wts), 2),
+                                                  f"midpoint of askingRateLow/High over {len(ll)} for-lease listings, "
+                                                  f"weighted by available SF; service types vary (not normalized)", ref)
+        if bi is None:
+            print(f"  costar {pid_c} {f['name']['value']}: no OSM footprint nearby; skipped")
+            continue
+        bid = link.bid(bi)
+        rec = {"id": bid, "parcel_id": parcel_id, "costar_id": pid_c, "fields": f}
+        if bid not in buildings or (rba or 0) > (buildings[bid]["fields"].get("rentable_area_sqft", {}).get("value") or 0):
+            buildings[bid] = rec
+        if parcel_id is None:
+            continue
+        pf = {}
+        owners = [c for c in r.get("contacts") or [] if c.get("contactRole") in (3, 7) and c.get("startDate")]
+        dated = sorted(((r2.get("soldDate"), r2, ent) for r2, ent in sales[pid_c] if r2.get("soldDate")),
+                       key=lambda t: t[0])
+        if dated:
+            sold, r2, ent = dated[-1]
+            pf["last_sale_year"] = _field(_year(sold), "soldDate of the latest sale comp", f"sale {r2['id']}")
+            price = r2.get("soldForPrice") if (r2.get("numberOfEntities") or 1) == 1 else ent.get("allocatedPrice")
+            if price:
+                pf["last_sale_usd"] = _field(float(price), f"soldForPrice, salePriceStatus {r2.get('salePriceStatus')}",
+                                             f"sale {r2['id']}")
+        elif owners:
+            pf["last_sale_year"] = _field(_year(max(c["startDate"] for c in owners)),
+                                          "startDate of the current recorded/true owner contact", ref)
+        if pf:
+            parcels[parcel_id] = {"id": parcel_id, "fields": pf}
+        exp = sorted((_year(o["leaseDeal"]["expirationDate"]), sum((s.get("squareFeetOccupied") or 0)
+                                                                    for s in o.get("spaces") or []))
+                     for o in cur if (o.get("leaseDeal") or {}).get("expirationDate")
+                     and o["leaseDeal"]["expirationDate"][:10] >= today)
+        if exp:
+            total, acc, median = sum(w for _, w in exp) or len(exp), 0.0, exp[-1][0]
+            for y, w in exp:
+                acc += w or (total / len(exp))
+                if acc >= total / 2:
+                    median = y
+                    break
+            leases[parcel_id] = {"id": parcel_id, "fields": {"lease_expiry_year": _field(
+                median, f"SF-weighted median expiration of {len(exp)} current leases with a future expiration "
+                        f"(of {len(cur)} current tenancies)", ref)}}
+    d = fixture_dir(lid, "costar")
+    (d / "buildings.json").write_text(json.dumps(list(buildings.values()), indent=1))
+    (d / "parcels.json").write_text(json.dumps(list(parcels.values()), indent=1))
+    (d / "leases.json").write_text(json.dumps(list(leases.values()), indent=1))
+    write_meta(d, "costar", [str(COSTAR_KIT / "data")], note="CoStar HackPrinceton data extract; hackathon use only")
+    print(f"costar: {len(props)} properties in bbox -> {len(buildings)} buildings, {len(parcels)} parcels, "
+          f"{len(leases)} lease records")
+
+
+# ---------------------------------------------------------------- Matterport (Model API)
+MP_GRAPH = "https://api.matterport.com/api/models/graph"
+# dimensionEstimates.height is Matterport's single room-height estimate; it is 0 for rooms with sloped or split
+# ceilings (soffits, voids), whose ceiling min/max would otherwise drag the figure down.
+MP_QUERY = ("query($id: ID!) { model(id: $id) { id name rooms { "
+            "dimensionEstimates(units: imperial) { area height } } } }")
+
+
+def _weighted_median(pairs: list[tuple[float, float]]) -> Optional[float]:
+    pairs = sorted(pairs)
+    total = sum(w for _, w in pairs)
+    if not pairs or total <= 0:
+        return None
+    acc = 0.0
+    for v, w in pairs:
+        acc += w
+        if acc >= total / 2:
+            return v
+    return pairs[-1][0]
+
+
+def record_matterport(lid: str) -> None:
+    """Ceiling height per CoStar building from its Matterport scans: room-area-weighted median room height."""
+    key, token = os.getenv("MP_API_KEY"), os.getenv("MP_API_TOKEN")
+    cs = settings.FIXTURES_DIR / lid / "costar" / "buildings.json"
+    if not (key and token) or not cs.exists():
+        print("matterport: needs MP_API_KEY/MP_API_TOKEN and the costar step first; skipped")
+        return
+    models: dict[int, list[str]] = defaultdict(list)
+    with open(COSTAR_KIT / "commercial-properties.csv") as fh:
+        for row in csv.DictReader(fh):
+            if row["MatterportModelId"]:
+                models[int(row["PropertyId"])].append(row["MatterportModelId"])
+    out = []
+    for rec in json.loads(cs.read_text()):
+        pairs, used = [], []
+        for mid in models.get(rec["costar_id"], []):
+            m = (cached_post(MP_GRAPH, {"query": MP_QUERY, "variables": {"id": mid}}, auth=(key, token))
+                 .get("data") or {}).get("model")
+            dims = [x.get("dimensionEstimates") or {} for x in (m or {}).get("rooms") or []]
+            rooms = [(x["height"], x["area"]) for x in dims if (x.get("height") or 0) > 0 and (x.get("area") or 0) > 0]
+            if rooms:
+                pairs += rooms
+                used.append(mid)
+        h = _weighted_median(pairs)
+        if h is None:
+            continue
+        out.append({"id": rec["id"], "fields": {"ceiling_height_ft": {
+            "value": round(h, 1), "source_url": f"https://my.matterport.com/show/?m={used[0]}",
+            "note": f"floor-area-weighted median of Matterport room height estimates over {len(pairs)} rooms in {len(used)} "
+                    f"scan(s): {', '.join(used)}; scans cover parts of the building"}}})
+    d = fixture_dir(lid, "matterport")
+    (d / "interiors.json").write_text(json.dumps(out, indent=1))
+    write_meta(d, "matterport", [MP_GRAPH], note="Matterport Model API, hackathon spaces; hackathon use only")
+    print(f"matterport: ceiling heights for {len(out)} buildings")
+
+
+# ---------------------------------------------------------------- Vexcel (API 2.0)
+VEXCEL = "https://api.vexcelgroup.com/v2"
+VEXCEL_LAYERS = "urban,urban-r,wide-area,urban-g"
+
+
+def _vexcel_property(lon: float, lat: float, key: str) -> Optional[dict]:
+    params = {"wkt": f"POINT({lon:.7f} {lat:.7f})", "srid": 4326, "layer": VEXCEL_LAYERS, "latest": "true",
+              "include": "precomputed", "unit-system": "imperial"}
+    for attempt in range(6):
+        try:
+            return cached_get(f"{VEXCEL}/property/extract", params, headers={"X-API-KEY": key}, timeout=120)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                time.sleep(min(2 ** attempt, 30))
+                continue
+            if e.response.status_code in (403, 404):  # 403 = outside the key's area; 404 = no parcel here
+                return None
+            raise
+    return None
+
+
+def record_vexcel(lid: str) -> None:
+    """Per non-residential county parcel: Vexcel parcel + structures. Writes roof/footprint records for the OSM
+    buildings they match, and surface-parking flags for building-free parcels mostly paved."""
+    from concurrent.futures import ThreadPoolExecutor
+    from shapely import wkt as shp_wkt
+    from backend.data.factors import resolve
+    key = os.getenv("VEXCEL_API_KEY")
+    if not key:
+        print("vexcel: needs VEXCEL_API_KEY; skipped")
+        return
+    min_pct = resolve(lid)["vexcel_surface_parking_hardscape_min_pct"]
+    lu_map = yaml.safe_load((ROOT / "backend" / "data" / "land_use_maps.yaml").read_text())[lid]
+    link = Linker(lid)
+    targets = []
+    for f in link.pfc:
+        raw = re.sub(r"\s+", " ", str(f["properties"].get(lu_map["field"]) or "").strip())
+        if lu_map["map"].get(raw, lu_map["default"]) == "residential":
+            continue
+        c = shape(f["geometry"]).representative_point()
+        targets.append((f["properties"]["id"], c.x, c.y))
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda t: (t[0], _vexcel_property(t[1], t[2], key)), targets))
+    imagery, footprints, n_ok = [], {}, 0
+    for pid, d in results:
+        if not d or not d.get("features"):
+            continue
+        n_ok += 1
+        feat = d["features"][0]
+        p = feat["properties"]
+        coll = p.get("metadata.collection")
+        if p.get("structure.count") == 0 and (p.get("hardscapes.percent") or 0) >= min_pct:
+            geom = feat["geometry"] if isinstance(feat["geometry"], dict) else mapping(shp_wkt.loads(feat["geometry"]))
+            imagery.append({"id": f"vexcel:{pid}", "geometry": geom, "fields": {"surface_parking": {
+                "value": True, "source_url": None,
+                "note": f"no structure and {p['hardscapes.percent']:.0f}% hardscape on the parcel (collection {coll}; "
+                        f"factor vexcel_surface_parking_hardscape_min_pct)"}}})
+        for s in p.get("structures") or []:
+            if not s.get("footprint.wkt") or not s.get("footprint.area"):
+                continue
+            g = shp_wkt.loads(s["footprint.wkt"])
+            bi = link.building_containing(g)
+            if bi is None:
+                continue
+            bid = link.bid(bi)
+            if bid in footprints and footprints[bid]["fields"]["roof_area_sqft"]["value"] >= s["footprint.area"]:
+                continue
+            footprints[bid] = {"id": bid, "geometry": mapping(g), "fields": {"roof_area_sqft": {
+                "value": round(s["footprint.area"]), "source_url": None,
+                "note": f"Vexcel structure footprint.area (collection {coll})"}}}
+    d = fixture_dir(lid, "vexcel")
+    (d / "imagery.json").write_text(json.dumps(imagery))
+    (d / "footprints.json").write_text(json.dumps(list(footprints.values())))
+    write_meta(d, "vexcel", [f"{VEXCEL}/property/extract"], note="Vexcel API 2.0 Elements; hackathon use only")
+    print(f"vexcel: {n_ok}/{len(targets)} parcels answered; {len(imagery)} surface-parking parcels, "
+          f"{len(footprints)} building footprints")
 
 
 STEPS = {"station": record_station, "county": record_county, "osm": record_osm, "gtfs": record_gtfs,
          "demand": record_demand, "fema": record_fema, "afdc": record_afdc, "pvwatts": record_pvwatts,
-         "utilities": record_utilities, "fcc": record_fcc, "costar": record_costar}
+         "utilities": record_utilities, "fcc": record_fcc, "research": record_research, "costar": record_costar,
+         "matterport": record_matterport, "vexcel": record_vexcel}
 
 
 def main() -> None:

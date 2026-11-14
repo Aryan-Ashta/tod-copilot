@@ -4,7 +4,7 @@ from backend.data.factors import resolve
 from backend.models.reuse import ramp, score_reuse
 from backend.schemas import Building, LegalPath, Provenance, Sourced
 
-P = Provenance(source="costar_fixture", confidence="medium", retrieved_at=datetime.now(timezone.utc))
+P = Provenance(source="costar", confidence="high", retrieved_at=datetime.now(timezone.utc))
 D = Provenance(source="derived", confidence="low", retrieved_at=datetime.now(timezone.utc))
 
 

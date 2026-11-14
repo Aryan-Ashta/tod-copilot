@@ -175,7 +175,13 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
                   <dd>
                     <SourcedValue
                       s={s}
-                      fmt={(v) => (typeof v === 'number' ? `${fmtNum(v, 1)}${unit ? ` ${unit}` : ''}` : humanize(String(v)))}
+                      fmt={(v) =>
+                        typeof v !== 'number'
+                          ? humanize(String(v))
+                          : key.startsWith('year_')
+                            ? String(v)
+                            : `${fmtNum(v, 1)}${unit ? ` ${unit}` : ''}`
+                      }
                     />
                   </dd>
                 </div>

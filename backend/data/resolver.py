@@ -88,9 +88,10 @@ class Resolver:
 
 def default_resolver() -> Resolver:
     from backend.data.providers import (afdc, costar, county, demand, derived, fcc, fema, gtfs, matterport, osm,
-                                        pvwatts, utilities, vexcel)
+                                        pvwatts, research, utilities, vexcel)
     return Resolver([
         costar.CoStarProvider(), matterport.MatterportProvider(), vexcel.VexcelProvider(),
+        research.PublicResearchProvider(),
         county.CountyParcelProvider(), afdc.AfdcProvider(), fcc.FccBroadbandProvider(),
         utilities.CityOpenDataProvider(), fema.FemaProvider(), gtfs.GtfsProvider(), demand.DemandProvider(),
         pvwatts.PvwattsProvider(), osm.OsmProvider(), derived.DerivedInteriorProvider(),

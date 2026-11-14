@@ -1,0 +1,8 @@
+{
+ "source": "public_research",
+ "urls": [
+  "backend/fixtures/houston_downtown/research/buildings_source.yaml"
+ ],
+ "retrieved_at": "2026-11-14T08:27:10.064030+00:00",
+ "note": "hand-entered from cited public sources (listings, press, assessor, studies); every field has its URL"
+}
