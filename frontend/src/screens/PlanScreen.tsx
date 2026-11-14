@@ -7,7 +7,7 @@ import MapView, { type MapInsets } from '../components/MapView'
 import LayerPanel from '../components/LayerPanel'
 import TargetsPanel from '../components/TargetsPanel'
 import UncertaintyQueue from '../components/UncertaintyQueue'
-import SplitPane from '../components/SplitPane'
+import SidePanel from '../components/SidePanel'
 import { dataTierLabel } from '../format'
 
 // Layers and "more certain" bars along the top; the Targets strip (TargetsPanel) along the bottom.
@@ -50,26 +50,22 @@ function PlanView({ replay }: { replay: boolean }) {
           Meeting mode
         </Link>
       </Disclaimer>
-      <SplitPane
-        storageKey="tod.split.plan"
-        defaultFrac={0.3}
-        leftLabel="Agents and results"
-        left={
+      <SidePanel
+        storageKey="tod.plan.panel"
+        label="Agents and results"
+        panel={
           <>
             {state.plan.prompt && <p className="border-b border-rule px-5 py-2.5 text-[15px] text-slate">“{state.plan.prompt}”</p>}
             <AgentChecklist />
             <AgentCard />
           </>
         }
-        right={
-          <>
-            <MapView insets={PLAN_MAP_INSETS} />
-            <LayerPanel />
-            <UncertaintyQueue className="absolute top-3 right-3 z-10 w-96" />
-            <TargetsPanel />
-          </>
-        }
-      />
+      >
+        <MapView insets={PLAN_MAP_INSETS} />
+        <LayerPanel />
+        <UncertaintyQueue className="absolute top-3 right-3 z-10 w-96" />
+        <TargetsPanel />
+      </SidePanel>
     </div>
   )
 }
