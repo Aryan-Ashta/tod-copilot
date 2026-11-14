@@ -4,6 +4,9 @@ import { areaCheck, createPlan, geocode, getLocales, parsePrompt, stockPrompts }
 import Disclaimer from '../components/Disclaimer'
 import AreaPicker, { type PolygonGeometry } from '../components/AreaPicker'
 import { LocalePoster } from '../components/LocalePosters'
+import Segmented from '../components/Segmented'
+import Slider from '../components/Slider'
+import { useApp } from '../state/AppContext'
 import type { BBox } from '../geo'
 import {
   DEFAULT_PLAN_OPTIONS,
@@ -24,11 +27,14 @@ function metroLocaleId(label: string | null): string | null {
   return null
 }
 
-const OPTION_GROUPS: { key: keyof PlanOptions; legend: string; choices: [string, string][] }[] = [
-  { key: 'focus', legend: 'Focus', choices: [['all', 'All'], ['conversions', 'Conversions only'], ['new_build', 'New construction only']] },
-  { key: 'transit_budget', legend: 'Transit budget', choices: [['default', 'Default'], ['half', 'Half'], ['double', 'Double']] },
-  { key: 'affordable', legend: 'Affordable homes', choices: [['default', 'Default'], ['high', 'High']] },
+const FOCUS: { value: PlanOptions['focus']; label: string }[] = [
+  { value: 'all', label: 'Both' },
+  { value: 'conversions', label: 'Conversions' },
+  { value: 'new_build', label: 'New construction' },
 ]
+// Slider ranges are UI limits, not model factors: the backend accepts any multiplier above 0 and any share 0-1.
+const BUDGET_RANGE = { min: 0.25, max: 3, step: 0.05 }
+const AFFORDABLE_RANGE = { min: 0, max: 0.6, step: 0.05 }
 
 function SectionHead({ children }: { children: ReactNode }) {
   return <h2 className="wide mt-16 mb-5 border-t-2 border-ink pt-4 text-[22.5px] leading-tight font-bold">{children}</h2>
@@ -52,6 +58,8 @@ export default function PromptScreen() {
   const [replay, setReplay] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const parseSeq = useRef(0)
+  const mapBoxRef = useRef<HTMLDivElement>(null)
+  const { factorNumber } = useApp()
 
   useEffect(() => {
     getLocales()
@@ -103,7 +111,7 @@ export default function PromptScreen() {
   const wholeLocale = !boundary ? (locales?.find((x) => x.id === selected) ?? null) : null
   const areaLocaleId = wholeLocale ? wholeLocale.id : check?.kind === 'subarea' ? check.locale_id : null
   const defaultOptions =
-    options.focus === 'all' && options.transit_budget === 'default' && options.affordable === 'default'
+    options.focus === 'all' && options.transit_budget_multiplier === 1 && options.affordable_share === null
   const replayAllowed = wholeLocale !== null && defaultOptions
   const replayOn = replay && replayAllowed
   const areaOk = wholeLocale !== null || (check !== null && check.kind !== null && !check.error)
@@ -124,6 +132,20 @@ export default function PromptScreen() {
     const l = locales?.find((x) => x.id === id)
     if (l) setFlyTo([...l.bbox])
   }
+
+  // A poster click picks the area and brings the map into view, where it flies to that area.
+  const pickPoster = (id: string) => {
+    pickLocale(id)
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    mapBoxRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' })
+  }
+
+  // The sliders show real numbers: the locale's transit budget times the multiplier (just the multiplier until a
+  // locale is known), and the affordable share (factors.yaml affordable_share until the user moves it).
+  const budgetBase = chipLocaleId ? factorNumber('transit_budget_usd', chipLocaleId) : null
+  const budgetText = (m: number) => (budgetBase === null ? `${m}×` : `$${Number(((budgetBase * m) / 1e6).toFixed(2))}M/yr`)
+  const defaultShare = factorNumber('affordable_share') ?? 0
+  const share = options.affordable_share ?? defaultShare
 
   const search = async () => {
     if (!query.trim()) return
@@ -203,7 +225,7 @@ export default function PromptScreen() {
               return (
                 <button
                   key={l.id}
-                  onClick={() => pickLocale(l.id)}
+                  onClick={() => pickPoster(l.id)}
                   aria-pressed={on}
                   className="group flex flex-col justify-start text-left"
                 >
@@ -256,7 +278,7 @@ export default function PromptScreen() {
             )}
           </form>
 
-          <div className="border border-rule">
+          <div ref={mapBoxRef} className="scroll-mt-6 overflow-hidden rounded-[12px] border border-rule">
             <AreaPicker
               locales={locales ?? []}
               selectedLocale={selected}
@@ -307,26 +329,41 @@ export default function PromptScreen() {
             className="mb-6 w-full border border-rule bg-transparent p-3 text-[18px] placeholder:text-slate/70 focus:border-ink focus:outline-none"
           />
 
-          <div className="mb-8 flex flex-wrap gap-x-12 gap-y-4">
-            {OPTION_GROUPS.map((g) => (
-              <fieldset key={g.key}>
-                <legend className="mb-1 text-sm text-slate">{g.legend}</legend>
-                <div className="flex flex-wrap gap-x-4 text-[15px]">
-                  {g.choices.map(([v, label]) => (
-                    <label key={v} className="flex cursor-pointer items-center gap-1.5">
-                      <input
-                        type="radio"
-                        name={g.key}
-                        value={v}
-                        checked={options[g.key] === v}
-                        onChange={() => setOption(g.key, v as PlanOptions[typeof g.key])}
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-            ))}
+          <div className="mb-8 grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.7fr)]">
+            <div>
+              <div className="mb-2 text-sm text-slate">Focus</div>
+              <Segmented label="Focus" options={FOCUS} value={options.focus} onChange={(v) => setOption('focus', v)} />
+            </div>
+            <div>
+              <div className="mb-2 flex items-baseline justify-between text-sm">
+                <span className="text-slate">Transit budget</span>
+                <span className="font-semibold tabular-nums">{budgetText(options.transit_budget_multiplier)}</span>
+              </div>
+              <Slider
+                label="Transit budget"
+                {...BUDGET_RANGE}
+                value={options.transit_budget_multiplier}
+                valueText={budgetText(options.transit_budget_multiplier)}
+                marks={[BUDGET_RANGE.min, 1, BUDGET_RANGE.max].map((m) => ({ value: m, label: budgetText(m) }))}
+                onChange={(m) => setOption('transit_budget_multiplier', m)}
+              />
+            </div>
+            <div>
+              <div className="mb-2 flex items-baseline justify-between text-sm">
+                <span className="text-slate">Affordable homes</span>
+                <span className="font-semibold tabular-nums">{Math.round(share * 100)}% of homes</span>
+              </div>
+              <Slider
+                label="Affordable homes"
+                {...AFFORDABLE_RANGE}
+                value={share}
+                valueText={`${Math.round(share * 100)}% of homes affordable`}
+                marks={[AFFORDABLE_RANGE.min, defaultShare, AFFORDABLE_RANGE.max].map((s) => ({ value: s, label: `${Math.round(s * 100)}%` }))}
+                color="var(--color-green)"
+                // back on the factors.yaml share counts as the default, so replays stay available
+                onChange={(s) => setOption('affordable_share', Math.abs(s - defaultShare) < 1e-9 ? null : s)}
+              />
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 border-t border-rule pt-5">

@@ -1,4 +1,5 @@
-# Clickable stock prompts. `options` steer the plan (backend/agents/plan_options.py); omitted keys are default.
+# Clickable stock prompts. `options` name presets (focus; transit_budget half|double; affordable high) that
+# backend/agents/plan_options.py turns into numbers from factors.yaml; omitted keys are default.
 - id: full_plan
   locale_id: null
   title: Full TOD plan

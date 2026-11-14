@@ -84,7 +84,8 @@ def _run_llm(ctx: RunContext, notes: dict[str, str], model: str, usage: dict, ru
                               subagents=subagents)
     o = ctx.options
     msg = {"messages": [{"role": "user", "content": f"{ctx.locale.name}: {ctx.prompt}\nOptions: focus={o.focus}, "
-                                                    f"transit budget={o.transit_budget}, affordable={o.affordable}"}]}
+                                                    f"transit budget x{o.transit_budget_multiplier:g}, affordable share="
+                                                    f"{'default' if o.affordable_share is None else f'{o.affordable_share:.0%}'}"}]}
     handler = UsageMetadataCallbackHandler()
     usage["handler"] = handler   # read even when the run times out
     pool = cf.ThreadPoolExecutor(max_workers=1)

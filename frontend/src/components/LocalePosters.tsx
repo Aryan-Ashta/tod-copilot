@@ -86,6 +86,10 @@ const STYLE: Record<string, { color: string; title: string[]; scene: Scene; ink?
   brevard_cocoa: { color: ISO.mustard, title: ['Cocoa,', 'Brevard'], scene: BREVARD, ink: true },
 }
 
+/** The locale's poster colour and title, shared by its map outline and pin so card and map read as the same place. */
+export const localeColor = (id: string) => STYLE[id]?.color ?? ISO.blue
+export const localeShortName = (l: Locale) => STYLE[l.id]?.title.join(' ') ?? l.name
+
 function stationsValue(l: Locale): string {
   const planned = l.stations.filter((s) => s.mode.endsWith('_planned')).length
   return planned === l.stations.length && planned > 0 ? `${planned} planned` : String(l.stations.length)

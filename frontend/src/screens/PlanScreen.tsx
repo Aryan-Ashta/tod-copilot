@@ -7,6 +7,7 @@ import MapView from '../components/MapView'
 import LayerPanel from '../components/LayerPanel'
 import TargetsPanel from '../components/TargetsPanel'
 import UncertaintyQueue from '../components/UncertaintyQueue'
+import SplitPane from '../components/SplitPane'
 
 function PlanView({ replay }: { replay: boolean }) {
   const { state } = usePlan()
@@ -15,8 +16,8 @@ function PlanView({ replay }: { replay: boolean }) {
   const optionChips = o
     ? [
         o.focus !== 'all' && `focus: ${o.focus.replace('_', ' ')}`,
-        o.transit_budget !== 'default' && `transit budget: ${o.transit_budget}`,
-        o.affordable !== 'default' && `affordable: ${o.affordable}`,
+        o.transit_budget_multiplier !== 1 && `transit budget ×${o.transit_budget_multiplier}`,
+        o.affordable_share !== null && `affordable ${Math.round(o.affordable_share * 100)}%`,
       ].filter((c): c is string => !!c)
     : []
   return (
@@ -37,24 +38,32 @@ function PlanView({ replay }: { replay: boolean }) {
         {replay && <span className="text-slate">recorded run</span>}
         <Link
           to={`/meeting/${state.planId}`}
-          className={`border-b border-ink pb-px no-underline ${state.basePlan ? '' : 'pointer-events-none border-rule text-slate'}`}
+          aria-disabled={!state.basePlan}
+          className={`ctl px-3 py-1 text-[13px] no-underline ${state.basePlan ? '' : 'pointer-events-none border-rule text-slate shadow-none'}`}
         >
           Meeting mode
         </Link>
       </Disclaimer>
-      <div className="flex min-h-0 flex-1">
-        <aside className="flex w-[640px] shrink-0 flex-col overflow-y-auto border-r border-rule">
-          {state.plan.prompt && <p className="border-b border-rule px-5 py-2.5 text-[15px] text-slate">“{state.plan.prompt}”</p>}
-          <AgentChecklist />
-          <AgentCard />
-        </aside>
-        <main className="relative min-w-0 flex-1">
-          <MapView />
-          <LayerPanel />
-          <UncertaintyQueue className="absolute top-3 right-3 z-10 w-96" />
-          <TargetsPanel />
-        </main>
-      </div>
+      <SplitPane
+        storageKey="tod.split.plan"
+        defaultFrac={0.3}
+        leftLabel="Agents and results"
+        left={
+          <>
+            {state.plan.prompt && <p className="border-b border-rule px-5 py-2.5 text-[15px] text-slate">“{state.plan.prompt}”</p>}
+            <AgentChecklist />
+            <AgentCard />
+          </>
+        }
+        right={
+          <>
+            <MapView />
+            <LayerPanel />
+            <UncertaintyQueue className="absolute top-3 right-3 z-10 w-96" />
+            <TargetsPanel />
+          </>
+        }
+      />
     </div>
   )
 }

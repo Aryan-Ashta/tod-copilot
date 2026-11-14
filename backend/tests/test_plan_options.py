@@ -11,18 +11,19 @@ def test_parse_focus():
 
 
 def test_parse_budget_and_affordable():
-    assert parse_prompt("Design bus service on a small budget").transit_budget == "half"
-    assert parse_prompt("Expand frequent bus service and phase in BRT").transit_budget == "double"
-    assert parse_prompt("Maximize affordable housing").affordable == "high"
+    f = resolve("houston_downtown")
+    assert parse_prompt("Design bus service on a small budget").transit_budget_multiplier == f["transit_budget_option_multipliers"]["half"]
+    assert parse_prompt("Expand frequent bus service and phase in BRT").transit_budget_multiplier == f["transit_budget_option_multipliers"]["double"]
+    assert parse_prompt("Maximize affordable housing").affordable_share == f["affordable_share_high"]
     assert parse_prompt("Plan TOD around the stations") == PlanOptions()
 
 
 def test_apply_options_does_not_mutate():
     f = resolve("houston_downtown")
     before = dict(f)
-    out = apply_options(f, PlanOptions(transit_budget="half", affordable="high"))
-    assert out["transit_budget_usd"] == 5000000
-    assert out["affordable_share"] == f["affordable_share_high"]
+    out = apply_options(f, PlanOptions(transit_budget_multiplier=0.75, affordable_share=0.35))
+    assert out["transit_budget_usd"] == 7_500_000
+    assert out["affordable_share"] == 0.35
     assert f == before
 
 
