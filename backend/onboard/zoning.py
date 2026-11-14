@@ -1,6 +1,7 @@
 """Agent 3: zoning layer scout. For a city (registry place) or a county (unincorporated land), finds the public
 zoning-district polygon layer and its district-code field, or official text saying the place has no zoning. Code
 samples the layer before anything is written to the registry `zoning` section."""
+from collections.abc import Collection
 from functools import lru_cache
 from pathlib import Path
 
@@ -21,10 +22,12 @@ def legal_domains() -> tuple[str, ...]:
     return tuple(yaml.safe_load(LEGAL_DOMAINS_PATH.read_text()))
 
 
-def official(url: str) -> bool:
+def official(url: str, extra_hosts: Collection[str] = ()) -> bool:
+    """True for legal-domain hosts (backend/registry/legal_domains.yaml) and for `extra_hosts` (the hosts of a
+    jurisdiction's own registry zoning layers)."""
     host = domain(url)
-    return any(host.endswith(d) if d.startswith(".") else host == d or host.endswith("." + d)
-               for d in legal_domains())
+    return host in extra_hosts or any(host.endswith(d) if d.startswith(".") else host == d or host.endswith("." + d)
+                                      for d in legal_domains())
 
 
 def quote_on_page(url: str, quote: str) -> bool:

@@ -4,7 +4,7 @@ import { fmtDelta, fmtNum, fmtUsd } from '../format'
 import FactorHover from './FactorHover'
 import type { Scoreboard as SB } from '../types'
 
-type NumKey = Exclude<keyof SB, 'walk_by_amenity_pct' | 'funding_gap_usd'>
+type NumKey = Exclude<keyof SB, 'walk_by_amenity_pct' | 'funding_required_usd'>
 
 const ITEMS: { key: NumKey; label: string; unit: string; digits: number; factors: string[] }[] = [
   { key: 'homes', label: 'Homes', unit: '', digits: 0, factors: ['avg_unit_sqft_residential', 'site_lot_coverage_ratio', 'newbuild_assumed_stories'] },
@@ -87,16 +87,16 @@ export default function Scoreboard() {
         <div className="min-w-0 px-5 pt-2.5 pb-2">
           <div className="flex items-baseline justify-between gap-2 whitespace-nowrap">
             <FactorHover keys={['cap_rate', 'debt_ratio', 'interest_rate', 'per_unit_credit_equity_usd', 'investor_equity_share']}>
-              <span className="text-[14px] text-slate">Funding gap</span>
+              <span className="text-[14px] text-slate">Funding required</span>
             </FactorHover>
-            {state.deltas.funding_gap_usd !== undefined && state.edits.length > 0 && (
+            {state.deltas.funding_required_usd !== undefined && state.edits.length > 0 && (
               <span className="text-xs text-slate tabular-nums">
-                vs base {state.deltas.funding_gap_usd < 0 ? '−' : '+'}
-                {fmtUsd(Math.abs(state.deltas.funding_gap_usd))}
+                vs base {state.deltas.funding_required_usd < 0 ? '−' : '+'}
+                {fmtUsd(Math.abs(state.deltas.funding_required_usd))}
               </span>
             )}
           </div>
-          <div className="display text-[34px] whitespace-nowrap tabular-nums">{fmtUsd(sb.funding_gap_usd)}</div>
+          <div className="display text-[34px] whitespace-nowrap tabular-nums">{fmtUsd(sb.funding_required_usd)}</div>
           <div className="h-5" />
         </div>
       </div>

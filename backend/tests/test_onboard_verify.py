@@ -11,7 +11,7 @@ from backend.onboard.arcgis import query_params
 from backend.research import pages
 from backend.schemas import (AssessorProposal, CorpusProposal, FieldExpr, LandUseProposal, LayerRef,
                              ParcelSourceProposal, UtilitiesProposal, UtilityLayerRef, ZoningProposal)
-from backend.tests.research_helpers import seed_json, seed_page
+from backend.tests.research_helpers import pdf, seed_json, seed_page
 
 BOX = (-105.0, 39.70, -104.99, 39.71)
 LAYER = "https://gis.example.gov/arcgis/rest/services/Parcels/MapServer/0"
@@ -161,13 +161,58 @@ def test_corpus_drops_unbacked_rules_hosts_and_sections():
             {"path": "Mixed use", "rule": "max_height_ft", "value": 85, "cite": cite},
             {"path": "Mixed use", "rule": "max_height_ft", "value": 75, "cite": cite},
             {"path": "Mixed use", "rule": "eligible", "value": True,
-             "cite": {**cite, "quote": "Multifamily dwellings are permitted by right"}}],
+             "cite": {**cite, "quote": "Multifamily dwellings are permitted by right"}},
+            {"path": "Mixed use", "rule": "allows_uses", "value": ["residential"],
+             "cite": {**cite, "quote": "Multifamily dwellings are permitted by right"}},
+            {"path": "Mixed use", "rule": "approval_steps", "value": "TODO", "cite": cite}],
         "paths": [{"name": "Mixed use", "kind": "both"}],
         "not_covered": ["density bonus"]})
     v = corpus.verify(p, "co_example")
     reasons = dict(v["rejected"])
-    assert [(r["rule"], r["value"]) for r in v["rules"]] == [("max_height_ft", 75), ("eligible", True)]
+    assert [(r["rule"], r["value"]) for r in v["rules"]] == [
+        ("max_height_ft", 75), ("eligible", True), ("allows_uses", ["residential"]), ("approval_steps", "TODO")]
     assert "85 does not appear in the quote" in reasons["rule Mixed use / max_height_ft"]
     assert "not an allowed official" in reasons["document lawfirm_summary"]
     assert "not verbatim" in reasons["example_zoning_art3 / Sec. 9"]
     assert [s["heading"] for s in v["docs"][0]["sections"]] == ["Sec. 3.2"]
+
+
+def test_corpus_page_hint_hosts_and_minimum_rules():
+    url = "https://denvergov.org/zoning-code.pdf"
+    sec = "Sec. 7.1. Multifamily dwellings are permitted by right in the C-MX-8 zone district of the city."
+    seed_page(url, pdf(["Article 7 contents and definitions of this code.", sec]))
+    cite = {"doc_id": "denver_art7", "section": "Sec. 7.1", "quote": "Multifamily dwellings are permitted by right"}
+    full = {"path": "City zoning", "cite": cite}
+    p = CorpusProposal.model_validate({
+        "documents": [{"doc_id": "denver_art7", "title": "Denver zoning", "url": url, "path_name": "City zoning",
+                       "sections": [{"heading": "Sec. 7.1", "text": sec, "page": 1}]}],   # text is on page 2
+        "rules": [{**full, "rule": "eligible", "value": True, "applies_if": {"zoning_code": {"in": ["C-MX-8"]}}},
+                  {**full, "rule": "allows_uses", "value": ["residential"]},
+                  {**full, "rule": "approval_steps", "value": "TODO"},
+                  {"path": "Only eligible", "rule": "eligible", "value": True, "cite": cite}],
+        "paths": [{"name": "City zoning", "kind": "both"}, {"name": "Only eligible", "kind": "both"}],
+        "not_covered": []})
+    assert "not an allowed official" in dict(corpus.verify(p, "co_example")["rejected"])["document denver_art7"]
+    v = corpus.verify(p, "co_example", {"denvergov.org"})
+    reasons = dict(v["rejected"])
+    assert [s["heading"] for s in v["docs"][0]["sections"]] == ["Sec. 7.1"]   # wrong page hint ignored
+    assert {r["path"] for r in v["rules"]} == {"City zoning"} and list(v["paths"]) == ["City zoning"]
+    assert reasons["path Only eligible"] == "path lacks eligible/allows_uses/approval_steps rules"
+
+
+def test_corpus_section_may_cross_a_pdf_running_footer():
+    url = "https://leg.example.gov/bill.pdf"
+    seed_page(url, pdf(["29-37-205. A transit-oriented community shall designate\nPAGE 1-HOUSE BILL 24-1313",
+                        "an area as a transit center of at least fifteen units per acre.\nPAGE 2-HOUSE BILL 24-1313",
+                        "29-37-206. Reports.\nPAGE 3-HOUSE BILL 24-1313"]))
+    joined = ("29-37-205. A transit-oriented community shall designate an area as a transit center of at least "
+              "fifteen units per acre.")
+    skipped = "29-37-205. A transit-oriented community shall designate an area of at least fifteen units per acre."
+    p = CorpusProposal.model_validate({
+        "documents": [{"doc_id": "bill", "title": "Bill", "url": url, "path_name": None,
+                       "sections": [{"heading": "29-37-205", "text": joined},
+                                    {"heading": "29-37-205 elided", "text": skipped}]}],
+        "rules": [], "paths": [], "not_covered": []})
+    v = corpus.verify(p, "co_example")
+    assert [s["heading"] for s in v["docs"][0]["sections"]] == ["29-37-205"]
+    assert "not verbatim" in dict(v["rejected"])["bill / 29-37-205 elided"]

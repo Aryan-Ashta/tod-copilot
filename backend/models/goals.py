@@ -1,8 +1,8 @@
 """Goal-driven site selection and the funding report. Pure: priced sites + goals -> which sites and what funding.
 
-Sites are added in order of cheapest funding gap per goal unit. A site's surplus never offsets another site's gap
-(no cross-subsidy). If every affordable-capable site is in and the affordable goal is still short, the affordable count
-per site is raised (up to all its homes) in order of cheapest marginal gap.
+Sites are added in order of cheapest funding required per goal unit. A site's surplus never offsets the funding another
+site requires (no cross-subsidy). If every affordable-capable site is in and the affordable goal is still short, the
+affordable count per site is raised (up to all its homes) in order of cheapest marginal funding required.
 """
 from typing import NamedTuple, Optional
 
@@ -11,8 +11,8 @@ from backend.schemas import CapitalStack, ExistingAffordable, GoalProgress, Goal
 
 
 def need(m: dict) -> float:
-    """Funding a site needs: its positive gap."""
-    return max(m["gap_usd"], 0.0)
+    """Funding a site requires: its positive funding_required_usd."""
+    return max(m["funding_required_usd"], 0.0)
 
 
 class Selection(NamedTuple):
@@ -109,7 +109,7 @@ def report(sites: list[Site], stacks: list[CapitalStack], goals: PlanGoals, tran
     return GoalReport(
         goals=progress, sites_funded=len(funded),
         total_cost_usd=round(sum(x.total_cost_usd for _, x in funded), 2),
-        housing_gap_usd=round(sum(max(x.gap_usd, 0.0) for _, x in funded), 2),
+        housing_funding_required_usd=round(sum(max(x.funding_required_usd, 0.0) for _, x in funded), 2),
         tax_credit_equity_usd=round(sum(x.tax_credit_equity_usd for _, x in funded), 2),
         incentive_usd=round(sum(x.incentive_usd for _, x in funded), 2),
         transit_operating_usd_per_year=round(transit.annual_operating_cost_usd, 2) if transit else 0.0,

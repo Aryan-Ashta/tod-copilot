@@ -179,6 +179,7 @@ class Citation(BaseModel):
     section: str
     quote: str                  # short verbatim excerpt from the corpus
     url: Optional[str]
+    status: Literal["reviewed", "agent_verified"] = "reviewed"   # agent_verified: code-checked, not reviewed
 
 
 class LegalPath(BaseModel):
@@ -217,8 +218,8 @@ class DealStrategy(BaseModel):
     letter_draft: Optional[str]
 
 
-class GapToPencil(BaseModel):  # Addition: what would close an open funding gap (models/finance.gap_to_pencil)
-    gap_per_home_usd: Optional[float]                    # extra per-home incentive that closes it; None: no homes
+class GapToPencil(BaseModel):  # Addition: what would cover the funding a site still requires (models/finance)
+    funding_required_per_home_usd: Optional[float]       # extra per-home incentive that covers it; None: no homes
     cost_per_home_usd: Optional[float]
     value_per_home_usd: Optional[float]                  # stabilized value (NOI / cap rate) per home
     rent_usd_per_unit_month: float                       # rent factor used
@@ -236,7 +237,7 @@ class CapitalStack(BaseModel):
     tax_credit_equity_usd: float
     incentive_usd: float        # e.g. local per-unit rebate, when a factor exists for it
     investor_equity_usd: float
-    gap_usd: float
+    funding_required_usd: float  # outside funding still needed after the stack; <= 0: it pencils
     pencils: bool
     assumptions: list[str]      # factors.yaml keys used
     gap_to_pencil: Optional[GapToPencil] = None  # Addition: None when it pencils
@@ -272,7 +273,7 @@ class GoalReport(BaseModel):
     goals: list[GoalProgress]
     sites_funded: int
     total_cost_usd: float
-    housing_gap_usd: float            # one-time: sum of positive gaps over funded sites (no cross-subsidy)
+    housing_funding_required_usd: float  # one-time: sum of positive per-site funding required (no cross-subsidy)
     tax_credit_equity_usd: float
     incentive_usd: float
     transit_operating_usd_per_year: float
@@ -376,7 +377,7 @@ class Scoreboard(BaseModel):
     transport_co2_tonnes_per_year: float
     embodied_co2_saved_tonnes: float
     affordable_homes: int
-    funding_gap_usd: float
+    funding_required_usd: float
     walk_by_amenity_pct: dict[str, float] = {}  # Addition: % of new homes within the walk of a park / clinic / grocery
 
 

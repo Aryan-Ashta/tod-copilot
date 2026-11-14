@@ -1,4 +1,7 @@
-"""Review, and on --approve install, an agent-proposed legal corpus (backend/corpus/proposed/<jurisdiction>/).
+"""Review, and on --approve promote, an agent-built legal corpus (backend/corpus/agent/<jurisdiction>/).
+
+Agent-built rules are already used in plans, labeled agent-verified (AGENTS.md ground rule 3). Approving makes them
+curated (reviewed by a person).
 
 Usage:
   uv run python scripts/review_corpus.py <jurisdiction>                       # print review.md; changes nothing
@@ -6,8 +9,8 @@ Usage:
 
 Approving moves the documents into backend/corpus/<jurisdiction>/, appends their index entries to
 backend/corpus/index.yaml (text append: comments survive), writes rules/<jurisdiction>.yaml, merges path kinds into
-backend/corpus/paths.yaml (existing names win), deletes the staging folder and runs the corpus tests. Only a person
-runs --approve, after reading every rule against its quote (AGENTS.md ground rule 3).
+backend/corpus/paths.yaml (existing names win), deletes the agent folder and runs the corpus tests. Only a person
+runs --approve, after reading every rule against its quote.
 """
 import argparse
 import shutil
@@ -27,9 +30,9 @@ def main() -> None:
     ap.add_argument("--approve", action="store_true")
     ap.add_argument("--replace", action="store_true", help="overwrite an existing rules/<jurisdiction>.yaml")
     a = ap.parse_args()
-    stage = CORPUS / "proposed" / a.jurisdiction
+    stage = CORPUS / "agent" / a.jurisdiction
     if not (stage / "review.md").exists():
-        sys.exit(f"nothing staged at {stage}")
+        sys.exit(f"no agent-built corpus at {stage}")
     print((stage / "review.md").read_text())
     if not a.approve:
         return
@@ -37,8 +40,8 @@ def main() -> None:
     if rules_path.exists() and not a.replace:
         sys.exit(f"{rules_path} exists; pass --replace to overwrite it")
     entries = yaml.safe_load((stage / "index.yaml").read_text()) or []
-    if not entries:
-        sys.exit("no documents staged; nothing to approve")
+    if not entries or not (stage / "rules.yaml").exists():
+        sys.exit("no accepted documents or rules; nothing to approve")
     dest = CORPUS / a.jurisdiction
     dest.mkdir(exist_ok=True)
     for e in entries:
