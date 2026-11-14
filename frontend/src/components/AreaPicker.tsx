@@ -19,7 +19,11 @@ interface Props {
   onBoundary: (b: PolygonGeometry | null) => void
   onLocale: (id: string | null) => void
   flyTo: BBox | null
+  /** Screen space covered by other UI; the US view and fly-tos centre in what is left. */
+  padding?: { top: number; right: number; bottom: number; left: number }
 }
+
+const NO_PADDING = { top: 0, right: 0, bottom: 0, left: 0 }
 
 type DrawMode = 'freehand' | 'polygon' | 'rectangle'
 
@@ -70,7 +74,7 @@ function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.Fea
 }
 
 /** Map for choosing a recorded locale or drawing one boundary (polygon or rectangle) with terra-draw. */
-export default function AreaPicker({ locales, selectedLocale, boundary, onBoundary, onLocale, flyTo }: Props) {
+export default function AreaPicker({ locales, selectedLocale, boundary, onBoundary, onLocale, flyTo, padding = NO_PADDING }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MlMap | null>(null)
   const drawRef = useRef<TerraDraw | null>(null)
@@ -79,9 +83,11 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
   // Latest callbacks for the long-lived map/draw listeners.
   const onBoundaryRef = useRef(onBoundary)
   const onLocaleRef = useRef(onLocale)
+  const paddingRef = useRef(padding)
   useEffect(() => {
     onBoundaryRef.current = onBoundary
     onLocaleRef.current = onLocale
+    paddingRef.current = padding
   })
 
   useEffect(() => {
@@ -89,14 +95,16 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     const map = new MlMap({
       container: containerRef.current,
       style: BASE_STYLE,
-      bounds: US_VIEW,
+      // Opens a little wide and glides onto the US once loaded.
+      bounds: US_LIMIT,
+      fitBoundsOptions: { padding: paddingRef.current },
       maxBounds: US_LIMIT,
       renderWorldCopies: false,
       attributionControl: { compact: true },
     })
     // Offline: tile fetches fail; keep them silent.
     map.on('error', () => {})
-    map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left')
+    map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
     map.on('load', () => {
       // State lines (US Census cartographic boundaries; scripts/build_us_reference.py), under everything else.
       map.addSource('states', { type: 'geojson', data: '/geo/us-states.geojson', attribution: 'States: US Census Bureau' })
@@ -192,6 +200,8 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       })
       drawRef.current = draw
       setReady(true)
+      const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      map.fitBounds(US_VIEW, { padding: paddingRef.current, duration: still ? 0 : 2200, curve: 1.2 })
     })
     // Clicking a recorded outline selects that locale, but only while nothing is drawn or being drawn:
     // the click that finishes a drawing also reaches this handler and must not clear the new boundary.
@@ -253,12 +263,13 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
   useEffect(() => {
     if (!flyTo || !mapRef.current) return
     const [w, s, e, n] = flyTo
+    const p = paddingRef.current
     mapRef.current.fitBounds(
       [
         [w, s],
         [e, n],
       ],
-      { padding: 40 },
+      { padding: { top: p.top + 40, right: p.right + 40, bottom: p.bottom + 40, left: p.left + 40 }, duration: 1600 },
     )
   }, [flyTo])
 
@@ -291,28 +302,35 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
           ? 'Press and drag across the map; release to finish'
           : 'Pick a pin, or draw your own area'
 
+  // Fills its parent; the draw tools and the current hint float in the top-right corner.
   return (
-    <div>
-      <div className="flex flex-wrap items-center gap-2.5 border-b border-rule bg-paper px-3 py-2.5">
-        {(
-          [
-            ['freehand', 'Draw freehand'],
-            ['rectangle', 'Draw rectangle'],
-            ['polygon', 'Draw polygon'],
-          ] as const
-        ).map(([m, label]) => (
-          <button key={m} type="button" disabled={!ready} onClick={() => startMode(m)} className={btn} aria-pressed={mode === m}>
-            {label}
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="h-full w-full" />
+      <div className="absolute z-10 flex flex-col items-end gap-2" style={{ top: 12, right: padding.right + 12 }}>
+        <div className="flex gap-2 rounded-2xl border border-rule bg-paper/85 p-2 shadow-[0_8px_24px_rgb(28_34_48/.12)] backdrop-blur-md">
+          {(
+            [
+              ['freehand', 'Draw freehand'],
+              ['rectangle', 'Draw rectangle'],
+              ['polygon', 'Draw polygon'],
+            ] as const
+          ).map(([m, label]) => (
+            <button key={m} type="button" disabled={!ready} onClick={() => startMode(m)} className={btn} aria-pressed={mode === m}>
+              {label}
+            </button>
+          ))}
+          <button type="button" disabled={!ready} onClick={clear} className={btn}>
+            Clear
           </button>
-        ))}
-        <button type="button" disabled={!ready} onClick={clear} className={btn}>
-          Clear
-        </button>
-        <span className={`ml-auto text-[13px] ${mode ? 'font-semibold text-ink' : 'text-slate'}`} aria-live="polite">
+        </div>
+        <span
+          key={mode ?? 'none'}
+          className="hint-in rounded-full bg-ink/85 px-3 py-1 text-[12.5px] font-medium text-paper backdrop-blur-md"
+          aria-live="polite"
+        >
           {hint}
         </span>
       </div>
-      <div ref={containerRef} className="h-[420px] w-full" />
     </div>
   )
 }
