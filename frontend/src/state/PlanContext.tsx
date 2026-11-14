@@ -53,8 +53,11 @@ export interface PlanState {
   stream: 'connecting' | 'streaming' | 'ended' | 'failed' | 'static'
   loadError: string | null
   selectedAgent: AgentName
-  /** flyTo: card links (not map clicks) ask the map to fly here; a fresh tuple re-flies even to the same spot. */
-  selected: { parcelId?: string; buildingId?: string; stopId?: string; flyTo?: [number, number] }
+  /** flyTo: card links (not map clicks) ask the map to fly here; a fresh tuple re-flies even to the same spot.
+   *  routeKey: a transit route (mapLayers.routeKey) the map keeps in focus. */
+  selected: { parcelId?: string; buildingId?: string; stopId?: string; routeKey?: string; flyTo?: [number, number] }
+  /** Route key hovered in the transit card; the map focuses it like a hovered line. */
+  hoverRouteKey: string | null
   layers: Record<LayerKey, boolean>
   edits: EditEntry[]
   /** Comma-joined ids of the edit list the current scoreboard reflects. */
@@ -81,6 +84,7 @@ export type PlanAction =
   | { type: 'load_error'; message: string }
   | { type: 'select_agent'; agent: AgentName }
   | { type: 'select'; selected: PlanState['selected'] }
+  | { type: 'hover_route'; key: string | null }
   | { type: 'toggle_layer'; key: LayerKey; on?: boolean }
   | { type: 'add_edit'; edit: Edit; label: string }
   | { type: 'undo' }
@@ -111,6 +115,7 @@ function initState(planId: string, isStatic: boolean): PlanState {
     loadError: null,
     selectedAgent: 'infrastructure',
     selected: {},
+    hoverRouteKey: null,
     layers: Object.fromEntries(LAYER_DEFS.map((d) => [d.key, d.on])) as Record<LayerKey, boolean>,
     edits: [],
     scoredKey: null,
@@ -197,6 +202,8 @@ function reducer(s: PlanState, a: PlanAction): PlanState {
       return { ...s, selectedAgent: a.agent }
     case 'select':
       return { ...s, selected: a.selected }
+    case 'hover_route':
+      return { ...s, hoverRouteKey: a.key }
     case 'toggle_layer':
       return { ...s, layers: { ...s.layers, [a.key]: a.on ?? !s.layers[a.key] } }
     case 'add_edit': {

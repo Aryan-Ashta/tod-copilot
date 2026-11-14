@@ -17,12 +17,12 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Dark th
 | --- | --- | --- |
 | Base | Dark base map (`TODO(kickoff)`: tile provider key) | |
 | Base | Aerial imagery | off by default |
-| Infrastructure | Rail and bus routes (existing) | rail red, bus grey |
+| Infrastructure | Rail and bus routes (existing) | each line in its GTFS feed colour over a white casing (grey, black or pale feed colours fall back to ink for rail, slate for bus); rail bold, bus thin; drawn above parcels and sidewalks, under buildings. Stops sized in metres (thin out when zoomed out) |
 | Infrastructure | Sidewalks / bike lanes | thin lines; missing sidewalk frontages in amber |
 | Infrastructure | Utilities (where public) | thin dashed lines; "not public here" note when missing |
 | Infrastructure | EV chargers, schools, clinics, parks, grocery | small icons |
 | Infrastructure | FEMA flood zones | blue hatch |
-| Plan | Proposed routes and stops | frequent bus teal/green, BRT thick, on-demand purple dashed polygon |
+| Plan | Proposed routes and stops | frequent bus teal, BRT thick green under it, on-demand blue dashed polygon; stops on new or upgraded routes ringed teal |
 | Plan | Underused parcels | amber fill |
 | Plan | Conversion candidates | existing buildings extruded in grey; color by best use (residential blue, hotel purple, mixed use teal, keep = grey); opacity by overall score; a change of use fades to the new colour (1.6 s) while conversion sites get a scaffold wrap that climbs the facade and comes down (3.4 s) |
 | Plan | Pursued sites | outline by deal strategy; label A/B/C |
@@ -32,13 +32,15 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Dark th
 ## Detail cards per agent
 
 - **Infrastructure:** counts by kind; readiness histogram; click a parcel for present/gaps.
-- **Transit:** routes with phase, headway, cost; measurement suggestions with expected narrowing.
+- **Transit:** routes with phase, headway, cost (new and upgraded first, coloured as on the map); measurement suggestions with expected narrowing. Hovering or clicking a route row focuses it on the map.
 - **Zoning & legislation:** per selected parcel, a row per legal path (eligible / not / not covered), what it allows, "§ cited" links, and the recommended path. In LA, show SB 79 and Adaptive Reuse side by side.
 - **Site:** underused parcel count, top sites.
 - **Building reuse:** ranked table (building, current use, best use, overall, units); click → radar or bar chart of the five fit scores, blockers list with the input and threshold behind each, and source badges (CoStar / Matterport / derived).
 - **Land deal:** strategy tag per site, reasons, draft letter.
 - **Funding:** goals table (target vs reached), the one-time housing funding gap, yearly transit operating funding and the existing HUD LIHTC baseline; capital stack bars for funded and watch sites (reserve sites as a count); for parcels with both options, "New build vs Convert" comparison; "Show math."
 - **Sustainability:** target bars including embodied carbon saved.
+
+**Transit focus:** hovering a line or a stop on the map, hovering a row in the Transit card, clicking either, or selecting a stop focuses those routes (`TransitFocus`, keyed by `routeKey` in `src/mapLayers.ts`: the GTFS route id behind `rail-`/`bus-`/`upg-`/`brt-` ids). Focused lines widen and come to the top, their stops ring in the line colour, and the rest of the network fades. Clicking empty map clears it.
 
 ## Provenance UI (required)
 
