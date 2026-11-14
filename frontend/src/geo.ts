@@ -20,3 +20,14 @@ export function boundaryPoints(g: Geometry): Ring {
 export function outerRing(g: Geometry): Ring | null {
   return polygons(g)[0]?.[0] ?? null
 }
+
+/** Even-odd ray test; any planar coordinates (lon/lat at parcel scale, or local metres). */
+export function pointInRing([x, y]: [number, number], ring: Ring): boolean {
+  let hit = false
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i]
+    const [xj, yj] = ring[j]
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit
+  }
+  return hit
+}

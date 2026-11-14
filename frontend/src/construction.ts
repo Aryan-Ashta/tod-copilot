@@ -5,6 +5,7 @@
 // Decoration only: no plan numbers come from here.
 import { PathLayer, ScatterplotLayer, SolidPolygonLayer } from '@deck.gl/layers'
 import type { Color, Layer } from '@deck.gl/core'
+import { pointInRing } from './geo'
 
 export type BuildKind = 'new' | 'convert' | 'demolish' | 'park'
 
@@ -297,17 +298,6 @@ function dust(b: Build, now: number, p: number, out: Puff[]) {
   })
 }
 
-/** Even-odd ray test in the local metre frame. */
-function inside([x, y]: [number, number], ring: [number, number][]): boolean {
-  let hit = false
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i]
-    const [xj, yj] = ring[j]
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit
-  }
-  return hit
-}
-
 const MAX_TREES = 12
 const TREE_GRID = 5
 
@@ -321,7 +311,7 @@ function treeSpots(ring: [number, number][]): [number, number][] {
     for (let j = 0; j < TREE_GRID; j++) {
       // offset alternate rows so the planting reads as informal
       const s: [number, number] = [x0 + ((i + 0.5 + (j % 2) * 0.3) / TREE_GRID) * (x1 - x0), y0 + ((j + 0.5) / TREE_GRID) * (y1 - y0)]
-      if (inside(s, ring)) spots.push(s)
+      if (pointInRing(s, ring)) spots.push(s)
     }
   }
   return sample(spots, MAX_TREES)

@@ -3,7 +3,7 @@ import { Map as MlMap, NavigationControl, type IControl, type StyleSpecification
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import { AmbientLight, DirectionalLight, LightingEffect, MapView as DeckMapView, type PickingInfo } from '@deck.gl/core'
 import { GeoJsonLayer } from '@deck.gl/layers'
-import { boundaryPoints, outerRing, type BBox } from '../geo'
+import { boundaryPoints, outerRing, pointInRing, type BBox } from '../geo'
 import {
   buildDuration,
   CLEARED_MS,
@@ -37,7 +37,7 @@ import {
   type Picked,
 } from '../mapLayers'
 import type { Building, ConversionCandidate, DealKind, Geometry, InfraFeature, Parcel, Route, Site, Station, Stop } from '../types'
-import { fmtNum, humanize } from '../format'
+import { fmtNum, geometryCentroid, humanize } from '../format'
 
 export interface MapHandle {
   /** Pick the top object under a viewport (client) point, restricted to the given deck layer ids. */
@@ -342,13 +342,14 @@ export default function MapView({
     const byId = new Map(buildings.map((b) => [b.id, b]))
     const useOf = new Map(conversions.map((c) => [c.building_id, c.best_use]))
     const heightOf = (b: Building) => (storyHeightFt === null ? 0 : (b.stories.value ?? 0) * storyHeightFt * FT_TO_M)
-    const clearing = new Set<string>()
+    // plots being cleared: their outline and the parcel ids that whatever replaces the buildings waits on
+    const clearing: { ring: [number, number][]; parcels: string[] }[] = []
     const kept = new Set<string>() // buildings a conversion keeps
     for (const s of sites) {
       if (s.status === 'pass') continue
       if (s.kind === 'new_build' && showNew) {
-        s.parcel_ids.forEach((p) => clearing.add(p))
         const ring = outerRing(s.geometry)
+        if (ring) clearing.push({ ring, parcels: s.parcel_ids })
         if (ring) want.set(`new:${s.id}`, { kind: 'new', ring, heightM: s.height_ft * FT_TO_M, parcels: s.parcel_ids })
       } else if (s.kind === 'conversion' && s.building_id) {
         kept.add(s.building_id)
@@ -365,13 +366,17 @@ export default function MapView({
       const pid = f.attrs.parcel_id
       const ring = outerRing(f.geometry)
       if (f.kind !== 'park' || typeof pid !== 'string' || !ring) continue
-      clearing.add(pid)
+      clearing.push({ ring, parcels: [pid] })
       want.set(`park:${pid}`, { kind: 'park', ring, heightM: 0, parcels: [pid] })
     }
+    // a building comes down when it is on a cleared parcel by id, or its footprint centre falls inside a cleared plot
+    // (parcel links miss buildings that straddle parcels or were matched to a neighbour)
     for (const b of buildings) {
       const ring = outerRing(b.footprint)
-      if (!b.parcel_id || !clearing.has(b.parcel_id) || kept.has(b.id) || !ring) continue
-      want.set(`demo:${b.id}`, { kind: 'demolish', ring, heightM: heightOf(b), parcels: [b.parcel_id] })
+      const c = geometryCentroid(b.footprint)
+      if (kept.has(b.id) || !ring) continue
+      const plot = clearing.find((p) => (b.parcel_id && p.parcels.includes(b.parcel_id)) || (c && pointInRing(c, p.ring)))
+      if (plot) want.set(`demo:${b.id}`, { kind: 'demolish', ring, heightM: heightOf(b), parcels: plot.parcels })
     }
     const m = builds.current
     let changed = false
