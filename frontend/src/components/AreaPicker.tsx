@@ -4,7 +4,6 @@ import { TerraDraw, TerraDrawFreehandLineStringMode, TerraDrawPolygonMode, Terra
 import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
 import { metros } from '../api'
 import { BASE_STYLE } from './MapView'
-import { localeColor, localeShortName } from './LocalePosters'
 import type { Locale } from '../types'
 import type { BBox } from '../geo'
 
@@ -20,7 +19,11 @@ interface Props {
   onBoundary: (b: PolygonGeometry | null) => void
   onLocale: (id: string | null) => void
   flyTo: BBox | null
+  /** Screen space covered by other UI; the US view and fly-tos centre in what is left. */
+  padding?: { top: number; right: number; bottom: number; left: number }
 }
+
+const NO_PADDING = { top: 0, right: 0, bottom: 0, left: 0 }
 
 type DrawMode = 'freehand' | 'polygon' | 'rectangle'
 
@@ -34,6 +37,16 @@ const US_LIMIT: [[number, number], [number, number]] = [
   [-55, 56],
 ]
 const DRAW_STYLE = { fillColor: '#2F5BD3', fillOpacity: 0.1, outlineColor: '#1C2230', outlineWidth: 2 } as const
+// Recorded areas left off this map (no pin, no outline).
+const NOT_ON_MAP: Record<string, true> = { brevard_cocoa: true }
+// Pin colour and short name per recorded area; others get blue and their full name.
+const PIN: Record<string, { color: string; name: string }> = {
+  houston_downtown: { color: '#2E7D5B', name: 'Houston Main St rail' },
+  la_wilshire_koreatown: { color: '#2F5BD3', name: 'Wilshire Koreatown' },
+}
+const pinColor = (id: string) => PIN[id]?.color ?? '#2F5BD3'
+// Esri's canvas land colour. The base tiles print country and state names (e.g. "UNITED STATES") through z7.
+const BASE_LAND = '#EFEFEF'
 
 function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.FeatureCollection {
   return {
@@ -42,7 +55,7 @@ function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.Fea
       const [w, s, e, n] = l.bbox
       return {
         type: 'Feature',
-        properties: { id: l.id, color: localeColor(l.id), width: l.id === selected ? 2.5 : 1.5, fill: l.id === selected ? 0.1 : 0.05 },
+        properties: { id: l.id, color: pinColor(l.id), width: l.id === selected ? 2.5 : 1.5, fill: l.id === selected ? 0.1 : 0.05 },
         geometry: {
           type: 'Polygon',
           coordinates: [
@@ -61,18 +74,20 @@ function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.Fea
 }
 
 /** Map for choosing a recorded locale or drawing one boundary (polygon or rectangle) with terra-draw. */
-export default function AreaPicker({ locales, selectedLocale, boundary, onBoundary, onLocale, flyTo }: Props) {
+export default function AreaPicker({ locales, selectedLocale, boundary, onBoundary, onLocale, flyTo, padding = NO_PADDING }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MlMap | null>(null)
   const drawRef = useRef<TerraDraw | null>(null)
   const [ready, setReady] = useState(false)
-  const [mode, setMode] = useState<DrawMode | null>(null)
+  const [mode, setMode] = useState<DrawMode | null>('freehand')
   // Latest callbacks for the long-lived map/draw listeners.
   const onBoundaryRef = useRef(onBoundary)
   const onLocaleRef = useRef(onLocale)
+  const paddingRef = useRef(padding)
   useEffect(() => {
     onBoundaryRef.current = onBoundary
     onLocaleRef.current = onLocale
+    paddingRef.current = padding
   })
 
   useEffect(() => {
@@ -80,17 +95,26 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     const map = new MlMap({
       container: containerRef.current,
       style: BASE_STYLE,
-      bounds: US_VIEW,
+      // Opens a little wide and glides onto the US once loaded.
+      bounds: US_LIMIT,
+      fitBoundsOptions: { padding: paddingRef.current },
       maxBounds: US_LIMIT,
       renderWorldCopies: false,
       attributionControl: { compact: true },
     })
     // Offline: tile fetches fail; keep them silent.
     map.on('error', () => {})
-    map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left')
+    map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
     map.on('load', () => {
       // State lines (US Census cartographic boundaries; scripts/build_us_reference.py), under everything else.
       map.addSource('states', { type: 'geojson', data: '/geo/us-states.geojson', attribution: 'States: US Census Bureau' })
+      // Paints over the base's country and state names with its own land colour; gone once z8 tiles (no names) load.
+      map.addLayer({
+        id: 'states-mask',
+        type: 'fill',
+        source: 'states',
+        paint: { 'fill-color': BASE_LAND, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 1, 8.6, 0] },
+      })
       map.addLayer({
         id: 'states-line',
         type: 'line',
@@ -152,6 +176,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
         ],
       })
       draw.start()
+      draw.setMode('freehand-linestring') // freehand is on from the start (the mode state starts as 'freehand')
       draw.on('finish', (id) => {
         const snapshot = draw.getSnapshot()
         const others = snapshot.filter((f) => f.id !== id).map((f) => f.id as string)
@@ -176,12 +201,14 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       })
       drawRef.current = draw
       setReady(true)
+      const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      map.fitBounds(US_VIEW, { padding: paddingRef.current, duration: still ? 0 : 2200, curve: 1.2 })
     })
     // Clicking a recorded outline selects that locale, but only while nothing is drawn or being drawn:
     // the click that finishes a drawing also reaches this handler and must not clear the new boundary.
     map.on('click', 'locales-fill', (e) => {
       const draw = drawRef.current
-      if (!draw || draw.getMode() !== 'static' || draw.getSnapshot().length > 0) return
+      if (!draw || draw.getSnapshot().length > 0) return
       const id = e.features?.[0]?.properties?.id
       if (typeof id === 'string') onLocaleRef.current(id)
     })
@@ -199,10 +226,11 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    ;(map.getSource('locales') as GeoJSONSource | undefined)?.setData(localeOutlines(locales, selectedLocale))
-    const markers = locales.map((l) => {
+    const shown = locales.filter((l) => !NOT_ON_MAP[l.id])
+    ;(map.getSource('locales') as GeoJSONSource | undefined)?.setData(localeOutlines(shown, selectedLocale))
+    const markers = shown.map((l) => {
       const on = l.id === selectedLocale
-      const color = localeColor(l.id)
+      const color = pinColor(l.id)
       const el = document.createElement('button')
       el.type = 'button'
       el.className = 'flex items-center gap-2 cursor-pointer'
@@ -219,12 +247,12 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       }
       const name = document.createElement('span')
       name.className = `rounded-full bg-white px-2.5 py-1 text-[12.5px] whitespace-nowrap shadow-[0_1px_2px_rgb(28_34_48/.15),0_6px_16px_rgb(28_34_48/.14)] transition-transform hover:-translate-y-px ${on ? 'font-bold text-ink' : 'font-semibold text-slate'}`
-      name.textContent = localeShortName(l)
+      name.textContent = PIN[l.id]?.name ?? l.name
       el.append(dot, name)
       el.addEventListener('click', (ev) => {
         ev.stopPropagation()
         const draw = drawRef.current
-        if (!draw || draw.getMode() !== 'static' || draw.getSnapshot().length > 0) return
+        if (!draw || draw.getSnapshot().length > 0) return
         onLocaleRef.current(l.id)
       })
       const [w, s, e, n] = l.bbox
@@ -236,12 +264,13 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
   useEffect(() => {
     if (!flyTo || !mapRef.current) return
     const [w, s, e, n] = flyTo
+    const p = paddingRef.current
     mapRef.current.fitBounds(
       [
         [w, s],
         [e, n],
       ],
-      { padding: 40 },
+      { padding: { top: p.top + 40, right: p.right + 40, bottom: p.bottom + 40, left: p.left + 40 }, duration: 1600 },
     )
   }, [flyTo])
 
@@ -250,49 +279,59 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     if (!boundary && ready) drawRef.current?.clear()
   }, [boundary, ready])
 
+  // Pressing the active mode's button turns it off, so the map pans again.
   const startMode = (m: DrawMode) => {
-    drawRef.current?.setMode(m === 'freehand' ? 'freehand-linestring' : m)
-    setMode(m)
+    const next = m === mode ? null : m
+    drawRef.current?.setMode(next === null ? 'static' : next === 'freehand' ? 'freehand-linestring' : next)
+    setMode(next)
   }
+  // Clear goes back to the default: nothing drawn, freehand on.
   const clear = () => {
     drawRef.current?.clear()
-    drawRef.current?.setMode('static')
-    setMode(null)
+    drawRef.current?.setMode('freehand-linestring')
+    setMode('freehand')
     onBoundary(null)
   }
 
   const btn = 'ctl px-3 py-1 text-[13px]'
   const hint =
     mode === 'freehand'
-      ? 'Press and drag around the area; release to close it'
+      ? 'Press and drag around the area; release to close it. Turn freehand off to pan'
       : mode === 'polygon'
         ? 'Click to add corners; click the first corner to finish'
         : mode === 'rectangle'
           ? 'Press and drag across the map; release to finish'
           : 'Pick a pin, or draw your own area'
 
+  // Fills its parent; the draw tools and the current hint float in the top-right corner.
   return (
-    <div>
-      <div className="flex flex-wrap items-center gap-2.5 border-b border-rule bg-paper px-3 py-2.5">
-        {(
-          [
-            ['freehand', 'Draw freehand'],
-            ['rectangle', 'Draw rectangle'],
-            ['polygon', 'Draw polygon'],
-          ] as const
-        ).map(([m, label]) => (
-          <button key={m} type="button" disabled={!ready} onClick={() => startMode(m)} className={btn} aria-pressed={mode === m}>
-            {label}
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="h-full w-full" />
+      <div className="absolute z-10 flex flex-col items-end gap-2" style={{ top: 12, right: padding.right + 12 }}>
+        <div className="flex gap-2 rounded-2xl border border-rule bg-paper/85 p-2 shadow-[0_8px_24px_rgb(28_34_48/.12)] backdrop-blur-md">
+          {(
+            [
+              ['freehand', 'Draw freehand'],
+              ['rectangle', 'Draw rectangle'],
+              ['polygon', 'Draw polygon'],
+            ] as const
+          ).map(([m, label]) => (
+            <button key={m} type="button" disabled={!ready} onClick={() => startMode(m)} className={btn} aria-pressed={mode === m}>
+              {label}
+            </button>
+          ))}
+          <button type="button" disabled={!ready} onClick={clear} className={btn}>
+            Clear
           </button>
-        ))}
-        <button type="button" disabled={!ready} onClick={clear} className={btn}>
-          Clear
-        </button>
-        <span className={`ml-auto text-[13px] ${mode ? 'font-semibold text-ink' : 'text-slate'}`} aria-live="polite">
+        </div>
+        <span
+          key={mode ?? 'none'}
+          className="hint-in rounded-full bg-ink/85 px-3 py-1 text-[12.5px] font-medium text-paper backdrop-blur-md"
+          aria-live="polite"
+        >
           {hint}
         </span>
       </div>
-      <div ref={containerRef} className="h-[420px] w-full" />
     </div>
   )
 }
