@@ -107,7 +107,7 @@ def score_plan(sites: list[Site], stacks: list[CapitalStack], conversions: dict[
                        transport_co2_tonnes_per_year=tv["transport_co2"],
                        embodied_co2_saved_tonnes=tv["embodied_co2_saved"],
                        affordable_homes=sum(x.affordable_units for x in fs),
-                       funding_gap_usd=round(sum(max(x.gap_usd, 0.0) for x in fs), 2),
+                       funding_required_usd=round(sum(max(x.funding_required_usd, 0.0) for x in fs), 2),
                        walk_by_amenity_pct={k: round(100 * (total - n) / total, 1) if total else 0.0
                                             for k, n in gaps.items()})
     return targets, board

@@ -142,8 +142,9 @@ export function describeChange(prev: Scoreboard | null, next: Scoreboard): strin
     parts.push(`embodied carbon saved ${fmtDelta(d(prev.embodied_co2_saved_tonnes, next.embodied_co2_saved_tonnes))} t`)
   if (prev.affordable_homes !== next.affordable_homes)
     parts.push(`affordable homes ${fmtDelta(d(prev.affordable_homes, next.affordable_homes))}`)
-  const gap = d(prev.funding_gap_usd, next.funding_gap_usd)
-  if (Math.abs(gap) >= 1) parts.push(`funding gap ${gap < 0 ? '−' : '+'}${fmtUsd(Math.abs(gap))}`)
+  const required = d(prev.funding_required_usd, next.funding_required_usd)
+  if (Math.abs(required) >= 1)
+    parts.push(`funding required ${required < 0 ? '−' : '+'}${fmtUsd(Math.abs(required))}`)
   return parts.length ? parts.join(', ') : 'no change'
 }
 

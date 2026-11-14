@@ -28,7 +28,7 @@ Three, each with a distinct purpose. See `docs/11-test-locales.md` for the full 
 4. **Site:** underused land (surface parking, one-story retail, vacant lots), combinable lots, homes per site.
 5. **Building reuse:** for existing buildings, which other uses they could become (housing, hotel, mixed use, or keep), scored on physical, legal, market, financial and location fit, with the blocking issues listed.
 6. **Land deal:** buy, ground lease, partner with the transit agency, or pass; draft owner letters.
-7. **Funding:** the user sets numeric goals (affordable homes, total homes, conversions, frequent-transit coverage); code picks the sites that reach them at the smallest funding gap and reports the one-time housing gap and yearly transit operating funding, with exact affordable counts per capital stack.
+7. **Funding:** the user sets numeric goals (affordable homes, total homes, conversions, frequent-transit coverage); code picks the sites that reach them at the smallest funding required and reports the one-time housing funding required and yearly transit operating funding, with exact affordable counts per capital stack.
 8. **Sustainability and health:** transport CO₂, embodied carbon saved by reuse, rooftop solar, 10-minute walk access, flood exposure.
 
 ## Interactive planning (software only)
@@ -44,7 +44,7 @@ Three, each with a distinct purpose. See `docs/11-test-locales.md` for the full 
 - [ ] Every conversion candidate shows its best use, five fit scores, blocking issues and the source of each input.
 - [ ] Every legal value shows a citation; clicking it shows the source text. In LA, parcels show which law path applies.
 - [ ] Every data value shows a source and confidence badge.
-- [ ] Each funded site or conversion shows a capital stack with its exact affordable homes and funding gap, computed in code.
+- [ ] Each funded site or conversion shows a capital stack with its exact affordable homes and funding required, computed in code.
 - [ ] Targets show transport CO₂, embodied carbon saved, solar and walk access, each with its factor source on hover.
 - [ ] Meeting-mode drags and the slider re-score in under 1 s.
 - [ ] The Brevard plan shows no CoStar data, medium or low confidence badges, missing-data notes, and 0% of new homes in flood zones.

@@ -35,13 +35,13 @@ export function TargetScope({ className = '' }: { className?: string }) {
   if (!inPlan.length) return null
   const funded = new Set(inPlan.filter((s) => s.status === 'pursue').map((s) => s.id))
   const watch = inPlan.filter((s) => s.status === 'watch').length
-  const gap = (state.plan.stacks ?? [])
+  const required = (state.plan.stacks ?? [])
     .filter((x) => funded.has(x.site_id))
-    .reduce((a, x) => a + Math.max(x.gap_usd, 0), 0)
+    .reduce((a, x) => a + Math.max(x.funding_required_usd, 0), 0)
   return (
     <p className={`text-amber-200 ${className}`}>
-      Counts {inPlan.length} sites in the plan ({watch} on watch: no price, or the owner will not sell) · funding gap of
-      the {funded.size} funded sites {fmtUsd(gap)}
+      Counts {inPlan.length} sites in the plan ({watch} on watch: no price, or the owner will not sell) · funding
+      required for the {funded.size} funded sites {fmtUsd(required)}
     </p>
   )
 }
