@@ -233,25 +233,30 @@ def estimate_ridership(stops: list[dict], grid: list[dict], f: dict, prov: Prove
 
 def suggest_measurements(stops: list[Stop], covered: dict[str, float], names: dict[str, str], f: dict,
                          sites: tuple[tuple[tuple[float, float], int], ...] = ()) -> list[MeasurementSuggestion]:
-    """Top 3 stops to count; one per stop name (GTFS often has one id per side of the street).
+    """Top 3 stops to count, each telling the plan something the others do not.
 
-    `sites`: (lon/lat, homes) of planned sites. Stops with planned homes inside their catchment come first, ranked by
-    range width x those homes; then the rest by range width x covered demand. Without sites, only the second key."""
+    `sites`: (lon/lat, homes) of planned sites. When there are any, only stops with planned homes inside their
+    catchment are suggested (a count elsewhere changes no decision), ranked by range width x those homes. Without
+    sites, stops rank by range width x covered demand. A stop is skipped when it shares a name with a chosen one (GTFS
+    often has one id per side of the street) or lies within `stop_catchment_m` of one: their catchments overlap by
+    more than half, so the two counts would narrow the same demand and serve the same sites."""
     def dep_homes(s: Stop) -> int:
         return sum(h for ll, h in sites if lonlat_dist_m(ll, s.lonlat) <= f["stop_catchment_m"])
 
     def key(s: Stop) -> tuple[float, float]:
         width = s.riders_per_day_high - s.riders_per_day_low
         return -width * dep_homes(s), -width * covered.get(s.id, 0)
-    ranked = sorted(stops, key=key)
-    out, seen = [], set()
-    for s in ranked:
+    out, chosen, seen = [], [], set()
+    for s in sorted(stops, key=key):
         name = names.get(s.id, s.id)
         # "8th / Irolo" and "Irolo / 8th" are one intersection: compare the set of street names
         corner = frozenset(p.strip().lower() for p in re.split(r"[/@&]", name)) or {name}
-        if s.riders_per_day_high <= 0 or corner in seen:
+        if s.riders_per_day_high <= s.riders_per_day_low or corner in seen or (sites and dep_homes(s) == 0):
+            continue
+        if any(lonlat_dist_m(s.lonlat, c.lonlat) < f["stop_catchment_m"] for c in chosen):
             continue
         seen.add(corner)
+        chosen.append(s)
         out.append(MeasurementSuggestion(what=f"Manual weekday passenger count at stop {name}, 7–9 am",
                                          target_id=s.id, expected_range_narrowing_pct=f["count_range_narrowing_pct"]))
         if len(out) == 3:
