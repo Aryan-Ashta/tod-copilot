@@ -4,8 +4,10 @@ import type {
   CorpusDoc,
   Edit,
   Factor,
+  GeocodeResult,
   Locale,
-  LocaleId,
+  PlanOptions,
+  StockPrompt,
   Plan,
   RescoreResponse,
   SimulatedCount,
@@ -32,7 +34,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // non-JSON error body; keep the status text
     }
-    throw new ApiError(res.status, `${res.status} ${detail}`)
+    throw new ApiError(res.status, res.status === 409 || res.status === 422 ? detail : `${res.status} ${detail}`)
   }
   return (await res.json()) as T
 }
@@ -42,8 +44,21 @@ const enc = encodeURIComponent
 
 export const getLocales = () => request<Locale[]>('/api/locales')
 
-export const createPlan = (locale_id: LocaleId, prompt: string) =>
-  post<{ plan_id: string }>('/api/plan', { locale_id, prompt })
+export interface CreatePlanRequest {
+  locale_id: string | null
+  boundary: unknown | null
+  area_name: string | null
+  prompt: string
+  options: PlanOptions | null
+}
+
+export const createPlan = (req: CreatePlanRequest) => post<{ plan_id: string }>('/api/plan', req)
+
+export const geocode = (q: string) => request<GeocodeResult[]>(`/api/geocode?q=${enc(q)}`)
+
+export const stockPrompts = () => request<StockPrompt[]>('/api/stock_prompts')
+
+export const parsePrompt = (prompt: string) => post<PlanOptions>('/api/parse_prompt', { prompt })
 
 export const getPlan = (planId: string) => request<Plan>(`/api/plan/${enc(planId)}`)
 
@@ -68,6 +83,8 @@ export interface StreamHandlers {
   onFail: () => void
 }
 
+const LLM_FALLBACK_STEP = 'LLM coordinator unavailable; deterministic driver used'
+
 /** Opens the SSE stream for a plan. Each message's `data` is a JSON AgentEvent. Returns a closer. */
 export function openStream(planId: string, replay: boolean, h: StreamHandlers): () => void {
   const url = `/api/plan/${enc(planId)}/stream${replay ? '?replay=1' : ''}`
@@ -83,7 +100,8 @@ export function openStream(planId: string, replay: boolean, h: StreamHandlers): 
     }
     ev.payload ??= {}
     h.onEvent(ev)
-    if (ev.agent === 'coordinator' && (ev.status === 'done' || ev.status === 'error')) {
+    // The LLM-fallback notice is a coordinator "error" but the run continues (backend/app.py notify).
+    if (ev.agent === 'coordinator' && (ev.status === 'done' || (ev.status === 'error' && ev.step !== LLM_FALLBACK_STEP))) {
       finished = true
       es.close()
       h.onEnd(ev)

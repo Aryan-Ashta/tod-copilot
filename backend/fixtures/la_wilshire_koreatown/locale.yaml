@@ -12,6 +12,7 @@ bbox:
 utm_epsg: 32611
 county_fips: '06037'
 transit_agency: LA Metro
+aliases: [los angeles, la, koreatown, wilshire, mid-wilshire]
 stations:
 - name: Wilshire / Normandie Station
   lonlat:

@@ -1,17 +1,65 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createPlan, getLocales } from '../api'
+import { createPlan, geocode, getLocales, parsePrompt, stockPrompts } from '../api'
 import Disclaimer from '../components/Disclaimer'
-import type { Locale, LocaleId } from '../types'
+import AreaPicker, { type PolygonGeometry } from '../components/AreaPicker'
+import { useApp } from '../state/AppContext'
+import { areaKm2, relationToBBox, type BBox } from '../geo'
+import { DEFAULT_PLAN_OPTIONS, type GeocodeResult, type Locale, type PlanOptions, type StockPrompt } from '../types'
+
+const REPLAY_HINT = 'Replays exist only for whole recorded areas with default options; this runs live'
+
+type AreaStatus =
+  | { kind: 'none' }
+  | { kind: 'whole'; locale: Locale }
+  | { kind: 'subarea'; locale: Locale; km2: number }
+  | { kind: 'custom'; km2: number }
+  | { kind: 'crosses'; locale: Locale }
+  | { kind: 'too_large'; km2: number }
+
+/** Client mirror of the server's resolve_area rules; the server's 422 is authoritative. */
+function areaStatus(
+  locales: Locale[],
+  selected: string | null,
+  boundary: PolygonGeometry | null,
+  maxKm2: number | null,
+): AreaStatus {
+  if (!boundary) {
+    const l = locales.find((x) => x.id === selected)
+    return l ? { kind: 'whole', locale: l } : { kind: 'none' }
+  }
+  const km2 = areaKm2(boundary)
+  // Factor not loaded yet: skip the size check here; the server enforces it.
+  if (maxKm2 !== null && km2 > maxKm2) return { kind: 'too_large', km2 }
+  for (const l of locales) {
+    const rel = relationToBBox(boundary, l.bbox)
+    if (rel === 'within') return { kind: 'subarea', locale: l, km2 }
+    if (rel === 'crosses') return { kind: 'crosses', locale: l }
+  }
+  return { kind: 'custom', km2 }
+}
+
+const SELECT = 'rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100'
 
 export default function PromptScreen() {
   const navigate = useNavigate()
+  const { factorNumber } = useApp()
   const [locales, setLocales] = useState<Locale[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [selected, setSelected] = useState<LocaleId | null>(null)
+  const [selected, setSelected] = useState<string | null>(null)
+  const [boundary, setBoundary] = useState<PolygonGeometry | null>(null)
+  const [areaName, setAreaName] = useState<string | null>(null)
+  const [flyTo, setFlyTo] = useState<BBox | null>(null)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<GeocodeResult[] | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [stock, setStock] = useState<StockPrompt[]>([])
   const [prompt, setPrompt] = useState('')
+  const [options, setOptions] = useState<PlanOptions>(DEFAULT_PLAN_OPTIONS)
+  const [optionsTouched, setOptionsTouched] = useState(false)
   const [replay, setReplay] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const parseSeq = useRef(0)
 
   useEffect(() => {
     getLocales()
@@ -20,18 +68,104 @@ export default function PromptScreen() {
         if (ls.length) setSelected((s) => s ?? ls[0].id)
       })
       .catch((e: Error) => setError(e.message))
+    stockPrompts()
+      .then(setStock)
+      .catch(() => {
+        // chips are optional; the free-text prompt still works
+      })
   }, [])
 
+  // Free text steers the options until the user edits a select.
+  useEffect(() => {
+    if (optionsTouched || !prompt.trim()) return
+    const seq = ++parseSeq.current
+    const t = setTimeout(() => {
+      parsePrompt(prompt)
+        .then((o) => {
+          if (seq === parseSeq.current) setOptions(o)
+        })
+        .catch(() => {})
+    }, 300)
+    return () => clearTimeout(t)
+  }, [prompt, optionsTouched])
+
+  const maxKm2 = factorNumber('custom_area_max_km2')
+  const status = useMemo(() => areaStatus(locales ?? [], selected, boundary, maxKm2), [locales, selected, boundary, maxKm2])
+  const areaLocaleId = status.kind === 'whole' || status.kind === 'subarea' ? status.locale.id : null
+  const defaultOptions =
+    options.focus === 'all' && options.transit_budget === 'default' && options.affordable === 'default'
+  const replayAllowed = status.kind === 'whole' && defaultOptions
+  const replayOn = replay && replayAllowed
+  const areaOk = status.kind === 'whole' || status.kind === 'subarea' || status.kind === 'custom'
+  const canSubmit = areaOk && !submitting && (replayOn || prompt.trim().length > 0)
+
+  const visibleStock = stock.filter((p) => p.locale_id === null || p.locale_id === areaLocaleId)
+
+  const onBoundary = (b: PolygonGeometry | null) => {
+    setBoundary(b)
+    setError(null)
+  }
+
+  const pickLocale = (id: string | null) => {
+    setSelected(id)
+    setBoundary(null)
+    setAreaName(null)
+    const l = locales?.find((x) => x.id === id)
+    if (l) setFlyTo([...l.bbox])
+  }
+
+  const search = async () => {
+    if (!query.trim()) return
+    setSearching(true)
+    try {
+      setResults(await geocode(query.trim()))
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const pickResult = (r: GeocodeResult) => {
+    setResults(null)
+    setFlyTo([...r.bbox])
+    if (r.recorded_locale_id) {
+      setSelected(r.recorded_locale_id)
+      setAreaName(null)
+    } else {
+      setSelected(null)
+      setAreaName(r.label)
+    }
+  }
+
+  const pickStock = (p: StockPrompt) => {
+    setPrompt(p.prompt)
+    setOptions(p.options)
+    setOptionsTouched(false)
+    parseSeq.current++ // drop any in-flight parse of the old text
+  }
+
+  const setOption = <K extends keyof PlanOptions>(k: K, v: PlanOptions[K]) => {
+    setOptions((o) => ({ ...o, [k]: v }))
+    setOptionsTouched(true)
+  }
+
   const submit = async () => {
-    if (!selected) return
-    if (replay) {
-      navigate(`/plan/demo-${selected}?replay=1`)
+    if (!canSubmit) return
+    if (replayOn && areaLocaleId) {
+      navigate(`/plan/demo-${areaLocaleId}?replay=1`)
       return
     }
     setSubmitting(true)
     setError(null)
     try {
-      const { plan_id } = await createPlan(selected, prompt.trim())
+      const { plan_id } = await createPlan({
+        locale_id: areaLocaleId,
+        boundary,
+        area_name: boundary ? areaName : null,
+        prompt: prompt.trim(),
+        options,
+      })
       navigate(`/plan/${plan_id}`)
     } catch (e) {
       setError((e as Error).message)
@@ -39,26 +173,98 @@ export default function PromptScreen() {
     }
   }
 
-  const canSubmit = !!selected && !submitting && (replay || prompt.trim().length > 0)
-
   return (
     <div className="flex h-full flex-col">
       <Disclaimer />
       <div className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-6 py-10">
         <h1 className="mb-1 text-3xl font-semibold tracking-tight">Plan transit and the homes around it</h1>
-        <p className="mb-8 text-neutral-400">
+        <p className="mb-6 text-neutral-400">
           One prompt: existing transit and infrastructure, buildings that can be converted, land that can be built on, what
           the law allows, how to get the land and pay for it, and how the plan scores on carbon and health.
         </p>
         {error && <div className="mb-4 rounded border border-rose-900 bg-rose-950/50 p-3 text-sm text-rose-300">{error}</div>}
+
+        <form
+          className="relative mb-3 flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void search()
+          }}
+        >
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search a US city or neighborhood"
+            className="flex-1 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder:text-neutral-600 focus:border-sky-600 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={searching || !query.trim()}
+            className="rounded-lg border border-neutral-700 px-4 py-2 text-sm hover:bg-neutral-800 disabled:opacity-40"
+          >
+            {searching ? 'Searching…' : 'Search'}
+          </button>
+          {results && (
+            <ul className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl">
+              {results.length === 0 && <li className="px-3 py-2 text-sm text-neutral-500">No matches</li>}
+              {results.map((r, i) => (
+                <li key={`${r.label}-${i}`}>
+                  <button
+                    type="button"
+                    onClick={() => pickResult(r)}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-neutral-800"
+                  >
+                    <span>{r.label}</span>
+                    {r.recorded_locale_id && <span className="rounded bg-sky-900 px-1.5 text-[11px] text-sky-200">recorded</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </form>
+
+        <AreaPicker
+          locales={locales ?? []}
+          selectedLocale={selected}
+          boundary={boundary}
+          onBoundary={onBoundary}
+          onLocale={pickLocale}
+          flyTo={flyTo}
+        />
+
+        <p className="mt-2 mb-6 text-sm">
+          {status.kind === 'none' && <span className="text-neutral-500">Pick a recorded area or draw a boundary</span>}
+          {status.kind === 'whole' && <span className="text-neutral-300">Whole recorded area: {status.locale.name}</span>}
+          {status.kind === 'subarea' && (
+            <span className="text-sky-300">
+              Inside {status.locale.name} · recorded data · {status.km2.toFixed(1)} km²
+            </span>
+          )}
+          {status.kind === 'custom' && (
+            <span className="text-amber-300">
+              Custom area · experimental · public data only · recorded live (a few minutes) · {status.km2.toFixed(1)} km²
+            </span>
+          )}
+          {status.kind === 'crosses' && (
+            <span className="text-rose-400">
+              Boundary crosses the edge of {status.locale.name}: draw it fully inside or fully outside
+            </span>
+          )}
+          {status.kind === 'too_large' && (
+            <span className="text-rose-400">
+              Area is {status.km2.toFixed(1)} km²; draw at most {maxKm2} km²
+            </span>
+          )}
+        </p>
+
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           {!locales && !error && <p className="text-neutral-500">Loading locales…</p>}
           {locales?.map((l) => (
             <button
               key={l.id}
-              onClick={() => setSelected(l.id)}
+              onClick={() => pickLocale(l.id)}
               className={`rounded-lg border p-4 text-left transition-colors ${
-                selected === l.id ? 'border-sky-500 bg-sky-950/40' : 'border-neutral-800 bg-neutral-900 hover:border-neutral-600'
+                areaLocaleId === l.id ? 'border-sky-500 bg-sky-950/40' : 'border-neutral-800 bg-neutral-900 hover:border-neutral-600'
               }`}
             >
               <div className="mb-2 flex items-start justify-between gap-2">
@@ -76,6 +282,24 @@ export default function PromptScreen() {
             </button>
           ))}
         </div>
+
+        {visibleStock.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {visibleStock.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => pickStock(p)}
+                title={p.prompt}
+                className={`rounded-full border px-3 py-1 text-xs ${
+                  p.locale_id ? 'border-sky-800 text-sky-200 hover:bg-sky-950' : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'
+                }`}
+              >
+                {p.title}
+              </button>
+            ))}
+          </div>
+        )}
+
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -83,11 +307,50 @@ export default function PromptScreen() {
           placeholder="e.g. Plan transit-oriented development around the rail stations"
           className="mb-3 w-full rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-neutral-100 placeholder:text-neutral-600 focus:border-sky-600 focus:outline-none"
         />
+
+        <div className="mb-4 flex flex-wrap items-center gap-4 text-sm text-neutral-300">
+          <label className="flex items-center gap-2">
+            Focus
+            <select value={options.focus} onChange={(e) => setOption('focus', e.target.value as PlanOptions['focus'])} className={SELECT}>
+              <option value="all">All</option>
+              <option value="conversions">Conversions only</option>
+              <option value="new_build">New construction only</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2">
+            Transit budget
+            <select
+              value={options.transit_budget}
+              onChange={(e) => setOption('transit_budget', e.target.value as PlanOptions['transit_budget'])}
+              className={SELECT}
+            >
+              <option value="default">Default</option>
+              <option value="half">Half</option>
+              <option value="double">Double</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2">
+            Affordable homes
+            <select
+              value={options.affordable}
+              onChange={(e) => setOption('affordable', e.target.value as PlanOptions['affordable'])}
+              className={SELECT}
+            >
+              <option value="default">Default</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+        </div>
+
         <div className="flex items-center gap-4">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-neutral-300">
-            <input type="checkbox" checked={replay} onChange={(e) => setReplay(e.target.checked)} />
+          <label
+            className={`flex items-center gap-2 text-sm ${replayAllowed ? 'cursor-pointer text-neutral-300' : 'text-neutral-600'}`}
+            title={replayAllowed ? undefined : REPLAY_HINT}
+          >
+            <input type="checkbox" checked={replayOn} disabled={!replayAllowed} onChange={(e) => setReplay(e.target.checked)} />
             Replay recorded run
           </label>
+          {!replayAllowed && <span className="text-xs text-neutral-500">{REPLAY_HINT}</span>}
           <button
             onClick={submit}
             disabled={!canSubmit}

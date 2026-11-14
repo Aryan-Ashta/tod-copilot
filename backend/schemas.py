@@ -28,13 +28,13 @@ class Sourced(BaseModel, Generic[T]):
 class Station(BaseModel):       # Addition: stations need a name, mode and source
     name: str
     lonlat: tuple[float, float]
-    mode: Literal["light_rail", "heavy_rail", "intercity_rail_planned"]
+    mode: Literal["light_rail", "heavy_rail", "intercity_rail_planned", "frequent_bus"]
     source_url: str
     note: Optional[str] = None
 
 
 class Locale(BaseModel):
-    id: Literal["houston_downtown", "la_wilshire_koreatown", "brevard_cocoa"]
+    id: str                     # recorded locale id, or "area-<hex8>" for a custom area
     name: str
     purpose: str                # one sentence, from docs/11-test-locales.md
     data_tier: Literal["costar_full", "public_only"]
@@ -44,6 +44,9 @@ class Locale(BaseModel):
     utm_epsg: int               # Addition
     county_fips: str            # Addition (5-digit)
     transit_agency: str         # Addition
+    boundary: Optional[dict] = None   # Addition: drawn GeoJSON Polygon/MultiPolygon (WGS84)
+    aliases: list[str] = []           # Addition: city-search names
+    experimental: bool = False        # Addition: custom area recorded live
 
 
 class Parcel(BaseModel):
@@ -236,6 +239,35 @@ class Precomputed(BaseModel):   # Addition: everything rescore needs, built with
     solar_kwh_per_kw_year: Optional[float]
 
 
+AgentName = Literal["infrastructure", "transit_network", "zoning_legislation", "site", "building_reuse",
+                    "land_deal", "funding", "sustainability_health", "coordinator"]
+
+
+class PlanOptions(BaseModel):   # Addition: fixed steering options from the prompt
+    focus: Literal["all", "conversions", "new_build"] = "all"
+    transit_budget: Literal["default", "half", "double"] = "default"
+    affordable: Literal["default", "high"] = "default"
+
+
+class StockPrompt(BaseModel):   # Addition
+    id: str
+    locale_id: Optional[str]
+    title: str
+    prompt: str
+    options: PlanOptions
+
+
+class LlmRun(BaseModel):        # Addition: how the LLM coordinator run went
+    model: str
+    seconds: float
+    agents_completed: list[AgentName]      # agents whose last tool ran via the LLM
+    notes_from_llm: list[AgentName]        # agents whose note text came from the LLM
+    fallback_reason: Optional[str]
+    input_tokens: Optional[int]
+    output_tokens: Optional[int]
+    tool_outputs: dict[str, list[str]]     # agent -> tool result strings, for grounding checks
+
+
 class Plan(BaseModel):
     id: str
     locale: Locale
@@ -255,6 +287,8 @@ class Plan(BaseModel):
     notes: dict[str, str]             # Addition: agent -> short explanation
     agent_errors: dict[str, str]      # Addition
     precomputed: Precomputed          # Addition
+    options: PlanOptions = PlanOptions()   # Addition
+    llm_run: Optional[LlmRun] = None       # Addition
 
 
 class Edit(BaseModel):          # from meeting mode or the slider
@@ -266,8 +300,7 @@ class Edit(BaseModel):          # from meeting mode or the slider
 
 # ---- Additions: API, events, rescore -------------------------------------------------------
 
-AgentName = Literal["infrastructure", "transit_network", "zoning_legislation", "site", "building_reuse",
-                    "land_deal", "funding", "sustainability_health", "coordinator"]
+# AgentName is defined above Plan.
 
 
 class AgentEvent(BaseModel):

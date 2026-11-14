@@ -8,11 +8,13 @@ from backend.corpus.loader import search_corpus as corpus_search
 from backend.models import zoning
 from backend.models.reuse import units_for
 from backend.schemas import ZoningEnvelope
+from backend.settings import CORPUS_DIR
 
 NAME = "zoning_legislation"
 GOAL = "For each candidate parcel, which legal paths apply and what each allows, with verbatim citations."
 ARO = "LA Citywide Adaptive Reuse"
 NEW_BUILD_EXCLUDE = {ARO}
+NOT_COVERED = "No legal corpus for this area: every legal question is not covered."
 
 
 def path_names(jurisdiction: str, rules: list[dict]) -> list[str]:
@@ -41,6 +43,13 @@ def tools(ctx: RunContext):
         compute homes per path and the recommended path. Returns eligibility counts per path."""
         if "readiness" not in ctx.plan_parts:
             raise ValueError("run infrastructure first")
+        if not (CORPUS_DIR / "rules" / f"{loc.jurisdiction}.yaml").exists():
+            ctx.cache["path_names"] = []
+            ctx.plan_parts["envelopes"] = []
+            ctx.pre["homes_by_parcel"] = {}
+            ctx.cache["zoning_attrs"] = {}
+            ctx.step(NAME, NOT_COVERED)
+            return NOT_COVERED
         rules = load_rules(loc.jurisdiction)
         names = path_names(loc.jurisdiction, rules)
         urls = {d["doc_id"]: d.get("url") for d in load_index()}
@@ -95,6 +104,8 @@ def run(ctx: RunContext) -> None:
 
 def explain(ctx: RunContext) -> str:
     envs = ctx.plan_parts.get("envelopes", [])
+    if not (CORPUS_DIR / "rules" / f"{ctx.locale.jurisdiction}.yaml").exists():
+        return NOT_COVERED
     names = ctx.cache.get("path_names", [])
     rec = {}
     for e in envs:

@@ -28,12 +28,15 @@ export type LonLat = [number, number]
 export interface Station {
   name: string
   lonlat: LonLat
-  mode: 'light_rail' | 'heavy_rail' | 'intercity_rail_planned'
+  mode: 'light_rail' | 'heavy_rail' | 'intercity_rail_planned' | 'frequent_bus'
   source_url: string
   note?: string | null
 }
 
-export type LocaleId = 'houston_downtown' | 'la_wilshire_koreatown' | 'brevard_cocoa'
+export type LocaleId = string
+
+/** The three recorded, committed locales. Other ids are sub-plans or custom areas (`area-xxxxxxxx`). */
+export const RECORDED_LOCALE_IDS = ['houston_downtown', 'la_wilshire_koreatown', 'brevard_cocoa'] as const
 
 export interface Locale {
   id: LocaleId
@@ -46,6 +49,10 @@ export interface Locale {
   utm_epsg: number
   county_fips: string
   transit_agency: string
+  /** GeoJSON Polygon/MultiPolygon (WGS84) for drawn areas. */
+  boundary?: Geometry | null
+  aliases?: string[]
+  experimental?: boolean
 }
 
 export interface Parcel {
@@ -283,6 +290,42 @@ export interface Plan {
   notes: Record<string, string>
   agent_errors: Record<string, string>
   precomputed: Precomputed
+  options?: PlanOptions
+  llm_run?: LlmRun | null
+}
+
+export interface PlanOptions {
+  focus: 'all' | 'conversions' | 'new_build'
+  transit_budget: 'default' | 'half' | 'double'
+  affordable: 'default' | 'high'
+}
+
+export const DEFAULT_PLAN_OPTIONS: PlanOptions = { focus: 'all', transit_budget: 'default', affordable: 'default' }
+
+export interface LlmRun {
+  model: string
+  seconds: number
+  agents_completed: AgentName[]
+  notes_from_llm: AgentName[]
+  fallback_reason: string | null
+  input_tokens: number | null
+  output_tokens: number | null
+  tool_outputs: Record<string, string[]>
+}
+
+export interface StockPrompt {
+  id: string
+  locale_id: string | null
+  title: string
+  prompt: string
+  options: PlanOptions
+}
+
+export interface GeocodeResult {
+  label: string
+  lonlat: LonLat
+  bbox: [number, number, number, number]
+  recorded_locale_id: string | null
 }
 
 export type TileKind = 'homes' | 'park' | 'stop' | 'convert_residential' | 'convert_hotel'

@@ -38,6 +38,13 @@ def _merge(dst: dict, src: dict) -> None:
             dst[k] = v
 
 
+def in_boundary(ctx: RunContext, recs: list[dict]) -> list[dict]:
+    """Keep records whose representative point lies inside the drawn sub-area (all of them without one)."""
+    if ctx.boundary is None:
+        return recs
+    return [m for m in recs if ctx.boundary.contains(shape(m["geometry"]).representative_point())]
+
+
 def load_buildings_raw(ctx: RunContext) -> list[dict]:
     """FOOTPRINTS + BUILDING_ATTRS + INTERIORS merged per building id (attrs first, then interiors)."""
     if "buildings_raw" in ctx.cache:
@@ -48,7 +55,8 @@ def load_buildings_raw(ctx: RunContext) -> list[dict]:
     for cap in (Capability.BUILDING_ATTRS, Capability.FOOTPRINTS, Capability.INTERIORS):
         for rec in r.get_records(loc, cap) if r.covering(loc, cap) else []:
             _merge(merged.setdefault(rec["id"], {"id": rec["id"]}), rec)
-    ctx.cache["buildings_raw"] = [m for m in merged.values() if m.get("geometry")]
+    recs = [m for m in merged.values() if m.get("geometry")]
+    ctx.cache["buildings_raw"] = in_boundary(ctx, recs)
     return ctx.cache["buildings_raw"]
 
 
@@ -63,7 +71,7 @@ def load_parcels(ctx: RunContext) -> list[Parcel]:
             continue
         for rec in r.get_records(loc, cap):
             _merge(merged.setdefault(rec["id"], {"id": rec["id"]}), rec)
-    recs = [m for m in merged.values() if m.get("geometry")]
+    recs = in_boundary(ctx, [m for m in merged.values() if m.get("geometry")])
     # overlays: surface-parking flags (Vexcel parcels, OSM lots) by area share, and building heights
     flags = r.get_records(loc, Capability.IMAGERY) if r.covering(loc, Capability.IMAGERY) else []
     parking = [to_utm(p["geometry"], epsg) for p in flags]
@@ -126,6 +134,8 @@ def load_buildings(ctx: RunContext) -> list[Building]:
         c = g.representative_point()
         hits = ptree.query(c, predicate="within")
         pid = ps[hits[0]].id if len(hits) else (m.get("parcel_id") or "")
+        if ctx.boundary is not None and pid not in ctx.cache["parcels_by_id"]:
+            pid = ""   # its parcel lies outside the drawn sub-area
         fields = {k: _get(m, k, "building_attrs") for k in BUILDING_FIELDS}
         if fields["rentable_area_sqft"].value is None and fields["stories"].value:
             fp = m.get("footprint_sqft")

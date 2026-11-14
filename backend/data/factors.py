@@ -22,7 +22,7 @@ def load_factors() -> dict[str, Factor]:
 
 
 def _is_per_locale(value: Any) -> bool:
-    return isinstance(value, dict) and set(value) == set(LOCALE_IDS)
+    return isinstance(value, dict) and set(value) == set(LOCALE_IDS) | {"national"}
 
 
 def _has_null(value: Any) -> bool:
@@ -36,12 +36,12 @@ def _has_null(value: Any) -> bool:
 
 
 def resolve(locale_id: str) -> dict[str, Any]:
-    """Flatten per-locale mappings to this locale's value; raise FactorMissing on any null."""
-    if locale_id not in LOCALE_IDS:
-        raise ValueError(f"unknown locale {locale_id}")
+    """Flatten per-locale mappings to this locale's value (`national` for custom areas); raise FactorMissing on
+    any null."""
+    pick = locale_id if locale_id in LOCALE_IDS else "national"
     out: dict[str, Any] = {}
     for key, fac in load_factors().items():
-        v = fac.value[locale_id] if _is_per_locale(fac.value) else fac.value
+        v = fac.value[pick] if _is_per_locale(fac.value) else fac.value
         if _has_null(v):
             raise FactorMissing(key)
         out[key] = v

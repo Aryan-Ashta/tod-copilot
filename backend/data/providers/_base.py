@@ -5,12 +5,12 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
+from backend.data.locales import locale_dir
 from backend.schemas import Confidence, Provenance, Sourced
-from backend.settings import FIXTURES_DIR
 
 
 def fx(locale_id: str, *parts: str) -> Path:
-    return FIXTURES_DIR.joinpath(locale_id, *parts)
+    return locale_dir(locale_id).joinpath(*parts)
 
 
 @lru_cache(maxsize=None)

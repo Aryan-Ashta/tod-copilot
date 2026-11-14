@@ -1,0 +1,18 @@
+# Base input/output prices per million tokens, from Anthropic's published pricing table (read 2026-11-14).
+# Haiku 5.5: the "prompts up to 100,000 tokens" row (coordinator prompts stay far below it).
+anthropic:claude-haiku-5-5:
+  input_usd_per_mtok: 0.10
+  output_usd_per_mtok: 0.50
+  source_url: https://platform.claude.com/docs/en/about-claude/pricing
+anthropic:claude-sonnet-5-5:
+  input_usd_per_mtok: 2
+  output_usd_per_mtok: 10
+  source_url: https://platform.claude.com/docs/en/about-claude/pricing
+anthropic:claude-opus-5-5:
+  input_usd_per_mtok: 4
+  output_usd_per_mtok: 20
+  source_url: https://platform.claude.com/docs/en/about-claude/pricing
+anthropic:claude-sonnet-4-6:
+  input_usd_per_mtok: 3
+  output_usd_per_mtok: 15
+  source_url: https://platform.claude.com/docs/en/about-claude/pricing

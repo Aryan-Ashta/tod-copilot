@@ -1,19 +1,26 @@
-"""Locales: exactly the three in docs/11-test-locales.md, loaded from fixtures/<id>/locale.yaml."""
+"""Locales: the three recorded ones in docs/11-test-locales.md (fixtures/<id>/), plus custom areas recorded live
+into cache/areas/<id>/."""
 from functools import lru_cache
+from pathlib import Path
 
 import yaml
 
 from backend.schemas import Locale
-from backend.settings import FIXTURES_DIR
+from backend.settings import CACHE_DIR, FIXTURES_DIR
 
 LOCALE_IDS = ("houston_downtown", "la_wilshire_koreatown", "brevard_cocoa")
 
 
+def locale_dir(locale_id: str) -> Path:
+    return FIXTURES_DIR / locale_id if locale_id in LOCALE_IDS else CACHE_DIR / "areas" / locale_id
+
+
 @lru_cache(maxsize=None)
 def get_locale(locale_id: str) -> Locale:
-    if locale_id not in LOCALE_IDS:
-        raise KeyError(f"unknown locale {locale_id}")
-    raw = yaml.safe_load((FIXTURES_DIR / locale_id / "locale.yaml").read_text())
+    p = locale_dir(locale_id) / "locale.yaml"
+    if not p.exists():
+        raise KeyError(f"unknown area {locale_id}")
+    raw = yaml.safe_load(p.read_text())
     return Locale(**{k: v for k, v in raw.items() if k in Locale.model_fields})
 
 

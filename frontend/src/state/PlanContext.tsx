@@ -16,7 +16,7 @@ import type {
   SimulatedCount,
   TileKind,
 } from '../types'
-import { AGENTS } from '../types'
+import { AGENTS, RECORDED_LOCALE_IDS } from '../types'
 
 export type AgentStatus = 'pending' | 'running' | 'done' | 'error'
 
@@ -91,9 +91,9 @@ export type PlanAction =
   | { type: 'simulated'; result: SimulatedCount }
 
 const ALL_AGENTS: AgentName[] = [...AGENTS, 'coordinator']
-const LOCALE_IDS: LocaleId[] = ['houston_downtown', 'la_wilshire_koreatown', 'brevard_cocoa']
-
-export const localeIdFromPlanId = (planId: string): LocaleId | null => LOCALE_IDS.find((id) => planId.includes(id)) ?? null
+/** Recorded locale a plan id belongs to (`<locale>-<hex8>`, `demo-<locale>`); null for custom areas (`area-…-plan`). */
+export const localeIdFromPlanId = (planId: string): LocaleId | null =>
+  RECORDED_LOCALE_IDS.find((id) => planId.includes(id)) ?? null
 
 let editSeq = 0
 
@@ -171,7 +171,9 @@ function reducer(s: PlanState, a: PlanAction): PlanState {
       const agentStatus = { ...s.agentStatus, [e.agent]: e.status }
       let plan = s.plan
       if (e.status === 'done' && e.agent !== 'coordinator' && !s.basePlan) plan = mergePayload(plan, e.payload)
-      const locale = s.locale ?? (plan.locale as Locale | undefined) ?? null
+      const streamed = plan.locale as Locale | undefined
+      // A drawn sub-area's locale carries its boundary; prefer it over the whole recorded locale.
+      const locale = streamed?.boundary ? streamed : (s.locale ?? streamed ?? null)
       return { ...s, steps, agentStatus, plan, locale, stream: 'streaming' }
     }
     case 'stream_ended':

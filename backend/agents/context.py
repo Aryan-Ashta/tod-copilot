@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
 from backend.data.resolver import Resolver
-from backend.schemas import AgentEvent, AgentName, Locale
+from backend.schemas import AgentEvent, AgentName, Locale, PlanOptions
 
 
 @dataclass
@@ -18,6 +18,8 @@ class RunContext:
     dists: dict[str, dict] = field(default_factory=dict)        # kind -> {node: walk metres}
     cache: dict[str, Any] = field(default_factory=dict)         # loaded records shared between agents
     missing: list[str] = field(default_factory=list)            # capabilities with no provider here
+    options: PlanOptions = field(default_factory=PlanOptions)   # prompt steering (plan_options.py)
+    boundary: Any = None                                        # drawn sub-area (shapely) or None
 
     def step(self, agent: AgentName, text: str, payload: Optional[dict] = None) -> None:
         self.emit(AgentEvent(agent=agent, status="running", step=text, payload=payload or {}))

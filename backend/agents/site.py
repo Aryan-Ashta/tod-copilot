@@ -11,6 +11,7 @@ from backend.schemas import Site
 
 NAME = "site"
 GOAL = "Find the best underused land (surface parking, one-story retail, vacant lots) near stops for new homes."
+SKIPPED = "new-build sites skipped: the prompt focuses on conversions"
 
 
 def tools(ctx: RunContext):
@@ -84,8 +85,9 @@ def tools(ctx: RunContext):
             score = homes * max(0.0, 1 - d / max_d) * under * ready
             ranked.append((score, g, homes))
         ranked.sort(key=lambda x: -x[0])
+        skip = ctx.options.focus == "conversions"
         sites = []
-        for score, g, homes in ranked[: f["sites_top_n"]]:
+        for score, g, homes in ([] if skip else ranked[: f["sites_top_n"]]):
             env = envs.get(g[0].id)
             max_h = next((x.allows.get("max_height_ft") for x in env.paths if x.eligible and x.allows.get("max_height_ft")),
                          None) if env else None
@@ -95,6 +97,9 @@ def tools(ctx: RunContext):
                               geometry=geom, homes=homes, height_ft=stories * f["story_height_ft"], status="pursue"))
         ctx.plan_parts.setdefault("sites", [])
         ctx.plan_parts["sites"] = [s for s in ctx.plan_parts["sites"] if s.kind != "new_build"] + sites
+        if skip:
+            ctx.step(NAME, SKIPPED)
+            return SKIPPED
         ctx.step(NAME, f"Top {len(sites)} new-build sites: {sum(s.homes for s in sites)} homes")
         return "; ".join(f"{s.id}: {s.homes} homes" for s in sites) or "no eligible underused land near stations"
 
@@ -109,5 +114,8 @@ def run(ctx: RunContext) -> None:
 def explain(ctx: RunContext) -> str:
     sites = [s for s in ctx.plan_parts.get("sites", []) if s.kind == "new_build"]
     n_under = len(common.underused_parcels(ctx)) if "parcels" in ctx.cache else 0
-    return (f"{n_under} underused parcels found; the top {len(sites)} new-build sites near stations hold "
+    text = (f"{n_under} underused parcels found; the top {len(sites)} new-build sites near stations hold "
             f"{sum(s.homes for s in sites)} homes. Parcels in FEMA high-risk flood zones were excluded.")
+    if ctx.options.focus == "conversions":
+        text += f" {SKIPPED[0].upper()}{SKIPPED[1:]}."
+    return text

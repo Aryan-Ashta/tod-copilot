@@ -11,6 +11,14 @@ import UncertaintyQueue from '../components/UncertaintyQueue'
 function PlanView({ replay }: { replay: boolean }) {
   const { state } = usePlan()
   const locale = state.locale
+  const o = state.plan.options
+  const optionChips = o
+    ? [
+        o.focus !== 'all' && `focus: ${o.focus.replace('_', ' ')}`,
+        o.transit_budget !== 'default' && `transit budget: ${o.transit_budget}`,
+        o.affordable !== 'default' && `affordable: ${o.affordable}`,
+      ].filter((c): c is string => !!c)
+    : []
   return (
     <div className="flex h-full flex-col">
       <Disclaimer>
@@ -20,8 +28,16 @@ function PlanView({ replay }: { replay: boolean }) {
             <span className="ml-2 rounded border border-neutral-700 px-1.5 text-[11px] text-neutral-400">
               {locale.data_tier === 'costar_full' ? 'CoStar full' : 'Public only'}
             </span>
+            {locale.experimental && (
+              <span className="ml-2 rounded bg-amber-900 px-1.5 text-[11px] text-amber-200">experimental</span>
+            )}
           </span>
         )}
+        {optionChips.map((c) => (
+          <span key={c} className="rounded border border-sky-800 px-1.5 text-[11px] text-sky-200">
+            {c}
+          </span>
+        ))}
         {replay && <span className="rounded bg-neutral-800 px-1.5 text-[11px] text-neutral-300">recorded run</span>}
         <Link
           to={`/meeting/${state.planId}`}

@@ -12,6 +12,7 @@ bbox:
 utm_epsg: 32617
 county_fips: '12009'
 transit_agency: Space Coast Area Transit
+aliases: [cocoa, brevard, space coast, cocoa fl]
 stations:
 - name: Cocoa Brightline station (planned)
   lonlat:

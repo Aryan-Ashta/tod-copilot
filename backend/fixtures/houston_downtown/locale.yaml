@@ -12,6 +12,7 @@ bbox:
 utm_epsg: 32615
 county_fips: '48201'
 transit_agency: METRO
+aliases: [houston, downtown houston, midtown houston]
 stations:
 - name: Bell Station
   lonlat:

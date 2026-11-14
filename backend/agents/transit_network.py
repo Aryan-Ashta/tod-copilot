@@ -1,5 +1,6 @@
 """2. Transit network agent: a phased network within an annual operating budget."""
 from pyproj import Transformer
+from shapely.geometry import Point
 
 from backend.agents.context import RunContext
 from backend.data.geo import lonlat_to_utm
@@ -24,7 +25,10 @@ def tools(ctx: RunContext):
         """Aggregate homes, jobs and zero-car households into ~0.5 km hexes. Returns the cell count and totals."""
         d = r.get(loc, Capability.DEMAND)
         ctx.cache["demand_prov"] = d.prov
-        grid = transit.demand_grid(d.value or [], f, epsg)
+        pts = d.value or []
+        if ctx.boundary is not None:   # drawn sub-area: demand inside it only; stops and routes stay whole
+            pts = [p for p in pts if ctx.boundary.contains(Point(*p["lonlat"]))]
+        grid = transit.demand_grid(pts, f, epsg)
         ctx.cache["grid"] = grid
         ctx.pre["demand_cells"] = [{"h3": c["h3"], "lonlat": c["lonlat"], "demand": round(c["demand"], 1),
                                     "homes": c["homes"]} for c in grid]

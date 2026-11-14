@@ -66,7 +66,7 @@ When there is no Matterport scan, estimate floor depth from the footprint: for a
 
 - **Provenance on everything.** Each `Sourced` value records source, confidence, `retrieved_at`, and URL when available.
 - **Missing is a value.** Agents must handle `confidence="missing"` and say what's missing.
-- **Locale-scoped.** Providers only fetch within `locale.bbox`. There is no "any city" mode in the demo.
+- **Locale-scoped.** Providers only fetch within `locale.bbox`; custom areas get their own data directory (`cache/areas/<id>/`).
 - **Cache by request** in `cache/`. With `DEMO_OFFLINE=1`, a cache miss raises instead of calling out.
 - **Record fixtures early** with `scripts/record_fixtures.py --locale <id>`.
 - **Coordinates:** GeoJSON in WGS84; distance and area math in the locale's UTM zone.

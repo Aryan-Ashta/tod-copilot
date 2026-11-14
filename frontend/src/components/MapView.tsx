@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type RefObject } f
 import { Map as MlMap, NavigationControl, type IControl, type StyleSpecification } from 'maplibre-gl'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { PickingInfo } from '@deck.gl/core'
+import { GeoJsonLayer } from '@deck.gl/layers'
+import { geometryBounds } from '../geo'
 import { usePlan, type PlanAction } from '../state/PlanContext'
 import { useApp } from '../state/AppContext'
 import {
@@ -28,13 +30,12 @@ export interface MapHandle {
   pick: (clientX: number, clientY: number, layerIds: string[]) => Picked | null
 }
 
-// TODO(kickoff): base map tile provider key. Carto's public dark raster needs no key for a demo.
-const BASE_STYLE: StyleSpecification = {
+// Esri's dark gray canvas needs no key (Carto's dark tiles now watermark "API KEY REQUIRED").
+export const BASE_STYLE: StyleSpecification = {
   version: 8,
   sources: {
-    carto: {
+    dark: {
       type: 'raster',
-      // Carto's dark tiles now watermark "API KEY REQUIRED"; Esri's dark gray canvas needs no key.
       tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'],
       tileSize: 256,
       attribution: 'Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors',
@@ -173,7 +174,7 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
   useEffect(() => {
     const map = mapRef.current
     if (!map || !locale) return
-    const [a, b, c, d] = locale.bbox
+    const [a, b, c, d] = (locale.boundary && geometryBounds(locale.boundary)) || locale.bbox
     map.fitBounds(
       [
         [a, b],
@@ -213,6 +214,22 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
   const lUtil = useMemo(() => utilitiesLayer(infra, L.utilities), [infra, L.utilities])
   const lAmen = useMemo(() => amenitiesLayer(infra, state.infraAdded, L.amenities), [infra, state.infraAdded, L.amenities])
   const lFlood = useMemo(() => floodLayer(infra, L.flood), [infra, L.flood])
+  const boundary = locale?.boundary
+  const lBoundary = useMemo(
+    () =>
+      boundary
+        ? new GeoJsonLayer({
+            id: 'boundary',
+            data: { type: 'Feature', geometry: boundary, properties: {} } as never,
+            stroked: true,
+            filled: false,
+            getLineColor: [255, 255, 255, 255],
+            getLineWidth: 2,
+            lineWidthUnits: 'pixels',
+          })
+        : null,
+    [boundary],
+  )
   const lProp = useMemo(
     () => proposedTransitLayer(routes, stops, L.proposed_transit, sel.stopId),
     [routes, stops, L.proposed_transit, sel.stopId],
@@ -227,9 +244,9 @@ export default function MapView({ handleRef, large = false }: { handleRef?: RefO
 
   useEffect(() => {
     overlayRef.current?.setProps({
-      layers: [...lTransit, lWalk, lUtil, lAmen, lFlood, ...lProp, lParcels, lBuildings, ...lSites, lNew],
+      layers: [...lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, ...lProp, lParcels, lBuildings, ...lSites, lNew],
     })
-  }, [lTransit, lWalk, lUtil, lAmen, lFlood, lProp, lParcels, lBuildings, lSites, lNew, large])
+  }, [lTransit, lWalk, lUtil, lAmen, lFlood, lBoundary, lProp, lParcels, lBuildings, lSites, lNew, large])
 
   // maplibre's own CSS sets `.maplibregl-map { position: relative }`, so the map gets a sized inner box.
   return (

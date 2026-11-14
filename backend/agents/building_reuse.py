@@ -9,6 +9,7 @@ from backend.schemas import Site, Sourced
 
 NAME = "building_reuse"
 GOAL = "For each existing building, score which use it could become (housing, hotel, mixed use, keep) and list blockers."
+SKIPPED = "conversion sites skipped: the prompt focuses on new construction"
 
 
 def tools(ctx: RunContext):
@@ -63,6 +64,8 @@ def tools(ctx: RunContext):
             raise ValueError("run score_reuse first")
         bmap = {b.id: b for b in ctx.plan_parts["buildings"]}
         picked = [c for c in convs if c.best_use != "keep_current" and c.overall >= f["reuse_feasible_threshold"]]
+        if ctx.options.focus == "new_build":
+            picked = []
         sites = []
         for c in picked[: f["sites_top_n"]]:
             b = bmap[c.building_id]
@@ -70,6 +73,9 @@ def tools(ctx: RunContext):
                               building_id=b.id, geometry=b.footprint, homes=conversion_homes(c.best_use, c.est_units, f),
                               height_ft=(b.stories.value or 1) * f["story_height_ft"], status="pursue"))
         ctx.plan_parts["sites"] = [s for s in ctx.plan_parts.get("sites", []) if s.kind != "conversion"] + sites
+        if ctx.options.focus == "new_build":
+            ctx.step(NAME, SKIPPED)
+            return SKIPPED
         ctx.step(NAME, f"{len(sites)} conversion sites, {sum(s.homes for s in sites)} homes")
         return "; ".join(f"{s.id}: {s.homes} homes" for s in sites) or "no feasible conversion"
 
@@ -90,4 +96,6 @@ def explain(ctx: RunContext) -> str:
             f"footprints, not measured, so confidence is capped at low.")
     if ctx.locale.data_tier == "public_only":
         text += " Screening only: county records support little beyond use, area and year built."
+    if ctx.options.focus == "new_build":
+        text += f" {SKIPPED[0].upper()}{SKIPPED[1:]}."
     return text

@@ -1,0 +1,61 @@
+# Clickable stock prompts. `options` steer the plan (backend/agents/plan_options.py); omitted keys are default.
+- id: full_plan
+  locale_id: null
+  title: Full TOD plan
+  prompt: "Plan transit-oriented development around the stations: what to convert, what to build, how to connect it"
+  options: {}
+- id: office_to_homes
+  locale_id: null
+  title: Offices to homes
+  prompt: Find office buildings that could become housing and show what blocks each one
+  options: {focus: conversions}
+- id: parking_to_homes
+  locale_id: null
+  title: Parking lots to homes
+  prompt: Where can we build new homes on parking lots and vacant land near transit?
+  options: {focus: new_build}
+- id: tight_budget
+  locale_id: null
+  title: Tight transit budget
+  prompt: Plan the transit network on a tight budget and show what we give up
+  options: {transit_budget: half}
+- id: expand_transit
+  locale_id: null
+  title: Expand transit
+  prompt: Expand frequent bus service and phase in BRT where demand supports it
+  options: {transit_budget: double}
+- id: max_affordable
+  locale_id: null
+  title: Maximize affordable homes
+  prompt: Maximize affordable housing near transit and show which sites still pencil
+  options: {affordable: high}
+- id: hou_towers
+  locale_id: houston_downtown
+  title: Downtown towers first
+  prompt: Which downtown towers should convert first, and does the per-unit incentive make them pencil?
+  options: {focus: conversions}
+- id: hou_main_lots
+  locale_id: houston_downtown
+  title: Main Street lots
+  prompt: Turn surface lots along the Main Street rail into homes
+  options: {focus: new_build}
+- id: la_two_laws
+  locale_id: la_wilshire_koreatown
+  title: SB 79 vs adaptive reuse
+  prompt: Compare SB 79 new construction with adaptive reuse along Wilshire, parcel by parcel
+  options: {}
+- id: la_aro
+  locale_id: la_wilshire_koreatown
+  title: Koreatown conversions
+  prompt: Convert Koreatown office buildings under the Adaptive Reuse Ordinance
+  options: {focus: conversions}
+- id: brv_station_bus
+  locale_id: brevard_cocoa
+  title: Bus for the new station
+  prompt: Design bus service for the future Brightline station on a small budget
+  options: {transit_budget: half}
+- id: brv_flood_safe
+  locale_id: brevard_cocoa
+  title: Flood-safe homes
+  prompt: Plan homes near the Cocoa station while keeping every new home out of flood zones
+  options: {focus: new_build}
