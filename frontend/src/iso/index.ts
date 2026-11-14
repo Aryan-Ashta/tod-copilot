@@ -1,0 +1,6 @@
+export { project, IsoBox, IsoGhost, IsoStack, IsoTile, IsoLabel, isoViewBox, byDepth } from './kit'
+export type { BoxGeom, StackLayer, Pt } from './kit'
+export { shade, lighten, ISO } from './shade'
+export type { Faces } from './shade'
+export { Poster } from './Poster'
+export type { PosterMetric } from './Poster'

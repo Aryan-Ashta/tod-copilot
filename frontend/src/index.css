@@ -1,5 +1,96 @@
 @import "tailwindcss";
 
+/*
+ * Visual language of aryanashta.me: paper, ink, hairlines, three flat accents, Archivo, no radius, no shadows.
+ * The dark theme is gone. Existing components use Tailwind's neutral / sky / emerald / rose / amber scales, so those
+ * scales are remapped here to light-theme values (low numbers = ink, high numbers = paper tints): every card reads
+ * correctly on paper without touching its markup, and new markup uses the named tokens (paper, ink, rule, ...).
+ */
+@theme {
+  --font-sans: "Archivo Variable", "Helvetica Neue", Arial, sans-serif;
+
+  --color-paper: #edefea;
+  --color-ink: #1c2230;
+  --color-slate: #5f6778;
+  --color-rule: #d3d7d0;
+  --color-green: #2e7d5b;
+  --color-blue: #2f5bd3;
+  --color-mustard: #e3b448;
+  --color-gap: #b93a2e;
+  --color-transit: #13808a;
+
+  /* neutral: ink -> paper */
+  --color-neutral-50: #1c2230;
+  --color-neutral-100: #1c2230;
+  --color-neutral-200: #232a38;
+  --color-neutral-300: #2d3443;
+  --color-neutral-400: #4b5263;
+  --color-neutral-500: #5f6778;
+  --color-neutral-600: #9aa09a;
+  --color-neutral-700: #c4c9c1;
+  --color-neutral-800: #d3d7d0;
+  --color-neutral-900: #e4e7e1;
+  --color-neutral-950: #edefea;
+
+  /* sky -> blue accent */
+  --color-sky-100: #1d3c93;
+  --color-sky-200: #23469f;
+  --color-sky-300: #2a50bc;
+  --color-sky-400: #2f5bd3;
+  --color-sky-500: #2f5bd3;
+  --color-sky-600: #2f5bd3;
+  --color-sky-700: #a9bfe7;
+  --color-sky-800: #c9d6ee;
+  --color-sky-900: #dde5f2;
+  --color-sky-950: #e6ecf4;
+
+  /* emerald -> green accent */
+  --color-emerald-100: #1c4d38;
+  --color-emerald-200: #1f5a41;
+  --color-emerald-300: #24664a;
+  --color-emerald-400: #2e7d5b;
+  --color-emerald-500: #2e7d5b;
+  --color-emerald-600: #2e7d5b;
+  --color-emerald-700: #9cc4b0;
+  --color-emerald-800: #bcd8c9;
+  --color-emerald-900: #d6e6dc;
+  --color-emerald-950: #e2ece5;
+
+  /* rose -> gap red */
+  --color-rose-100: #7c231b;
+  --color-rose-200: #8e2a21;
+  --color-rose-300: #a33227;
+  --color-rose-400: #b93a2e;
+  --color-rose-500: #b93a2e;
+  --color-rose-700: #e2aca5;
+  --color-rose-800: #ecc6c1;
+  --color-rose-900: #f2d9d5;
+  --color-rose-950: #f4e2df;
+
+  /* amber -> mustard (text stays dark enough for 4.5:1 on paper) */
+  --color-amber-100: #5c4308;
+  --color-amber-200: #6b4f0b;
+  --color-amber-300: #7a5a0e;
+  --color-amber-400: #8a6512;
+  --color-amber-600: #8a6512;
+  --color-amber-700: #8a6512;
+  --color-amber-900: #f0dca8;
+  --color-amber-950: #f5e9c8;
+
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+
+  --shadow-sm: 0 0 #0000;
+  --shadow-md: 0 0 #0000;
+  --shadow-lg: 0 0 #0000;
+  --shadow-xl: 0 0 #0000;
+  --shadow-2xl: 0 0 #0000;
+}
+
 html,
 body,
 #root {
@@ -8,8 +99,70 @@ body,
 
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  color-scheme: dark;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 100;
+  font-size: 18px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+}
+
+/* display type: Archivo 800, wide, tight tracking (the site's poster titles) */
+.display {
+  font-weight: 800;
+  font-variation-settings: "wdth" 125;
+  letter-spacing: -0.01em;
+  line-height: 1.02;
+}
+.wide {
+  font-variation-settings: "wdth" 112;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+/* the site's button: hairline ink border, square, filled when pressed */
+.ctl {
+  background: none;
+  border: 1px solid var(--color-ink);
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  color: var(--color-ink);
+}
+.ctl:hover:not(:disabled) {
+  background: rgb(28 34 48 / 0.06);
+}
+.ctl:disabled {
+  border-color: var(--color-rule);
+  color: var(--color-slate);
+  cursor: default;
+}
+.ctl[aria-pressed="true"]:not(:disabled),
+.ctl[data-selected="true"]:not(:disabled) {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
+input[type="radio"],
+input[type="checkbox"],
+input[type="range"] {
+  accent-color: var(--color-blue);
 }
 
 .delta-fade {
@@ -30,10 +183,40 @@ body {
   }
 }
 
+/* running agent glyphs breathe; reduced motion keeps them still */
+@keyframes iso-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+.iso-running {
+  animation: iso-breathe 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 .maplibregl-ctrl-attrib {
-  background: rgba(10, 10, 10, 0.7) !important;
-  color: #a3a3a3;
+  background: rgb(237 239 234 / 0.85) !important;
+  color: var(--color-slate);
+  font-size: 11px;
 }
 .maplibregl-ctrl-attrib a {
-  color: #d4d4d4 !important;
+  color: var(--color-ink) !important;
+}
+.maplibregl-ctrl-group {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: 1px solid var(--color-rule);
 }
