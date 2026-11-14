@@ -17,7 +17,8 @@ def test_apply_rules_tier_todo_and_missing_attr():
     a, b = apply_rules({"station_mode": "heavy_rail", "distance_to_stop_mi": 0.3, "property_type": None}, RULES, ["A", "B"])
     assert a.eligible is True and a.allows == {"max_units_per_acre": 100, "max_far": 2,
                                                "not_covered": ["approval_steps"]}  # TODO is flagged, never defaulted
-    assert b.eligible is None and b.allows == {}  # property_type missing -> not covered, never a default
+    # property_type missing -> not covered, never a default; the missing input is named
+    assert b.eligible is None and b.allows == {"missing_inputs": ["property_type"]}
 
 
 def test_homes_for_density_vs_floor_area():
@@ -42,3 +43,15 @@ def test_density_rule_with_todo_value_blocks_homes():
     p = apply_rules({"zoning_code": "C-G"}, rules, ["L"])[0]
     assert p.eligible is True and p.allows["not_covered"] == ["max_units_per_acre"]
     assert homes_for(2.0, p, F) is None  # never fall back to assumed stories when the law sets an uncited cap
+
+
+def test_off_path_citations_explain_only_the_verdict():
+    rules = [{"path": "R", "rule": "eligible", "applies_if": {"est_units": {"gte": 5}}, "value": True, "cite": {**C, "section": "ok"}},
+             {"path": "R", "rule": "eligible", "applies_if": {"est_units": {"lte": 4}}, "value": False, "cite": {**C, "section": "why"}},
+             {"path": "R", "rule": "allows_uses", "applies_if": {}, "value": ["residential"], "cite": {**C, "section": "uses"}}]
+    no, = apply_rules({"est_units": 3}, rules, ["R"])
+    assert no.eligible is False and [c.section for c in no.citations] == ["why"]
+    unknown, = apply_rules({"est_units": None}, rules, ["R"])
+    assert unknown.eligible is None and unknown.citations == [] and unknown.allows == {"missing_inputs": ["est_units"]}
+    yes, = apply_rules({"est_units": 9}, rules, ["R"])
+    assert [c.section for c in yes.citations] == ["ok", "uses"]

@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { useApp } from '../state/AppContext'
-import { fmtValue } from '../format'
+import { fmtValue, humanize } from '../format'
 
 /** Hover a score or target to see the factors behind it: value, unit, source link and "unverified" mark. */
 export default function FactorHover({ keys, children }: { keys: string[]; children: ReactNode }) {
@@ -17,8 +17,9 @@ export default function FactorHover({ keys, children }: { keys: string[]; childr
             const f = factors[k]
             return (
               <span key={k} className="block border-t border-neutral-800 py-1 first:border-t-0">
+                {f?.label && <span className="block font-medium text-neutral-100">{f.label}</span>}
                 <span className="flex items-center gap-2">
-                  <code className="text-neutral-200">{k}</code>
+                  <code className="text-neutral-400">{k}</code>
                   {f && !f.verified && (
                     <span className="rounded bg-amber-900/60 px-1 text-[10px] text-amber-300">unverified</span>
                   )}
@@ -46,5 +47,32 @@ export default function FactorHover({ keys, children }: { keys: string[]; childr
         </span>
       )}
     </span>
+  )
+}
+
+/** Factor's human label, falling back to the key with underscores spaced out. */
+export function useFactorLabel(): (key: string) => string {
+  const { factors } = useApp()
+  return (key: string) => factors[key]?.label ?? humanize(key)
+}
+
+/** Text that may name factors as `key` (blockers, agent notes): each becomes its label, with the factor on hover. */
+export function FactorText({ text }: { text: string }) {
+  const { factors } = useApp()
+  const parts = text.split(/`([^`]+)`/)
+  return (
+    <>
+      {parts.map((p, i) =>
+        i % 2 === 0 ? (
+          <Fragment key={i}>{p}</Fragment>
+        ) : factors[p] ? (
+          <FactorHover key={i} keys={[p]}>
+            {factors[p].label ?? humanize(p)}
+          </FactorHover>
+        ) : (
+          <Fragment key={i}>{humanize(p)}</Fragment>
+        ),
+      )}
+    </>
   )
 }

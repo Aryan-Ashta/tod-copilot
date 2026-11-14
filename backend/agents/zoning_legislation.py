@@ -17,6 +17,12 @@ NEW_BUILD_EXCLUDE = {ARO}
 NOT_COVERED = "No legal corpus for this area: every legal question is not covered."
 
 
+def snippet(text: str, words: int = 25) -> str:
+    """The first `words` words of a verbatim quote, with an ellipsis when cut."""
+    w = text.split()
+    return " ".join(w[:words]) + ("…" if len(w) > words else "")
+
+
 def path_names(jurisdiction: str, rules: list[dict]) -> list[str]:
     if jurisdiction == "houston":
         return ["Houston development rules"]
@@ -34,9 +40,9 @@ def tools(ctx: RunContext):
     loc, f = ctx.locale, ctx.f
 
     def search_corpus(query: str) -> str:
-        """Search the curated legal corpus for this jurisdiction (BM25). Returns doc ids and sections."""
+        """Search the curated legal corpus for this jurisdiction (BM25). Returns sections with a short verbatim quote."""
         hits = corpus_search(loc.jurisdiction, query, k=5)
-        return "; ".join(f"{h['doc_id']} {h['section']}" for h in hits) or "not covered"
+        return "; ".join(f"{h['doc_id']} {h['section']}: “{snippet(h['text'])}”" for h in hits) or "not covered"
 
     def apply_rules() -> str:
         """Evaluate every legal path's structured rules for each candidate parcel and building host parcel;
@@ -80,6 +86,7 @@ def tools(ctx: RunContext):
             paths = zoning.apply_rules(attrs, rules, names, urls)
             homes = {pth.name: (attrs["est_units"] if pth.name == ARO and pth.eligible else
                                 zoning.homes_for(p.area_acres.value, pth, f)) for pth in paths}
+            paths = [pth.model_copy(update={"homes": homes[pth.name] if pth.eligible else None}) for pth in paths]
             nb = [h for n, h in homes.items() if n not in NEW_BUILD_EXCLUDE and h]
             homes_by_parcel[p.id] = max(nb) if nb else None
             attrs_by_parcel[p.id] = attrs
@@ -91,8 +98,18 @@ def tools(ctx: RunContext):
         ctx.cache["zoning_attrs"] = attrs_by_parcel
         counts = {n: sum(1 for e in envelopes for x in e.paths if x.name == n and x.eligible) for n in names}
         ctx.step(NAME, f"{len(envelopes)} envelopes", {"eligible_by_path": counts})
-        return f"{len(envelopes)} envelopes; eligible parcels by path: {counts}; " \
-               f"not covered: {sum(1 for e in envelopes if not e.covered)}"
+        rec = {n: sum(1 for e in envelopes if e.recommended_path == n) for n in names}
+        both = sum(1 for e in envelopes if sum(1 for x in e.paths if x.eligible) > 1)
+        per_path = []
+        for n in names:
+            ex = next((x for e in envelopes for x in e.paths if x.name == n and x.eligible), None)
+            cites = list({(c.doc_id, c.section): c for c in (ex.citations if ex else [])}.values())[:2]
+            per_path.append(f"{n}: eligible on {counts[n]}, recommended on {rec[n]}"
+                            + "".join(f"; {c.section}: “{snippet(c.quote)}”" for c in cites))
+        return (f"{len(envelopes)} candidate parcels (underused land and parcels with a convertible building) "
+                f"evaluated in the plan area around the {len(loc.stations)} station(s); " + " | ".join(per_path)
+                + (f" | {both} parcels qualify under more than one path" if len(names) > 1 else "")
+                + f" | not covered by the corpus: {sum(1 for e in envelopes if not e.covered)}")
 
     return [search_corpus, apply_rules]
 
@@ -107,12 +124,18 @@ def explain(ctx: RunContext) -> str:
     if not (CORPUS_DIR / "rules" / f"{ctx.locale.jurisdiction}.yaml").exists():
         return NOT_COVERED
     names = ctx.cache.get("path_names", [])
-    rec = {}
+    rec: dict[str, int] = {}
     for e in envs:
         if e.recommended_path:
             rec[e.recommended_path] = rec.get(e.recommended_path, 0) + 1
-    base = (f"Evaluated {', '.join(names)} for {len(envs)} candidate parcels; recommended: "
-            f"{rec or 'none'}; {sum(1 for e in envs if not e.covered)} not covered by the corpus.")
+    uncovered = sum(1 for e in envs if not e.covered)
+    base = f"Evaluated {common.join_and(names)} for {len(envs)} candidate parcels. "
+    base += (f"Recommended path: {common.counts_text(rec, '{k} on {n} parcels')}. " if rec
+             else "No parcel has an eligible path. ")
+    if len(names) > 1:
+        both = sum(1 for e in envs if sum(1 for x in e.paths if x.eligible) > 1)
+        base += f"{both} parcels qualify under more than one path; each shows the paths side by side. "
+    base += f"{uncovered} parcels are not covered by the corpus." if uncovered else "Every parcel is covered by the corpus."
     if ctx.locale.jurisdiction == "houston":
         base += " Houston has no zoning; development rules apply and deed restrictions need a title check."
     return base

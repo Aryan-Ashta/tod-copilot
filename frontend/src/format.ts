@@ -1,5 +1,5 @@
 // Display formatting only. No computation of plan numbers happens here.
-import type { Geometry, LonLat, Parcel, Building } from './types'
+import type { Geometry, LonLat, Parcel, Building, Plan } from './types'
 
 export function fmtNum(v: number | null | undefined, digits = 0): string {
   if (v === null || v === undefined || Number.isNaN(v)) return '—'
@@ -103,3 +103,28 @@ export function parcelLabel(p: Parcel | undefined, id: string): string {
 export function buildingLabel(b: Building | undefined, id: string): string {
   return b?.name.value || `building ${id}`
 }
+
+/** Display name per site id: the building's name for a conversion, else the first parcel's address, else
+ *  "parcel <id>". Two sites with the same name (two parcels at one address) get "(parcel <id>)" appended. */
+export function siteNames(plan: Partial<Plan>): Map<string, string> {
+  const parcels = new Map((plan.parcels ?? []).map((p) => [p.id, p]))
+  const buildings = new Map((plan.buildings ?? []).map((b) => [b.id, b]))
+  const base = new Map<string, string>()
+  const counts = new Map<string, number>()
+  for (const s of plan.sites ?? []) {
+    const b = s.building_id ? buildings.get(s.building_id) : undefined
+    const pid = s.parcel_ids[0]
+    const name = b?.name.value || (pid ? parcelLabel(parcels.get(pid), pid) : s.id)
+    base.set(s.id, name)
+    counts.set(name, (counts.get(name) ?? 0) + 1)
+  }
+  const out = new Map<string, string>()
+  for (const s of plan.sites ?? []) {
+    const name = base.get(s.id)!
+    out.set(s.id, (counts.get(name) ?? 0) > 1 && s.parcel_ids[0] ? `${name} (parcel ${s.parcel_ids[0]})` : name)
+  }
+  return out
+}
+
+/** "§ 1.2" for bare section numbers; sections that already carry "§" ("Gov. Code § 65912.157") stay as they are. */
+export const sectionLabel = (section: string) => (section.includes('§') ? section : `§ ${section}`)

@@ -1,5 +1,5 @@
 import { usePlan } from '../../state/PlanContext'
-import { buildingLabel, humanize, parcelLabel } from '../../format'
+import { humanize, siteNames } from '../../format'
 import { siteLetters, STRATEGY_COLORS } from '../../mapLayers'
 import { CardShell, Empty } from './common'
 import FactorHover from '../FactorHover'
@@ -14,8 +14,7 @@ export default function LandDealCard() {
   const sites = plan.sites ?? []
   const letters = siteLetters(sites)
   const siteById = new Map(sites.map((s) => [s.id, s]))
-  const parcelsById = new Map((plan.parcels ?? []).map((p) => [p.id, p]))
-  const buildingsById = new Map((plan.buildings ?? []).map((b) => [b.id, b]))
+  const names = siteNames(plan)
   return (
     <CardShell title="Land deal" note={plan.notes?.land_deal}>
       {!deals ? (
@@ -26,11 +25,9 @@ export default function LandDealCard() {
         <ul className="space-y-3">
           {deals.map((d) => {
             const s = siteById.get(d.site_id)
-            const parcel = s ? parcelsById.get(s.parcel_ids[0]) : undefined
+            const parcel = s ? plan.parcels?.find((p) => p.id === s.parcel_ids[0]) : undefined
             const c = STRATEGY_COLORS[d.strategy]
-            const title = s?.building_id
-              ? buildingLabel(buildingsById.get(s.building_id), s.building_id)
-              : parcelLabel(parcel, s?.parcel_ids[0] ?? d.site_id)
+            const title = names.get(d.site_id) ?? d.site_id
             return (
               <li key={d.site_id} className="rounded border border-neutral-800 bg-neutral-900 p-3 text-sm">
                 <div className="mb-1 flex flex-wrap items-center gap-2">

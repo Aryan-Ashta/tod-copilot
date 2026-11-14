@@ -36,3 +36,9 @@ def area_sqft(geom: dict | BaseGeometry, epsg: int) -> float:
 
 def distance_m(a: dict | BaseGeometry, b: dict | BaseGeometry, epsg: int) -> float:
     return to_utm(a, epsg).distance(to_utm(b, epsg))
+
+
+def lonlat_dist_m(a: tuple[float, float], b: tuple[float, float]) -> float:
+    """Metres between two lon/lat points (equirectangular; fine at site scale)."""
+    lat = np.radians((a[1] + b[1]) / 2)
+    return float(np.hypot((a[0] - b[0]) * 111_320 * np.cos(lat), (a[1] - b[1]) * 110_540))

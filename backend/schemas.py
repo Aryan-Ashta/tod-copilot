@@ -144,6 +144,7 @@ class Stop(BaseModel):
     riders_per_day_low: float
     riders_per_day_high: float
     prov: Provenance
+    name: Optional[str] = None  # Addition: GTFS stop name or "<feeder> stop N"
 
 
 class Route(BaseModel):
@@ -180,6 +181,7 @@ class LegalPath(BaseModel):
     eligible: Optional[bool]    # None = not covered by corpus
     allows: dict                # e.g. {"max_height_ft": ..., "max_units": ..., "parking_min_per_unit": ...}
     citations: list[Citation]
+    homes: Optional[int] = None  # Addition: homes this path allows here (None: not eligible or unknown)
 
 
 ConversionCandidate.model_rebuild()
@@ -210,6 +212,16 @@ class DealStrategy(BaseModel):
     letter_draft: Optional[str]
 
 
+class GapToPencil(BaseModel):  # Addition: what would close an open funding gap (models/finance.gap_to_pencil)
+    gap_per_home_usd: Optional[float]                    # extra per-home incentive that closes it; None: no homes
+    cost_per_home_usd: Optional[float]
+    value_per_home_usd: Optional[float]                  # stabilized value (NOI / cap rate) per home
+    rent_usd_per_unit_month: float                       # rent factor used
+    break_even_rent_usd_per_unit_month: Optional[float]  # None: rent alone cannot close it, or no homes
+    debt_limit: Literal["loan_to_value", "loan_to_cost"]  # which cap binds the debt today
+    factor_keys: list[str]
+
+
 class CapitalStack(BaseModel):
     site_id: str
     total_cost_usd: float
@@ -220,6 +232,7 @@ class CapitalStack(BaseModel):
     gap_usd: float
     pencils: bool
     assumptions: list[str]      # factors.yaml keys used
+    gap_to_pencil: Optional[GapToPencil] = None  # Addition: None when it pencils
 
 
 class TargetScore(BaseModel):
@@ -317,6 +330,7 @@ class Scoreboard(BaseModel):
     embodied_co2_saved_tonnes: float
     pencils_yes: int
     pencils_total: int
+    walk_by_amenity_pct: dict[str, float] = {}  # Addition: % of new homes within the walk of a park / clinic / grocery
 
 
 class Rejection(BaseModel):
@@ -351,3 +365,4 @@ class Factor(BaseModel):
     source_url: str
     verified: bool
     note: Optional[str] = None
+    label: Optional[str] = None  # Addition: human name shown in the UI; the key stays in the tooltip

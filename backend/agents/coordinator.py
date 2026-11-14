@@ -33,7 +33,7 @@ OUTPUTS = {"infrastructure": ["infrastructure", "readiness"], "transit_network":
            "building_reuse": ["buildings", "conversions", "sites"], "land_deal": ["deals"],
            "funding": ["stacks", "sites"], "sustainability_health": ["targets"]}
 PROMPTS = Path(__file__).with_name("prompts")
-LLM_TIMEOUT_S = 75
+LLM_TIMEOUT_S = 120   # Haiku 5.5 finishes in 45-66 s (docs/model-eval.md); headroom for a slow API during judging
 PLANS_DIR = settings.CACHE_DIR / "plans"
 
 
@@ -181,6 +181,7 @@ def run_plan(locale_id: str, prompt: str, plan_id: str, emit: Callable[[AgentEve
             if name in done:
                 notes.setdefault(name, mod.explain(ctx))
                 emit_all(AgentEvent(agent=name, status="done", step=notes[name], payload=_payload(ctx, name)))
+        transit_network.finalize_measurements(ctx)
         p = ctx.plan_parts
         pre = ctx.pre
         plan = Plan(id=plan_id, locale=locale, infrastructure=p.get("infrastructure", []),

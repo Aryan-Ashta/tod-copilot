@@ -9,10 +9,10 @@ import math
 from datetime import date, datetime, timezone
 from typing import Optional
 
-from backend.data.geo import M2_PER_ACRE, SQFT_PER_M2
+from backend.data.geo import M2_PER_ACRE, SQFT_PER_M2, lonlat_dist_m
 from backend.models import deal as deal_model
 from backend.models import finance
-from backend.models.targets import build_targets, embodied_co2_saved
+from backend.models.targets import build_targets, embodied_co2_saved, walk_gaps
 from backend.schemas import (CapitalStack, Citation, ConversionCandidate, DealStrategy, Edit, InfraFeature, Parcel,
                              Plan, Provenance, Rejection, RescoreResponse, Scoreboard, Site, Stop, TargetScore)
 
@@ -96,10 +96,14 @@ def score_plan(sites: list[Site], stacks: list[CapitalStack], conversions: dict[
     tv = {t.key: t.value for t in targets}
     pursued_ids = {s.id for s in pursued}
     st = [x for x in stacks if x.site_id in pursued_ids]
-    board = Scoreboard(homes=sum(homes_by_target.values()), walk_access_pct=tv["walk_access"],
+    total = sum(homes_by_target.values())
+    gaps = walk_gaps(homes_by_target, walk_m, f)
+    board = Scoreboard(homes=total, walk_access_pct=tv["walk_access"],
                        transport_co2_tonnes_per_year=tv["transport_co2"],
                        embodied_co2_saved_tonnes=tv["embodied_co2_saved"],
-                       pencils_yes=sum(1 for x in st if x.pencils), pencils_total=len(st))
+                       pencils_yes=sum(1 for x in st if x.pencils), pencils_total=len(st),
+                       walk_by_amenity_pct={k: round(100 * (total - n) / total, 1) if total else 0.0
+                                            for k, n in gaps.items()})
     return targets, board
 
 
@@ -138,11 +142,7 @@ def _lookups(base: Plan) -> dict:
 
 
 def _dist(a: tuple[float, float], b: tuple[float, float]) -> float:
-    """Metres between two lon/lat points (equirectangular; fine at site scale)."""
-    lat = math.radians((a[1] + b[1]) / 2)
-    dx = (a[0] - b[0]) * 111_320 * math.cos(lat)
-    dy = (a[1] - b[1]) * 110_540
-    return math.hypot(dx, dy)
+    return lonlat_dist_m(a, b)
 
 
 def _improve(st: _State, kind: str, at: tuple[float, float]) -> None:
@@ -326,7 +326,8 @@ def rescore(base: Plan, edits: list[Edit], f: dict) -> RescoreResponse:
         st = _run(base, edits, f)
     targets, board = _score(st)
     _, base_board = _score(_State(base, f))
-    deltas = {k: round(getattr(board, k) - getattr(base_board, k), 4) for k in Scoreboard.model_fields}
+    deltas = {k: round(getattr(board, k) - getattr(base_board, k), 4) for k in Scoreboard.model_fields
+              if isinstance(getattr(board, k), (int, float))}
     # Patch keys replace whole Plan fields; conversions and transit only appear when an edit changed them.
     patch = {"sites": st.sites, "stacks": st.stacks, "deals": st.deals, "targets": targets,
              "infrastructure_added": st.infra_added}

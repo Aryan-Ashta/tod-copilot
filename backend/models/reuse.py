@@ -95,12 +95,13 @@ def score_reuse(building: Building, legal_paths: Optional[list[LegalPath]], read
                                 f"(factor `reuse_missing_input_score`)")
             else:
                 s = ramp(float(sv.value), lo, hi, tol)
+                src = sv.prov.source.replace("_", " ")
                 if s < 1:
                     if key == "floor_depth":
-                        blockers.append(f"floor depth {sv.value:.0f} ft ({sv.prov.source}) > {hi:.0f} ft {use} limit "
+                        blockers.append(f"floor depth {sv.value:.0f} ft ({src}) > {hi:.0f} ft {use} limit "
                                         f"(factor `{fkey}`)")
                     else:
-                        blockers.append(f"{LABELS[key]} {float(sv.value):,.0f} {unit} ({sv.prov.source}) outside "
+                        blockers.append(f"{LABELS[key]} {float(sv.value):,.0f} {unit} ({src}) outside "
                                         f"{thr} (factor `{fkey}`)")
             scores[key] = s
             details.append(ScoreInput(use=use, fit="physical", name=LABELS[key], value=sv.value, unit=unit,

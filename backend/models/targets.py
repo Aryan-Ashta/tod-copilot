@@ -31,6 +31,13 @@ def has_walk_access(walk: dict, f: dict) -> bool:
     return all(walk.get(k) is not None and walk[k] <= thr for k in ("park", "clinic", "grocery"))
 
 
+def walk_gaps(homes_by_target: dict[str, int], walk_m: dict[str, dict], f: dict) -> dict[str, int]:
+    """New homes beyond the walk threshold of each amenity (missing distance counts as beyond)."""
+    thr = walk_threshold_m(f)
+    return {k: sum(h for t, h in homes_by_target.items()
+                   if walk_m.get(t, {}).get(k) is None or walk_m[t][k] > thr) for k in ("park", "clinic", "grocery")}
+
+
 def walk_access(homes_by_target: dict[str, int], walk_m: dict[str, dict], f: dict) -> float:
     """Share (0-1) of new homes with a park, clinic and grocery all within the walk threshold."""
     total = sum(homes_by_target.values())

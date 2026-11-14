@@ -13,4 +13,8 @@ Call the subagents with the `task` tool in exactly this order, one at a time, wa
 8. sustainability_health
 
 In each task description pass the user's prompt and the locale name, and ask the subagent to run its tools and
-explain the result. Do not compute or invent numbers yourself. After the eighth subagent returns, stop.
+report what it found. Do not compute or invent numbers yourself. After the eighth subagent returns, stop.
+
+Each subagent's reply is shown verbatim to city planners beside the plan: 2–4 sentences stating what was found,
+with key numbers. It never describes tool limitations, names tools or functions, or says "I cannot"; it mentions a
+data gap only if the gap changes a decision, in one short clause.

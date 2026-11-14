@@ -61,6 +61,8 @@ def apply_rules(target_attrs: dict, rules: list[dict], path_names: list[str],
         eligible: Optional[bool] = None
         allows: dict = {}
         cites: list[Citation] = []
+        why: list[Citation] = []        # eligibility rules that decided (False) or a corpus gap (TODO) for None
+        missing: list[str] = []         # inputs an eligibility rule needed but this target lacks
         seen_kinds: set[str] = set()
         todo_kinds: list[str] = []
         for r in rules:
@@ -72,11 +74,17 @@ def apply_rules(target_attrs: dict, rules: list[dict], path_names: list[str],
             res = evaluate(r, attrs)
             if res == "uncovered" and r.get("value") == "TODO" and evaluate({**r, "value": None}, attrs) == "match":
                 todo_kinds.append(kind)  # the rule applies here but its value is not in the corpus
+                if kind == "eligible":
+                    why.append(citation(r, urls))
+            elif res == "uncovered" and kind == "eligible":
+                missing += [a for a in (r.get("applies_if") or {}) if attrs.get(a) is None]
             if res != "match":
                 continue
             seen_kinds.add(kind)
             if kind == "eligible":
                 eligible = bool(r["value"])
+                if not eligible:
+                    why = [citation(r, urls)]
             elif kind in ALLOW_KINDS:
                 allows[kind] = r["value"]
             cites.append(citation(r, urls))
@@ -85,6 +93,11 @@ def apply_rules(target_attrs: dict, rules: list[dict], path_names: list[str],
             allows["not_covered"] = nc
         if eligible is not True:  # what a path allows only matters where it applies
             allows = {k: v for k, v in allows.items() if k == "note"}
+            if eligible is None and missing:
+                allows["missing_inputs"] = list(dict.fromkeys(missing))
+            # only the citations that explain the verdict: the rule that ruled it out, or the uncovered rule
+            paths.append(LegalPath(name=name, eligible=eligible, allows=allows, citations=why))
+            continue
         if attrs.get("stop_tier") is not None:
             for r in rules:
                 if r["path"] == name and r["rule"] == "stop_tier" and evaluate(r, attrs) == "match":

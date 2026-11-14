@@ -2,42 +2,49 @@
 # Per-locale values are mappings keyed by locale id.
 
 reuse_max_floor_depth_ft_residential:
+  label: max floor depth for residential conversion
   value: 45
   unit: ft (core to window)
   source_url: https://ctycms.com/mn-saint-paul/docs/downtown-saint-paul-gensler-conversion-study.pdf
   verified: false
   note: "Gensler, Saint Paul Downtown Alliance conversion study (2024): 'Core to window depth ... Ideal depth is 35-0 - 45-0'. Upper bound of the ideal range used as the max."
 reuse_max_floor_depth_ft_hotel:
+  label: max floor depth for hotel conversion
   value: 36
   unit: ft (core to window)
   source_url: https://www.gensler.com/blog/office-to-hotel-conversions-resilient-opportunities
   verified: false
   note: "Gensler (2025): 'Ideally, in a business hotel, each corridor plus the hotel room depth is 32-36 feet from the building core to the exterior wall. Depths over 40 feet become problematic.' Upper bound of the ideal range used."
 reuse_max_floor_depth_ft_mixed_use:
+  label: max floor depth for mixed-use conversion
   value: 45
   unit: ft (core to window)
   source_url: https://ctycms.com/mn-saint-paul/docs/downtown-saint-paul-gensler-conversion-study.pdf
   verified: false
   note: "No mixed-use-specific depth published; mixed use here is mostly residential above ground-floor retail, so the Gensler residential ideal depth (35-45 ft core to window) is reused. Gap: no direct mixed-use source."
 reuse_min_ceiling_height_ft:
+  label: min ceiling height for conversion
   value: 7.5
   unit: ft (floor to floor or clear; state which)
   source_url: https://codes.iccsafe.org/s/IBC2024V2.0/chapter-12-interior-environment/IBC2024V2.0-Ch12-Sec1208.2
   verified: false
   note: "CLEAR height. IBC 2024 Sec. 1208.2: occupiable spaces, habitable spaces and corridors shall have a ceiling height of not less than 7 feet 6 inches (2286 mm). Code minimum, not a market-preference threshold."
 reuse_min_window_wall_pct:
+  label: min window-to-wall share for conversion
   value: 30
   unit: pct of facade
   source_url: https://codes.iccsafe.org/content/IBC2024P1/chapter-12-interior-environment
   verified: false
   note: "Derived, nearest-source fallback: no published conversion study gives a minimum window-to-wall %. IBC Sec. 1204.2 requires natural-light glazing of at least 8% of the floor area served; for a unit 45 ft deep (factor reuse_max_floor_depth_ft_residential) and a 12 ft story (factor story_height_ft), glazing/wall = 0.08 x 45 / 12 = 0.30 -> 30%."
 reuse_floor_sqft_range_residential:
+  label: floor-plate size range for residential conversion
   value: [12000, 20000]
   unit: '[min, max] sqft per floor'
   source_url: https://www.spur.org/sites/default/files/2023-10/Gensler_Building%20Suitability_Analysis_Sept_2023.pdf
   verified: false
   note: "Gensler for SPUR (San Francisco, 2023), compatibility by typology: High Rise 12001-20000 sf floor plates averaged 84% compatibility; 'properties with mid-size floorplates scored the highest across all categories.'"
 conversion_cost_usd_per_sqft:
+  label: conversion cost per sqft
   value:
     houston_downtown: 360
     la_wilshire_koreatown: 434
@@ -47,6 +54,7 @@ conversion_cost_usd_per_sqft:
   verified: false
   note: "Houston: AECOM Downtown Houston Office Conversion Study (Nov 2023), comparable conversions: 'Average conversion cost was in the ballpark of $360 per square foot' (2022 $, excludes acquisition; local hard costs alone 'approximately $200-250 PSF'). LA: HR&A Advisors for LA City Planning, Exhibit F.4 'Feasibility of Community Benefit Requirements on Adaptive Reuse Projects' (Sept 2022) https://cityclerk.lacity.org/onlinedocs/2022/22-0617_misc_05_09-29-2022.pdf, market-rate prototype 533 S Fremont Ave (Financial District 1960s-80s office, 9 stories, 82,500 SF GBA, no seismic retrofit): 'Total Development Costs per GBA' $434 (residual-land-value model, so excludes building acquisition; per gross building area; with seismic retrofit $540/GBA). Brevard: HR&A Advisors Adaptive Reuse Feasibility Study, Orlando case (Empire Building, 28-44 W. Central Blvd) https://www.buildflorida2030.com/pdf/adaptive/Orlando_Case.pdf: Hard Costs $8.6M + Soft Costs $2.1M + Financing Costs $0.7M (Land $7.5M excluded) over 47,800 rentable sf -> 11,400,000 / 47,800 = 238.49 -> 238 (Central Florida; program includes a 21,250 sf new freestanding addition, so not a pure conversion - gap; no Brevard-specific figure found)."
 hotel_conversion_cost_usd_per_sqft:
+  label: hotel conversion cost per sqft
   value:
     houston_downtown: 360
     la_wilshire_koreatown: 450
@@ -56,21 +64,24 @@ hotel_conversion_cost_usd_per_sqft:
   verified: false
   note: "Nearest-study fallback: no hotel-specific per-city figure found. CBRE (Apr 2024): 'Conversion costs generally range between $250 and $650 per square foot'; this range is cited for office-to-hotel by Hotel Dive / Delta Quattro (2026). Houston = AECOM comparable-conversion average $360/sf (comps include office-to-hotel projects); LA = CBRE midpoint 450; Brevard = CBRE low end 250."
 construction_cost_usd_per_unit:
+  label: construction cost per home
   value:
     houston_downtown: 327500
-    la_wilshire_koreatown: 313950
+    la_wilshire_koreatown: 429996
     brevard_cocoa: 190517
   unit: USD/unit
   source_url: https://nmrk.imgix.net/uploads/fields/pdf-market-reports/4Q25-Houston-Multifamily-Market-Report.pdf
   verified: false
-  note: "Excludes land (land enters the pro forma separately as land_cost). Houston: Newmark Houston Multifamily Market Report 4Q25, Replacement Cost Tracker, 'Mid-Rise Concrete Podium' Per Unit: 'Hard Costs $240K - $295K', 'Soft Costs 15% - 20% $45K - $75K' (Land $50K-$70K, all-in $350K-$400K) -> midpoint hard 267,500 + midpoint soft 60,000 = 327,500 (product type matches newbuild_assumed_stories 7). LA: RAND RR-A3743-1, The High Cost of Producing Multifamily Housing in California (2025) https://www.rand.org/content/dam/rand/pubs/research_reports/RRA3700/RRA3743-1/RAND_RRA3743-1.pdf, Table 3.3, Los Angeles Metro market rate: Hard Costs $259 and Soft Costs $86 per NRSF (Land $61 excluded) -> 345 x 910 sf (avg_unit_sqft_residential) = 313,950. Multi-project regression estimate in 2019 dollars, not escalated, so it understates 2026 cost - gap; Terner Center Making It Pencil 2023 LA prototype is '$71.2 million ($594,000 per unit)' but includes land and does not publish the land amount. Brevard: U.S. Census Bureau Building Permits Survey, County annual 2025 https://www2.census.gov/econ/bps/County/co2025a.txt, Brevard County (12009) 5+ unit buildings: 23 buildings, 1,230 units, valuation $234,335,714 -> 234,335,714 / 1,230 = 190,517 per unit (multi-project, excludes land; permit valuation covers construction only and typically omits soft costs, so it understates total cost - gap)."
+  note: "Excludes land (land enters the pro forma separately as land_cost). Houston: Newmark Houston Multifamily Market Report 4Q25, Replacement Cost Tracker, 'Mid-Rise Concrete Podium' Per Unit: 'Hard Costs $240K - $295K', 'Soft Costs 15% - 20% $45K - $75K' (Land $50K-$70K, all-in $350K-$400K) -> midpoint hard 267,500 + midpoint soft 60,000 = 327,500 (product type matches newbuild_assumed_stories 7). LA: RAND RR-A3743-1, The High Cost of Producing Multifamily Housing in California (2025) https://www.rand.org/content/dam/rand/pubs/research_reports/RRA3700/RRA3743-1/RAND_RRA3743-1.pdf, Table 3.3, Los Angeles Metro market rate: Hard Costs $259 and Soft Costs $86 per NRSF (Land $61 excluded) -> 345 x 910 sf (avg_unit_sqft_residential) = 313,950 in 2019 dollars (RAND: 'Costs are adjusted to 2019 dollars'). Escalated with the Rider Levett Bucknall Comparative Cost Index for Los Angeles: Q3 2020 QCR https://www.rlb.com/wp-content/uploads/sites/4/2021/02/Q3-2020-QCR.pdf 'Los Angeles|21,769|21,819|...' (October 2019 = 21,819) and Q4 2025 QCR https://www.rlb.com/wp-content/uploads/sites/4/2026/01/Q4-2025_QCR.pdf 'Los Angeles|28,731|28,942|29,265|29,640|29,884' (October 2025 = 29,884) -> 29,884 / 21,819 = 1.3696; 313,950 x 1.3696 = 429,996 (general building index, not multifamily-specific - gap). Terner Center Making It Pencil 2023 LA prototype is '$71.2 million ($594,000 per unit)' but includes land and does not publish the land amount. Brevard: U.S. Census Bureau Building Permits Survey, County annual 2025 https://www2.census.gov/econ/bps/County/co2025a.txt, Brevard County (12009) 5+ unit buildings: 23 buildings, 1,230 units, valuation $234,335,714 -> 234,335,714 / 1,230 = 190,517 per unit (multi-project, excludes land; permit valuation covers construction only and typically omits soft costs, so it understates total cost - gap)."
 avg_unit_sqft_residential:
+  label: average apartment size
   value: 910
   unit: sqft/unit
   source_url: https://www.rentcafe.com/blog/rental-market/market-snapshots/national-average-apartment-size/
   verified: false
   note: "RentCafe / Yardi Matrix (Aug 2026): 'The typical size of apartments in 2025 increased by 13 square feet, reaching 910 square feet.' National average of new apartments."
 rent_usd_per_unit_month:
+  label: monthly rent per home
   value:
     houston_downtown: 2288
     la_wilshire_koreatown: 2218
@@ -80,6 +91,7 @@ rent_usd_per_unit_month:
   verified: false
   note: "RentCafe (Yardi Matrix) average apartment rent. Houston: 'The average rent for an apartment in Downtown Houston is $2,288' (Oct 30, 2026). LA: https://www.rentcafe.com/average-rent-market-trends/us/ca/los-angeles/koreatown 'The average rent for an apartment in Koreatown is $2,218' (Sep 30, 2026). Brevard: https://www.rentcafe.com/average-rent-market-trends/us/fl/cocoa 'The average rent for an apartment in Cocoa is $1,757' (Oct 30, 2026)."
 retail_rent_usd_sqft_yr:
+  label: retail rent per sqft
   value:
     houston_downtown: 28.16
     la_wilshire_koreatown: 36.6
@@ -89,6 +101,7 @@ retail_rent_usd_sqft_yr:
   verified: false
   note: "Houston: Partners Real Estate, Houston Retail Q3 2026, submarket table 'CBD 1,748,092 10.7% 8.1% ... $28.16' (Total Avg Asking Rent NNN $/PSF; market total $22.12). LA: NAI Capital, Retail Market Outlook Los Angeles County Q3 2026 https://www2.naicapital.com/wp-content/uploads/sites/2/LA_Retail_Market_Outlook_Q3_2026.pdf, 'Mid-Wilshire 7,572,433 0 7.7% 6.6% ... $3.05' (rents 'triple net, monthly on a direct basis', buildings 5,000+ SF) -> 3.05 x 12 = 36.60. Brevard: Matthews Brevard County Retail Q1 2026 http://www.matthews.com/insights/brevard-county-retailq1-2026 'Asking rents averaged $18.58 per square foot' (county-wide; no Cocoa submarket figure published - gap)."
 hotel_value_usd_per_key:
+  label: hotel value per key
   value:
     houston_downtown: 207000
     la_wilshire_koreatown: 177000
@@ -98,48 +111,56 @@ hotel_value_usd_per_key:
   verified: false
   note: "LA: The Real Deal (Jan 3, 2026), The Line, 3515 Wilshire Boulevard, Koreatown (inside the locale): 'The distressed deal came out to $177,000 a room' ($68M, 384 keys, foreclosure purchase by the lender - single distressed transaction; Atlas Hospitality Group 2025 year-end LA County median 'increased 16% to $185k' https://wpdash.medianewsgroup.com/wp-content/uploads/2026/04/Atlas-Hospitality-Group-California-Hotel-Sales-Survey-2025-Year-End.pdf). Brevard: CRE Direct https://crenews.com/2025/08/29/88-room-hampton-inn-in-melbourne-fla-sells-for-16-5mln '88-Room Hampton Inn in Melbourne, Fla., Sells for $16.5Mln' -> 16,500,000 / 88 = 187,500 (single transaction - gap). Houston: nearest-study fallback, no public downtown Houston per-key sale or HVS HVI per-room value found (HVI market pages publish only value-change bands); LW Hospitality Advisors Q3 2025 Major U.S. Hotel Sales Survey (https://www.hospitalitynet.org/opinion/4130596.html) national 'average sale price per room of roughly $207,000'."
 hotel_key_sqft:
+  label: hotel floor area per key
   value: 775
   unit: sqft/key (gross)
   source_url: https://www.gensler.com/blog/office-to-hotel-conversions-resilient-opportunities
   verified: false
   note: "Gensler (2025): 'With an efficiency of 775 gross square feet per key at a downtown business travel hotel, a 200,000-square-foot building yields approximately 260 keys.' (limited-service: 650 gsf/key)."
 cap_rate:
+  label: cap rate
   value: 0.0525
   unit: fraction
   source_url: https://www.cbre.com/insights/reports/us-cap-rate-survey-h1-2026
   verified: false
   note: "CBRE U.S. Cap Rate Survey H1 2026 (full report PDF https://1031buyerrep.com/articles/2026/08/U.S._H1_2026_Cap_Rate_Survey.pdf), Multifamily Infill Class A Stabilized, H1 2026: Houston 5%-5.25%, Los Angeles 4.75%-5.5%, Orlando 4.75%-5.5%. Single value 5.25% = approximate midpoint across the three markets."
 debt_ratio:
+  label: construction loan-to-cost
   value: 0.87
   unit: fraction of total cost
   source_url: https://www.hud.gov/sites/dfiles/OCHCO/documents/2025-03hsgml.pdf
   verified: false
   note: "HUD Mortgagee Letter 2025-03 (Jan 8, 2025): Market Rate 221(d)(4) NC/SR loan-to-value/loan-to-cost raised from 85% to 87%. Upper bound for insured construction debt; conventional bank construction loans are lower."
 interest_rate:
+  label: interest rate
   value: 0.0705
   unit: fraction/yr
   source_url: https://skylatus.com/multifamily-loan-rates-2026/
   verified: false
   note: "Skylatus Property Capital, rates as of Oct 30, 2026: 'HUD / FHA 221(d)(4) ~6.8% - 7.3% before MIP'. Midpoint 7.05% (matches the 221(d)(4) basis of debt_ratio)."
 vacancy_rate:
+  label: vacancy rate
   value: 0.0615
   unit: fraction
   source_url: https://naahq.org/news/momentum-management-navigating-elevated-costs-constrained-operating-environment
   verified: false
   note: "NAA Income/Expense IQ 2024 national same-store: 'Vacancy and rent loss rose again to $1,323 per unit' vs 'Average annual rent reached $21,502 per unit' -> 1,323 / 21,502 = 0.0615."
 opex_ratio:
+  label: operating expense ratio
   value: 0.4026
   unit: fraction of gross rent
   source_url: https://naahq.org/news/momentum-management-navigating-elevated-costs-constrained-operating-environment
   verified: false
   note: "NAA Income/Expense IQ 2024 national same-store: 'total annual operating expenses per unit climbed to $8,657 per unit' vs 'Average annual rent reached $21,502 per unit' -> 8,657 / 21,502 = 0.4026."
 max_ltv:
+  label: max loan-to-value
   value: 0.80
   unit: fraction of value
   source_url: https://skylatus.com/multifamily-loan-rates-2026/
   verified: false
   note: "Skylatus (Oct 2026) loan table: Agency fixed (Fannie Mae / Freddie Mac) 'Up to 80% LTV' for stabilized apartments."
 per_unit_credit_equity_usd:
+  label: tax credit equity per affordable home
   value:
     houston_downtown: 91668
     la_wilshire_koreatown: 200533
@@ -149,30 +170,35 @@ per_unit_credit_equity_usd:
   verified: false
   note: "4% (bond) deals. LA: LIHTC Sanity Check, California LIHTC cost benchmarks 2026 (every 2026 CTCAC 4% application, Rounds 1-2, matched to CDLAC awards), 'Federal tax credit equity per unit' awarded median $200,533 (per total unit; CA 4% deals are mostly 100% affordable). Houston/Texas: TDHCA Board report on the 2025 Non-competitive 4% HTC Program (Jan 15, 2026) https://assets.noviams.com/novi-file-uploads/taahp/TDHCA_Board_Meetings/Item_31_Non-competitive_4_Percent_Program_Forecast.pdf: approved applications 'represent total issuances of more than $69M in 4% Housing Tax Credits, and 6,050 total units'; closed 'represent 4,185 units and over $45 million' -> 114,000,000 / 10,235 = $11,138 annual credit per unit x 10 years x $0.823 = 91,668 (per total unit; the 'more than'/'over' totals make this a lower bound). Brevard/Florida: Florida Housing Finance Corporation 2025 Annual Report https://www.floridahousing.org/docs/default-source/data-docs-and-reports/annual-reports/2025-annual-report.pdf '$167,954,503 in non-competitive (4%) Housing Credits was allocated' with '10,373 units will be set aside as affordable' -> 16,192 annual credit per affordable unit x 10 years x $0.823 = 133,256. Credit price for TX and FL: CohnReznick Housing Tax Credit Monitor median 'is $0.823 per dollar of housing tax credit' (Jun-Jul 2026, via https://lihtc.loans/market/equity-pricing/), national, not state-specific - gap."
 houston_downtown_per_unit_incentive_usd:
+  label: Downtown Living Initiative rebate per home
   value: 15000
   unit: USD/unit
   source_url: https://therealdeal.com/texas/houston/2024/01/02/tax-breaks-recommended-for-office-to-resi-conversions-in-houston/
   verified: false
   note: "program status: being shaped, verify. The Real Deal (Jan 2, 2024): 'The Downtown Living Initiative, created to spur apartment development, offers up to $15,000 per unit in tax rebates to developers.' A conversion-specific program (AECOM scenarios) was proposed, not adopted."
 embodied_co2_kg_per_sqft_new:
+  label: embodied carbon of new construction
   value: 28.8
   unit: kg CO2e/sqft
   source_url: https://carbonleadershipforum.org/the-embodied-carbon-benchmark-report/
   verified: false
   note: "CLF Embodied Carbon Benchmark Report (2025), Table 1, 50th percentile ('Typical') Multifamily Residential, SEI scope A1-A3 = 310 kgCO2e/m2 GFA (PDF: https://www.cecchub.org/s/The-Embodied-Carbon-Benchmark-Report_2025-04-23-nf45.pdf) -> 310 / 10.764 = 28.8 kg/sqft. Excludes MEP."
 embodied_co2_kg_per_sqft_reuse:
+  label: embodied carbon of reuse
   value: 10.94
   unit: kg CO2e/sqft
   source_url: https://www.builtbuildings.org/carbon-of-commercial-to-residential-conversions
   verified: false
   note: "ULI Randall Lewis Center / Architecture 2030, Whole Life Carbon of Commercial to Residential Conversions (2025), 24 conversions: '62% estimated embodied carbon avoided through housing created by conversions compared to new construction' -> 28.8 x (1 - 0.62) = 10.94 kg/sqft."
 co2_g_per_vehicle_mile:
+  label: CO2 per vehicle mile
   value: 400
   unit: g CO2/mile
   source_url: https://www.epa.gov/greenvehicles/greenhouse-gas-emissions-typical-passenger-vehicle
   verified: false
   note: "US EPA: 'The average passenger vehicle emits about 400 grams of CO2 per mile.'"
 vmt_reduction_per_household_near_transit:
+  label: driving avoided per household near transit
   value:
     houston_downtown: 1884
     la_wilshire_koreatown: 1884
@@ -182,6 +208,7 @@ vmt_reduction_per_household_near_transit:
   verified: false
   note: "CARB policy brief 'Impacts of Residential Transit Access (Distance to Transit)' (Volker, UC Davis, Apr 2025), review of the empirical literature: 'Two separate meta-analyses ... estimated an elasticity of VMT with respect to transit proximity of -0.05' (Ewing & Cervero 2010; Stevens 2017), and 'the maximum total effect of rail transit proximity is more than double that of bus stop proximity (13% versus 6% reduction in VMT)' (Bailey et al. 2008: -4.3% per mile within 3 mi of rail; -1.5% per 1/4 mi within 1 mi of a bus stop). Baseline: FHWA Summary of Travel Trends, 2022 NHTS https://www.fhwa.dot.gov/policyinformation/2022Summary_of_Travel_Trends_Report.pdf, Table 3-4 average annual VMT per household (all purposes) 2022 = 14,489. Houston and LA (sites limited to rail station areas): 0.13 x 14,489 = 1,884. Brevard (no operating rail; planned Brightline is intercity): bus maximum 0.06 x 14,489 = 869. Controlled cross-sectional estimates, not causal; NHTS survey VMT runs below external VMT totals, so the baseline is conservative."
 bus_operating_cost_usd_per_revenue_hour:
+  label: bus operating cost per revenue hour
   value:
     houston_downtown: 195.15
     la_wilshire_koreatown: 246.35
@@ -191,6 +218,7 @@ bus_operating_cost_usd_per_revenue_hour:
   verified: false
   note: "FTA NTD 2022-2025 Annual Data - Metrics, report year 2025, mode MB (bus), directly operated, cost_per_hour: METRO Harris County (ntd_id 60008) 195.1456; LA Metro (90154) 246.3541; Space Coast Area Transit / Brevard BOCC (40063) 109.1695."
 bus_avg_speed_kmh:
+  label: average bus speed
   value:
     houston_downtown: 20.17
     la_wilshire_koreatown: 16.21
@@ -200,6 +228,7 @@ bus_avg_speed_kmh:
   verified: false
   note: "FTA NTD report year 2025, MB directly operated: vehicle_revenue_miles / vehicle_revenue_hours x 1.609344. METRO (60008) 12.53 mph -> 20.17; LA Metro (90154) 10.07 mph -> 16.21; Brevard (40063) 19.07 mph -> 30.70. Made per-locale because the agencies differ by ~2x."
 on_demand_cost_usd_per_zone_year:
+  label: on-demand zone cost per year
   value:
     houston_downtown: 1093333
     la_wilshire_koreatown: 3875000
@@ -209,36 +238,42 @@ on_demand_cost_usd_per_zone_year:
   verified: false
   note: "Brevard: LYNX (Central Florida) Board Action Item 7.B, Oct 23, 2025, NeighborLink on-demand contract to Beefree LLC dba Freebee: 'The cost submitted by Beefree, LLC was $8,495,410 for the initial three (3) year term'; 'The service has grown to 11 routes' (NeighborLink zones) -> 8,495,410 / 3 / 11 = 257,437 per zone-year (neighboring Central Florida agency; no Space Coast Area Transit microtransit cost found). Houston: Houston Chronicle (Dec 19, 2025) https://www.houstonchronicle.com/news/houston-texas/transportation/article/metro-evolve-funding-scrapped-21251191.php: the proposed '$4.1 million' would 'extend the service through September 2026' (from Evolve's Dec 31, 2025 contract end, i.e. 9 months) for Community Connector zones in 'the Third Ward, Second Ward, downtown, the Heights and near Northside' (5 zones) -> 4,100,000 / 0.75 / 5 = 1,093,333 per zone-year (proposed, not executed; METRO instead moved the service to MV Transportation for $2.3M). LA: LA Metro Board Report 2023-0464 (Metro Micro) https://metro.legistar.com/ViewReport.ashx?GID=557&GUID=LATEST&ID=9542&M=R&N=TextL5&Title=Board%20Report 'The annual cost of the MicroTransit program is $31 million' across 'a total of eight Micro Zones' -> 31,000,000 / 8 = 3,875,000."
 walk_speed_m_per_s:
+  label: walking speed
   value: 1.067
   unit: m/s
   source_url: https://mutcd.fhwa.dot.gov/HTM/2009/part4/part4e.htm
   verified: false
   note: "MUTCD 2009 Sec. 4E.06: pedestrian clearance time assumes 'a walking speed of 3.5 feet per second' -> 3.5 x 0.3048 = 1.067 m/s. Conservative (slower walkers); same value carried in MUTCD 11th ed. Sec. 4I.06."
 story_height_ft:
+  label: story height
   value: 12
   unit: ft floor-to-floor
   source_url: https://www.gensler.com/blog/what-we-learned-assessing-office-to-residential-conversions
   verified: false
   note: "Gensler: 'a floor-to-floor height that's typical of a Class C building is approximately 12 feet'."
 reuse_efficiency_factor:
+  label: net-to-gross efficiency for conversion
   value: 0.75
   unit: net/gross fraction
   source_url: https://comptroller.nyc.gov/reports/office-to-residential-conversions-in-nyc-economics-and-fiscal-estimates/
   verified: false
   note: "NYC Comptroller, Office-to-Residential Conversions in NYC (2025): 'the analysis assumes that the rentable-to-gross square feet ratio is 75%, slightly more than the roughly 70-72% that is common for residential projects.' Gensler found 75-80% in the Flatiron/NoMad study; AECOM Houston test fits 54-68%."
 usable_roof_share:
+  label: usable roof share for solar
   value: 0.42
   unit: fraction
   source_url: https://docs.nlr.gov/docs/fy16osti/65298.pdf
   verified: false
   note: "Gagnon et al., NREL/TP-6A20-65298 (2016): earlier NREL work 'estimated that ... 60%-65% of commercial rooftop area was suitable for PV', and 'For flat roofs, the ratio of module area to roof area was assumed to be 0.7'. 0.60 x 0.70 = 0.42 (lower suitability bound; module area per roof area)."
 solar_kw_per_m2:
+  label: solar capacity per m2 of roof
   value: 0.16
   unit: kW/m2
   source_url: https://docs.nlr.gov/docs/fy16osti/65298.pdf
   verified: false
   note: "Gagnon et al. (NREL 2016), Table 1: 'Module power density 160 W/m2' (~16% module efficiency). Applies per m2 of module area."
 solar_kwh_per_kw_year:
+  label: solar output per kW
   value:
     houston_downtown: 1421.4
     la_wilshire_koreatown: 1678.3
@@ -248,24 +283,28 @@ solar_kwh_per_kw_year:
   verified: false
   note: "NREL PVWatts v8.5.0 ac_annual (NSRDB PSM V3 tmy-2020), system_capacity=1, module_type=0, losses=14, array_type=1, tilt=20, azimuth=180, queried 2026-11-14 with DEMO_KEY at bbox/station centers: Houston (29.7505,-95.3690) 1421.42; LA (34.0620,-118.3000) 1678.35; Cocoa station (28.3954,-80.7531) 1543.08. developer.nrel.gov no longer resolves; developer.nlr.gov serves the same API."
 reuse_vacancy_threshold_pct:
+  label: vacancy that flags a building for reuse
   value: 25
   unit: pct
   source_url: team choice
   verified: false
   note: team design choice, labeled
 reuse_missing_input_score:
+  label: score used when an input is missing
   value: 0.5
   unit: score 0-1
   source_url: team choice
   verified: false
   note: team design choice, labeled
 reuse_keep_margin:
+  label: margin to keep the current use
   value: 0.05
   unit: score 0-1
   source_url: team choice
   verified: false
   note: team design choice, labeled
 reuse_ramp_tolerance_pct:
+  label: tolerance around reuse thresholds
   value: 1.0
   unit: fraction of bound
   source_url: team choice
@@ -274,18 +313,21 @@ reuse_ramp_tolerance_pct:
     downtown, and at 0.25 a 57 ft depth scored 0, which the weighted geometric mean turns into a physical fit of ~0.
     At 1.0 a score reaches 0 at twice the bound (plan Phase 6 step 33)."
 reuse_min_building_age_years:
+  label: min building age for reuse
   value: 15
   unit: years
   source_url: team choice
   verified: false
   note: team design choice, labeled
 reuse_min_stories:
+  label: min stories for reuse
   value: 2
   unit: stories
   source_url: team choice
   verified: false
   note: team design choice, labeled
 reuse_fin_margin_floor:
+  label: margin floor for reuse financial fit
   value: -1.0
   unit: margin fraction
   source_url: team choice
@@ -294,18 +336,21 @@ reuse_fin_margin_floor:
     factors, pre-subsidy margins of the two completed conversions we backtest (1801 Smith, 3325 Wilshire) are about
     -0.4 and -0.6, so a -0.3 floor scored every real conversion's financial fit 0. A -1.0 floor maps the full range."
 reuse_fin_margin_ceiling:
+  label: margin ceiling for reuse financial fit
   value: 0.2
   unit: margin fraction
   source_url: team choice
   verified: false
   note: team design choice, labeled
 reuse_feasible_threshold:
+  label: reuse feasibility threshold
   value: 0.6
   unit: score 0-1
   source_url: team choice
   verified: false
   note: team design choice, labeled
 reuse_weights:
+  label: reuse score weights
   value:
     physical: 0.25
     legal: 0.15
@@ -319,6 +364,7 @@ reuse_weights:
     always scores physical 1 and legal 1, so with the original weights a 60%-vacant office tower kept its use even
     when every conversion fit was strong; market fit now carries more weight (plan Phase 6 step 33)."
 reuse_physical_weights:
+  label: reuse physical-fit weights
   value:
     floor_depth: 0.3
     floor_plate: 0.2
@@ -331,6 +377,7 @@ reuse_physical_weights:
   verified: false
   note: team design choice, labeled
 reuse_location_weights:
+  label: reuse location-fit weights
   value:
     readiness: 0.4
     walk_access: 0.3
@@ -340,6 +387,7 @@ reuse_location_weights:
   verified: false
   note: team design choice, labeled
 readiness_weights:
+  label: infrastructure readiness weights
   value:
     transit: 0.3
     grocery: 0.1
@@ -356,6 +404,7 @@ readiness_weights:
   verified: false
   note: team design choice, labeled
 site_rank_weights:
+  label: site ranking weights
   value:
     underuse:
       surface_parking: 1.0
@@ -367,66 +416,87 @@ site_rank_weights:
   verified: false
   note: team design choice, labeled
 sites_top_n:
+  label: number of top sites kept
   value: 5
   unit: sites
   source_url: team choice
   verified: false
   note: team design choice, labeled
 newbuild_assumed_stories:
+  label: assumed stories for new builds
   value: 7
   unit: stories
   source_url: team choice
   verified: false
   note: team design choice, labeled
 site_lot_coverage_ratio:
+  label: lot coverage for new builds
   value: 0.6
   unit: fraction
   source_url: team choice
   verified: false
   note: team design choice, labeled
 mixed_use_residential_share:
+  label: residential share of mixed-use homes
   value: 0.85
   unit: fraction of units
   source_url: team choice
   verified: false
   note: team design choice, labeled
 affordable_share:
+  label: affordable share of homes
   value: 0.2
   unit: fraction of units
   source_url: team choice
   verified: false
   note: team design choice, labeled
+affordable_rent_usd_per_unit_month:
+  label: affordable rent per home (60% AMI, 1-bedroom)
+  value:
+    houston_downtown: 1137
+    la_wilshire_koreatown: 1704
+    brevard_cocoa: 1125
+  unit: USD/unit/month (gross rent, includes utility allowance)
+  source_url: https://www.floridahousing.org/docs/default-source/developers-and-property-managers/compliance/limits/rent-limits/2025_rent_limits/florida-housing-rental-programs---2025-income-and-rent-limits--eff--4-1-2025-.pdf
+  verified: false
+  note: "Maximum LIHTC gross rent at 60% AMI for a 1-bedroom, 2025 HUD MTSP limits effective 4/1/2025; the rent of the affordable_share homes that earn tax credit equity. Rent rule: income for 1.5 persons (average of the 1- and 2-person limits) x 30% / 12. Brevard (Palm Bay-Melbourne-Titusville MSA), Florida Housing 2025 table, 60% row: income '42,000|48,000' and rent '1,050|1,125|1,350' (0BR|1BR|2BR) -> 1,125; check (42,000 + 48,000) / 2 x 0.30 / 12 = 1,125. Houston (Houston-The Woodlands-Sugar Land HUD Metro FMR Area), https://westmontadvisors.com/hudincomedata2025/2025-lihtc-income-limits-harris-county-tx/ '1 person | $35,400 | $42,480'; '2 person | $40,450 | $48,540' (50% | 60% AMI) -> (42,480 + 48,540) / 2 x 0.30 / 12 = 1,137.75 -> 1,137. LA (Los Angeles-Long Beach-Glendale HUD Metro FMR Area), https://westmontadvisors.com/hudincomedata2025/2025-lihtc-income-limits-los-angeles-county-ca/ '1 person | $53,000 | $63,600'; '2 person | $60,600 | $72,720' -> (63,600 + 72,720) / 2 x 0.30 / 12 = 1,704. Houston and LA are computed from income limits, not read from the TDHCA / CTCAC rent tables - verify. Gross rent overstates net rent by the utility allowance."
 investor_equity_share:
+  label: investor equity share of cost
   value: 0.1
   unit: fraction of total cost
   source_url: team choice
   verified: false
   note: team design choice, labeled
 derived_core_depth_ft:
+  label: assumed core depth for derived floor depth
   value: 15
   unit: ft
   source_url: team choice
   verified: false
   note: team design choice, labeled
 deal_vacancy_for_acquisition:
+  label: vacancy that favors buying
   value: 50
   unit: pct
   source_url: team choice
   verified: false
   note: team design choice, labeled
 deal_long_hold_years:
+  label: long-hold ownership period
   value: 20
   unit: years
   source_url: team choice
   verified: false
   note: team design choice, labeled
 deal_lease_pass_years:
+  label: lease term that makes a site a pass
   value: 3
   unit: years
   source_url: team choice
   verified: false
   note: team design choice, labeled
 transit_demand_weights:
+  label: transit demand weights
   value:
     homes: 1.0
     jobs: 0.5
@@ -436,6 +506,7 @@ transit_demand_weights:
   verified: false
   note: team design choice, labeled
 transit_budget_usd:
+  label: annual transit operating budget
   value:
     houston_downtown: 10000000
     la_wilshire_koreatown: 10000000
@@ -445,102 +516,119 @@ transit_budget_usd:
   verified: false
   note: team design choice, labeled
 frequent_bus_headway_min:
+  label: frequent bus headway
   value: 15
   unit: min
   source_url: team choice
   verified: false
   note: team design choice, labeled
 brt_headway_min:
+  label: BRT headway
   value: 10
   unit: min
   source_url: team choice
   verified: false
   note: team design choice, labeled
 brt_min_demand_per_km:
+  label: min demand per km for BRT
   value: 5000
   unit: demand units/km
   source_url: team choice
   verified: false
   note: team design choice, labeled
 stop_spacing_m:
+  label: stop spacing
   value: 400
   unit: m
   source_url: team choice
   verified: false
   note: team design choice, labeled
 stop_catchment_m:
+  label: stop catchment radius
   value: 400
   unit: m
   source_url: team choice
   verified: false
   note: team design choice, labeled
 service_span_hours_per_day:
+  label: service hours per day
   value: 18
   unit: hours/day
   source_url: team choice
   verified: false
   note: team design choice, labeled
 service_days_per_year:
+  label: service days per year
   value: 360
   unit: days/year
   source_url: team choice
   verified: false
   note: team design choice, labeled
 ridership_rate_low:
+  label: ridership rate (low)
   value: 0.02
   unit: riders/day per demand unit
   source_url: team choice
   verified: false
   note: team design choice, labeled
 ridership_rate_high:
+  label: ridership rate (high)
   value: 0.08
   unit: riders/day per demand unit
   source_url: team choice
   verified: false
   note: team design choice, labeled
 count_range_narrowing_pct:
+  label: range narrowing from a ridership count
   value: 60
   unit: pct
   source_url: team choice
   verified: false
   note: team design choice, labeled
 readiness_frequent_headway_max_min:
+  label: max headway counted as frequent
   value: 15
   unit: min
   source_url: team choice
   verified: false
   note: team design choice, labeled
 bike_lane_reach_m:
+  label: bike lane reach
   value: 400
   unit: m
   source_url: team choice
   verified: false
   note: team design choice, labeled
 walk_minutes_target:
+  label: walk time target
   value: 10
   unit: min
   source_url: team choice
   verified: false
   note: team design choice, labeled
 walk_detour_factor:
+  label: walk detour factor
   value: 1.3
   unit: ratio
   source_url: team choice
   verified: false
   note: team design choice, labeled
 slider_max_open_space_share:
+  label: max open-space share on the slider
   value: 0.3
   unit: fraction
   source_url: team choice
   verified: false
   note: team design choice, labeled
 simulated_count_position_in_range:
+  label: simulated count position in range
   value: 0.4
   unit: fraction
   source_url: team choice
   verified: false
   note: team design choice, labeled
 broadband_served_share_min:
+  label: min broadband served share
   value: 0.5
   unit: fraction of broadband serviceable locations in an H3-8 cell
   source_url: team choice
@@ -548,6 +636,7 @@ broadband_served_share_min:
   note: "team design choice, labeled: a cell counts as served at 100/20 Mbps when more than this share of its FCC
     broadband serviceable locations are served (FCC BDC Dec 2025 via Esri Living Atlas)"
 vexcel_surface_parking_hardscape_min_pct:
+  label: min hardscape share for surface parking (Vexcel)
   value: 50
   unit: pct of parcel area that is hardscape (Vexcel Elements)
   source_url: team choice
@@ -555,6 +644,7 @@ vexcel_surface_parking_hardscape_min_pct:
   note: "team design choice, labeled: a parcel with no structure counts as surface parking when at least this share
     of it is hardscape, matching the 50% OSM surface-parking overlay rule"
 walk_snap_nodes:
+  label: walk-network snap nodes
   value: 8
   unit: walk-network nodes
   source_url: team choice
@@ -562,6 +652,7 @@ walk_snap_nodes:
   note: "team design choice, labeled: a parcel or building enters the walk network at whichever of its this-many
     nearest nodes gives the shortest walk (one nearest node can be a dead-end driveway that routes around the block)"
 surface_parking_min_share:
+  label: min parking share of parcel
   value: 0.5
   unit: fraction of parcel area
   source_url: team choice
@@ -569,6 +660,7 @@ surface_parking_min_share:
   note: "team design choice, labeled: a parcel is classed as surface parking when imagery or OSM surface-parking
     flags cover at least this share of its area (plan Phase 2 step 10)"
 transit_budget_option_multipliers:
+  label: transit budget multipliers by option
   value:
     half: 0.5
     double: 2.0
@@ -578,6 +670,7 @@ transit_budget_option_multipliers:
   note: "team design choice, labeled: the 'tight budget' and 'expand transit' prompt options scale the annual
     transit operating budget by these multipliers (backend/agents/plan_options.py)"
 affordable_share_high:
+  label: affordable share of homes (high option)
   value: 0.4
   unit: fraction of units
   source_url: team choice
@@ -585,6 +678,7 @@ affordable_share_high:
   note: "team design choice, labeled: affordable share used when the prompt asks to maximize affordable homes;
     reference: Florida Live Local Act requires 40% affordable units"
 area_max_km2:
+  label: max drawn area
   value: 25
   unit: km2
   source_url: team choice

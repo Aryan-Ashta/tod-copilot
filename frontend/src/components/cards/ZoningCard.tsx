@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { usePlan } from '../../state/PlanContext'
 import { fmtNum, fmtValue, humanize, parcelLabel } from '../../format'
-import { CardShell, CiteLink, Empty, Section } from './common'
+import { CardShell, CiteList, Empty, Section } from './common'
 import { SourcedValue } from '../SourceBadge'
-import type { LegalPath } from '../../types'
+import type { LegalPath, ZoningEnvelope } from '../../types'
 
 function PathColumn({ path, recommended }: { path: LegalPath; recommended: boolean }) {
   const status =
@@ -12,7 +12,8 @@ function PathColumn({ path, recommended }: { path: LegalPath; recommended: boole
       : path.eligible
         ? { text: 'eligible', cls: 'bg-emerald-900 text-emerald-300' }
         : { text: 'not eligible', cls: 'bg-rose-950 text-rose-300' }
-  const allows = Object.entries(path.allows)
+  const missing = Array.isArray(path.allows.missing_inputs) ? (path.allows.missing_inputs as string[]) : []
+  const allows = path.eligible ? Object.entries(path.allows) : []
   return (
     <div className={`rounded border p-3 ${recommended ? 'border-emerald-600' : 'border-neutral-800'} bg-neutral-900`}>
       <div className="mb-1 font-medium">{path.name}</div>
@@ -20,8 +21,20 @@ function PathColumn({ path, recommended }: { path: LegalPath; recommended: boole
         <span className={`rounded px-1.5 py-px text-[11px] ${status.cls}`}>{status.text}</span>
         {recommended && <span className="rounded bg-emerald-600 px-1.5 py-px text-[11px] text-white">recommended</span>}
       </div>
+      {path.homes !== undefined && path.homes !== null && (
+        <div className="mb-2 text-sm">
+          <span className="font-semibold tabular-nums">{fmtNum(path.homes)}</span>{' '}
+          <span className="text-neutral-400">homes on this parcel</span>
+        </div>
+      )}
       {path.eligible === null && (
-        <p className="mb-2 text-xs text-neutral-400">The curated corpus does not cover this question for this parcel.</p>
+        <p className="mb-2 text-xs text-neutral-400">
+          {!missing.length
+            ? 'The curated corpus does not cover this question for this parcel.'
+            : missing.includes('property_type')
+              ? "Not covered here: no existing building is on record for this parcel, so this path's rules cannot be applied."
+              : `Not covered here: the rules need ${missing.map(humanize).join(', ')}, which this parcel's building does not have on record.`}
+        </p>
       )}
       {allows.length > 0 && (
         <dl className="mb-2 space-y-0.5 text-xs">
@@ -33,12 +46,27 @@ function PathColumn({ path, recommended }: { path: LegalPath; recommended: boole
           ))}
         </dl>
       )}
-      <div className="flex flex-wrap gap-1">
-        {path.citations.map((c, i) => (
-          <CiteLink key={`${c.doc_id}-${c.section}-${i}`} c={c} />
-        ))}
-      </div>
+      <CiteList
+        citations={path.citations}
+        label={path.eligible === false ? 'Why not eligible:' : path.eligible === null ? 'Rule not covered:' : undefined}
+      />
     </div>
+  )
+}
+
+function PickLine({ env }: { env: ZoningEnvelope }) {
+  const rec = env.paths.find((p) => p.name === env.recommended_path)
+  if (!rec) return <p className="text-xs text-neutral-400">No eligible path, so nothing is recommended here.</p>
+  const others = env.paths.filter((p) => p.eligible && p.name !== rec.name)
+  if (!others.length) return <p className="text-xs text-neutral-300">Pick: {rec.name}, the only eligible path.</p>
+  const tie = others.every((o) => (o.homes ?? 0) === (rec.homes ?? 0))
+  return (
+    <p className="text-xs text-neutral-300">
+      Pick: <span className="font-medium text-emerald-300">{rec.name}</span>
+      {tie
+        ? ', same homes as the alternative; fewer approval steps wins the tie.'
+        : `, ${fmtNum(rec.homes)} homes vs ${others.map((o) => `${fmtNum(o.homes)} under ${o.name}`).join(', ')} (most homes wins).`}
+    </p>
   )
 }
 
@@ -60,7 +88,6 @@ export default function ZoningCard() {
   const parcelId = selected.parcelId
   const env = parcelId ? envelopes?.find((e) => e.parcel_id === parcelId) : undefined
   const parcel = parcelId ? plan.parcels?.find((p) => p.id === parcelId) : undefined
-  const homes = parcelId ? plan.precomputed?.homes_by_parcel?.[parcelId] : undefined
 
   return (
     <CardShell title="Zoning & legislation" note={plan.notes?.zoning_legislation}>
@@ -102,20 +129,20 @@ export default function ZoningCard() {
                       </span>
                     </div>
                   )}
-                  {homes !== undefined && (
-                    <div className="text-xs text-neutral-400">
-                      New-build homes under the recommended path: {homes === null ? 'no eligible path' : fmtNum(homes)}
-                    </div>
-                  )}
                 </div>
                 {!env ? (
-                  <Empty>No legal envelope computed for this parcel.</Empty>
+                  <Empty>
+                    Not a candidate parcel (not underused and no convertible building), so no legal paths were evaluated here.
+                  </Empty>
                 ) : (
-                  <div className={`grid gap-2 ${env.paths.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                    {env.paths.map((p) => (
-                      <PathColumn key={p.name} path={p} recommended={env.recommended_path === p.name} />
-                    ))}
-                  </div>
+                  <>
+                    <PickLine env={env} />
+                    <div className={`grid gap-2 ${env.paths.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      {env.paths.map((p) => (
+                        <PathColumn key={p.name} path={p} recommended={env.recommended_path === p.name} />
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             )}

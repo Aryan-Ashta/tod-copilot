@@ -1,4 +1,6 @@
 """5. Building reuse agent: which use each existing building could become, and what stops it."""
+import re
+
 from backend.agents import common
 from backend.agents.context import RunContext
 from backend.agents.zoning_legislation import conversion_paths
@@ -26,7 +28,8 @@ def tools(ctx: RunContext):
         by_type: dict[str, int] = {}
         for b in cand:
             by_type[b.property_type.value] = by_type.get(b.property_type.value, 0) + 1
-        return f"{len(cand)} candidate buildings by type {by_type}; {derived} with footprint-derived interiors"
+        return (f"{len(cand)} candidate buildings by type: {common.counts_text(by_type)}; {derived} with "
+                f"footprint-derived interiors")
 
     def score_reuse() -> str:
         """Score every candidate building for residential, hotel, mixed use and keep on physical, legal, market,
@@ -55,7 +58,17 @@ def tools(ctx: RunContext):
         out.sort(key=lambda c: (c.best_use == "keep_current", -c.overall))
         ctx.plan_parts["conversions"] = out
         top = [c for c in out if c.best_use != "keep_current"][:5]
-        return "; ".join(f"{c.building_id}: {c.best_use} {c.overall:.2f}" for c in top) or "no building beats keeping its use"
+        names = {b.id: common.building_label(ctx, b) for b in cand}
+
+        def brief(c) -> str:
+            bl = [re.sub(r"\s*\(factor `[^`]+`\)", "", x) for x in c.blockers[:2]]
+            return (f"{names[c.building_id]}: {c.best_use.replace('_', ' ')} {c.overall:.2f}"
+                    + (f" (top blockers: {'; '.join(bl)})" if bl else " (no blockers)"))
+        if top:
+            return f"{len(top)} top conversion prospects: " + "; ".join(brief(c) for c in top)
+        if not out:
+            return "no candidate buildings"
+        return "no building scores better converted than kept; closest: " + "; ".join(brief(c) for c in out[:2])
 
     def estimate_units() -> str:
         """Turn the top feasible conversions into conversion sites with unit estimates. Returns the sites."""
@@ -77,7 +90,7 @@ def tools(ctx: RunContext):
             ctx.step(NAME, SKIPPED)
             return SKIPPED
         ctx.step(NAME, f"{len(sites)} conversion sites, {sum(s.homes for s in sites)} homes")
-        return "; ".join(f"{s.id}: {s.homes} homes" for s in sites) or "no feasible conversion"
+        return "; ".join(f"{common.site_label(ctx, s.id)}: {s.homes} homes" for s in sites) or "no feasible conversion"
 
     return [get_buildings, score_reuse, estimate_units]
 
@@ -94,8 +107,14 @@ def explain(ctx: RunContext) -> str:
     text = (f"Scored {len(convs)} buildings; {sum(1 for c in convs if c.best_use != 'keep_current')} could change use and "
             f"{len(conv_sites)} became conversion sites. Floor depths for {derived} buildings are derived from "
             f"footprints, not measured, so confidence is capped at low.")
+    blds = ctx.plan_parts.get("buildings", [])
+    gone = [k.replace("_", " ").replace(" usd sqft yr", "").replace(" pct", "").replace(" sqft", "").replace(" ft", "")
+            for k in common.BUILDING_FIELDS if k != "name" and blds
+            and all(getattr(b, k).prov.confidence == "missing" for b in blds)]
+    if gone:
+        text += f" Missing for every building here (no source covers it): {', '.join(gone)}."
     if ctx.locale.data_tier == "public_only":
-        text += " Screening only: county records support little beyond use, area and year built."
+        text += " Screening only: county records carry little beyond use and area."
     if ctx.options.focus == "new_build":
         text += f" {SKIPPED[0].upper()}{SKIPPED[1:]}."
     return text

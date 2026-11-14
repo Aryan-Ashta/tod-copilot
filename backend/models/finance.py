@@ -2,9 +2,10 @@
 import math
 from typing import Literal, Optional
 
-from backend.schemas import CapitalStack
+from backend.schemas import CapitalStack, GapToPencil
 
-NOI_KEYS = ["rent_usd_per_unit_month", "vacancy_rate", "opex_ratio", "cap_rate"]
+NOI_KEYS = ["rent_usd_per_unit_month", "affordable_rent_usd_per_unit_month", "affordable_share", "vacancy_rate",
+            "opex_ratio", "cap_rate"]
 
 
 def acquisition_basis(last_sale_usd: Optional[float], assessed_value_usd: Optional[float]) -> Optional[float]:
@@ -16,8 +17,15 @@ def acquisition_basis(last_sale_usd: Optional[float], assessed_value_usd: Option
     return None
 
 
+def affordable_units(units: int, f: dict) -> int:
+    return math.floor(units * f["affordable_share"])
+
+
 def _noi_value(units: int, f: dict) -> tuple[float, float]:
-    noi = units * f["rent_usd_per_unit_month"] * 12 * (1 - f["vacancy_rate"] - f["opex_ratio"])
+    """Affordable homes (affordable_share, the same ones that earn tax credit equity) rent at the 60% AMI limit."""
+    aff = affordable_units(units, f)
+    rent = (units - aff) * f["rent_usd_per_unit_month"] + aff * f["affordable_rent_usd_per_unit_month"]
+    noi = rent * 12 * (1 - f["vacancy_rate"] - f["opex_ratio"])
     return noi, noi / f["cap_rate"]
 
 
@@ -52,8 +60,8 @@ def capital_stack(site_id: str, pf: dict, f: dict, incentive_per_unit: float = 0
     total = pf["total_cost_usd"]
     debt = min(f["debt_ratio"] * total, pf["value_usd"] * f["max_ltv"])
     incentive = units * incentive_per_unit
-    affordable_units = math.floor(units * f["affordable_share"])
-    tax_credit = affordable_units * f["per_unit_credit_equity_usd"]
+    affordable = affordable_units(units, f)
+    tax_credit = affordable * f["per_unit_credit_equity_usd"]
     investor = f["investor_equity_share"] * total
     gap = total - debt - incentive - tax_credit - investor
     keys = [*pf["factor_keys"], "debt_ratio", "max_ltv", "affordable_share", "per_unit_credit_equity_usd",
@@ -64,9 +72,34 @@ def capital_stack(site_id: str, pf: dict, f: dict, incentive_per_unit: float = 0
                          tax_credit_equity_usd=round(tax_credit, 2), incentive_usd=round(incentive, 2),
                          investor_equity_usd=round(investor, 2), gap_usd=round(gap, 2), pencils=gap <= 0,
                          assumptions=keys)
-    math_ = {**pf, "debt_usd": debt, "incentive_usd": incentive, "affordable_units": affordable_units,
+    math_ = {**pf, "debt_usd": debt, "incentive_usd": incentive, "affordable_units": affordable,
              "tax_credit_equity_usd": tax_credit, "investor_equity_usd": investor, "gap_usd": gap}
+    if gap > 0:
+        stack.gap_to_pencil = gap_to_pencil(math_, f)
     return stack, math_
+
+
+def gap_to_pencil(m: dict, f: dict) -> GapToPencil:
+    """What would close an open gap, holding every other factor fixed: an extra per-home incentive of gap / homes,
+    or the monthly rent at which loan-to-value debt covers what other sources leave. Rent cannot close it when the
+    loan-to-cost cap (debt_ratio) binds before value does."""
+    units, total = m["units"], m["total_cost_usd"]
+    ltc_debt = f["debt_ratio"] * total
+    debt_limit = "loan_to_cost" if ltc_debt <= m["value_usd"] * f["max_ltv"] else "loan_to_value"
+    need_debt = total - m["incentive_usd"] - m["tax_credit_equity_usd"] - m["investor_equity_usd"]
+    rent = f["rent_usd_per_unit_month"]
+    market_units = units - affordable_units(units, f)  # only market-rate homes move with the market rent
+    value_per_rent = market_units * 12 * (1 - f["vacancy_rate"] - f["opex_ratio"]) / f["cap_rate"]  # per $1/mo
+    break_even = None
+    if value_per_rent and need_debt <= ltc_debt:
+        other_value = m["value_usd"] - value_per_rent * rent        # affordable rents, hotel keys, retail NOI
+        break_even = (need_debt / f["max_ltv"] - other_value) / value_per_rent
+    return GapToPencil(
+        gap_per_home_usd=round(m["gap_usd"] / units, 2) if units else None,
+        cost_per_home_usd=round(total / units, 2) if units else None,
+        value_per_home_usd=round(m["value_usd"] / units, 2) if units else None,
+        rent_usd_per_unit_month=rent, break_even_rent_usd_per_unit_month=break_even, debt_limit=debt_limit,
+        factor_keys=["rent_usd_per_unit_month", "cap_rate", "max_ltv", "debt_ratio", *m["factor_keys"][:1]])
 
 
 def compare_options(nb: dict, conv: dict) -> Literal["new_build", "conversion"]:

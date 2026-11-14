@@ -12,3 +12,9 @@ def test_hand_checked_targets():
     walk = {"a": {"park": 100, "clinic": 500, "grocery": 599}, "b": {"park": 100, "clinic": 700, "grocery": 1}}
     assert walk_access({"a": 30, "b": 10}, walk, F) == 0.75     # threshold 600 m
     assert flood_exposure({"a": 30, "b": 10}, {"b": True}) == 0.25
+
+
+def test_walk_gaps_count_homes_beyond_each_amenity():
+    from backend.models.targets import walk_gaps
+    walk = {"a": {"park": 100, "clinic": 500, "grocery": 599}, "b": {"park": 100, "clinic": 700, "grocery": None}}
+    assert walk_gaps({"a": 30, "b": 10}, walk, F) == {"park": 0, "clinic": 10, "grocery": 10}

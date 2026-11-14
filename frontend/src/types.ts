@@ -167,6 +167,7 @@ export interface Stop {
   riders_per_day_low: number
   riders_per_day_high: number
   prov: Provenance
+  name?: string | null
 }
 
 export type RouteKind = 'rail_existing' | 'bus_existing' | 'frequent_bus' | 'brt' | 'on_demand_zone'
@@ -198,6 +199,8 @@ export interface Citation {
   section: string
   quote: string
   url: string | null
+  /** UI only: every quote when chips for the same (doc_id, section) are merged */
+  quotes?: string[]
 }
 
 export interface LegalPath {
@@ -205,6 +208,7 @@ export interface LegalPath {
   eligible: boolean | null
   allows: Record<string, unknown>
   citations: Citation[]
+  homes?: number | null
 }
 
 export interface ZoningEnvelope {
@@ -234,6 +238,16 @@ export interface DealStrategy {
   letter_draft: string | null
 }
 
+export interface GapToPencil {
+  gap_per_home_usd: number | null
+  cost_per_home_usd: number | null
+  value_per_home_usd: number | null
+  rent_usd_per_unit_month: number
+  break_even_rent_usd_per_unit_month: number | null
+  debt_limit: 'loan_to_value' | 'loan_to_cost'
+  factor_keys: string[]
+}
+
 export interface CapitalStack {
   site_id: string
   total_cost_usd: number
@@ -244,6 +258,7 @@ export interface CapitalStack {
   gap_usd: number
   pencils: boolean
   assumptions: string[]
+  gap_to_pencil?: GapToPencil | null
 }
 
 export type TargetKey = 'transport_co2' | 'embodied_co2_saved' | 'rooftop_solar' | 'walk_access' | 'flood_exposure'
@@ -389,6 +404,7 @@ export interface Scoreboard {
   embodied_co2_saved_tonnes: number
   pencils_yes: number
   pencils_total: number
+  walk_by_amenity_pct?: Record<string, number>
 }
 
 export interface Rejection {
@@ -432,6 +448,7 @@ export interface Factor {
   source_url: string
   verified: boolean
   note?: string | null
+  label?: string | null
 }
 
 // ---- API response shapes (Phase 7) ----

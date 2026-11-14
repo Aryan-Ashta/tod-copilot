@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { Legend, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from 'recharts'
 import { usePlan } from '../../state/PlanContext'
 import { buildingLabel, fmtNum, humanize } from '../../format'
-import { CardShell, CiteLink, Empty, Section, td, th } from './common'
+import { CardShell, CiteList, Empty, Section, td, th } from './common'
 import SourceBadge, { SourcedValue } from '../SourceBadge'
-import FactorHover from '../FactorHover'
+import FactorHover, { FactorText } from '../FactorHover'
 import type { Building, ConversionCandidate, FitName, Sourced, UseType } from '../../types'
 
 const FITS: FitName[] = ['physical', 'legal', 'market', 'financial', 'location']
@@ -100,7 +100,9 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
         ) : (
           <ul className="list-disc space-y-0.5 pl-5 text-sm text-amber-200">
             {c.blockers.map((x) => (
-              <li key={x}>{x}</li>
+              <li key={x}>
+                <FactorText text={x} />
+              </li>
             ))}
           </ul>
         )}
@@ -112,9 +114,7 @@ function Detail({ b, c }: { b: Building | undefined; c: ConversionCandidate }) {
             <span className="text-xs text-neutral-400">
               {c.legal_path.eligible === null ? 'not covered' : c.legal_path.eligible ? 'eligible' : 'not eligible'}
             </span>
-            {c.legal_path.citations.map((ci, i) => (
-              <CiteLink key={i} c={ci} />
-            ))}
+            <CiteList citations={c.legal_path.citations} />
           </div>
         </Section>
       )}

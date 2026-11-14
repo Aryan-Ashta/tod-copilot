@@ -1,5 +1,6 @@
 """Transit network design (docs/05). Pure: demand + existing GTFS + walk graph -> TransitPlan pieces."""
 import math
+import re
 import statistics
 from typing import Optional
 
@@ -9,7 +10,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 from shapely.geometry import LineString, MultiPoint, mapping
 
-from backend.data.geo import lonlat_to_utm
+from backend.data.geo import lonlat_dist_m, lonlat_to_utm
 from backend.models.geo_graph import NodeIndex
 from backend.schemas import MeasurementSuggestion, Provenance, Route, SimulatedCount, Stop
 
@@ -133,7 +134,8 @@ def optimize_network(existing: dict, grid: list[dict], cands: list[dict], budget
             hw *= 2
             best = {**best, "headway_min": hw, "cost": upgrade_cost(best["cycle_time_h"], best["old_headway_min"], hw, f)}
         take(best)
-        notes.append(f"guardrail: {best['id']} upgraded from {best['old_headway_min']:.0f} to {hw} min headway")
+        notes.append(f"route {best.get('name') or best['id']} runs every {hw} min instead of "
+                     f"{best['old_headway_min']:.0f} so at least one existing route gets more frequent")
         cands = [c for c in cands if c["id"] != best["id"]]
     pool = list(cands)
     while pool:
@@ -217,16 +219,36 @@ def estimate_ridership(stops: list[dict], grid: list[dict], f: dict, prov: Prove
         s["covered_demand"] = d
         out.append(Stop(id=s["id"], lonlat=s["lonlat"], route_ids=s["route_ids"],
                         riders_per_day_low=round(d * f["ridership_rate_low"], 1),
-                        riders_per_day_high=round(d * f["ridership_rate_high"], 1), prov=prov))
+                        riders_per_day_high=round(d * f["ridership_rate_high"], 1), prov=prov, name=s.get("name")))
     return out
 
 
-def suggest_measurements(stops: list[Stop], covered: dict[str, float], names: dict[str, str], f: dict
-                         ) -> list[MeasurementSuggestion]:
-    ranked = sorted(stops, key=lambda s: -(s.riders_per_day_high - s.riders_per_day_low) * covered.get(s.id, 0))
-    return [MeasurementSuggestion(what=f"Manual weekday passenger count at stop {names.get(s.id, s.id)}, 7–9 am",
-                                  target_id=s.id, expected_range_narrowing_pct=f["count_range_narrowing_pct"])
-            for s in ranked[:3] if s.riders_per_day_high > 0]
+def suggest_measurements(stops: list[Stop], covered: dict[str, float], names: dict[str, str], f: dict,
+                         sites: tuple[tuple[tuple[float, float], int], ...] = ()) -> list[MeasurementSuggestion]:
+    """Top 3 stops to count; one per stop name (GTFS often has one id per side of the street).
+
+    `sites`: (lon/lat, homes) of planned sites. Stops with planned homes inside their catchment come first, ranked by
+    range width x those homes; then the rest by range width x covered demand. Without sites, only the second key."""
+    def dep_homes(s: Stop) -> int:
+        return sum(h for ll, h in sites if lonlat_dist_m(ll, s.lonlat) <= f["stop_catchment_m"])
+
+    def key(s: Stop) -> tuple[float, float]:
+        width = s.riders_per_day_high - s.riders_per_day_low
+        return -width * dep_homes(s), -width * covered.get(s.id, 0)
+    ranked = sorted(stops, key=key)
+    out, seen = [], set()
+    for s in ranked:
+        name = names.get(s.id, s.id)
+        # "8th / Irolo" and "Irolo / 8th" are one intersection: compare the set of street names
+        corner = frozenset(p.strip().lower() for p in re.split(r"[/@&]", name)) or {name}
+        if s.riders_per_day_high <= 0 or corner in seen:
+            continue
+        seen.add(corner)
+        out.append(MeasurementSuggestion(what=f"Manual weekday passenger count at stop {name}, 7–9 am",
+                                         target_id=s.id, expected_range_narrowing_pct=f["count_range_narrowing_pct"]))
+        if len(out) == 3:
+            break
+    return out
 
 
 def simulate_count(stop: Stop, f: dict) -> SimulatedCount:

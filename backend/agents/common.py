@@ -21,6 +21,50 @@ BUILDING_FIELDS = ("property_type", "building_class", "year_built", "year_renova
                    "ceiling_height_ft", "window_wall_pct", "roof_area_sqft", "name")
 
 
+def counts_text(counts: dict[str, int], fmt: str = "{n} {k}") -> str:
+    """{'buy': 6, 'ground_lease': 2} -> '6 buy, 2 ground lease' (largest first, zeros dropped)."""
+    items = sorted(((n, k) for k, n in counts.items() if n), key=lambda x: -x[0])
+    return ", ".join(fmt.format(n=n, k=str(k).replace("_", " ")) for n, k in items) or "none"
+
+
+def join_and(names: list[str]) -> str:
+    return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} and {names[-1]}" if names else "no paths"
+
+
+def _base_label(ctx: RunContext, site) -> str:
+    if site.building_id:
+        b = next((b for b in ctx.plan_parts.get("buildings", []) if b.id == site.building_id), None)
+        if b is not None:
+            return building_label(ctx, b)
+    p = ctx.cache.get("parcels_by_id", {}).get(site.parcel_ids[0]) if site.parcel_ids else None
+    if p is not None and p.address.value:
+        return p.address.value
+    return f"parcel {site.parcel_ids[0]}" if site.parcel_ids else site.id
+
+
+def site_label(ctx: RunContext, site_id: str) -> str:
+    """Building name for a conversion, else the first parcel's address, else the parcel id (never a bare site id).
+    Two sites with the same label (two parcels at one address) get their parcel id appended."""
+    sites = ctx.plan_parts.get("sites", [])
+    site = next((s for s in sites if s.id == site_id), None)
+    if site is None:
+        return site_id
+    label = _base_label(ctx, site)
+    if site.parcel_ids and any(s.id != site.id and _base_label(ctx, s) == label for s in sites):
+        label += f" (parcel {site.parcel_ids[0]})"
+    return label
+
+
+def building_label(ctx: RunContext, b: Building) -> str:
+    """Building name, else its parcel's address, else 'an unnamed <type> building' (never an osm id)."""
+    if b.name.value:
+        return b.name.value
+    p = ctx.cache.get("parcels_by_id", {}).get(b.parcel_id)
+    if p is not None and p.address.value:
+        return p.address.value
+    return f"an unnamed {(b.property_type.value or 'commercial').replace('_', ' ')} building"
+
+
 def _get(rec: dict, k: str, cap: str) -> Sourced:
     v = rec.get(k)
     return v if isinstance(v, Sourced) else missing(cap, f"{k}: no provider has this value here")
@@ -188,3 +232,23 @@ def euclid_to_stations(ctx: RunContext, lonlat: tuple[float, float]) -> tuple[Op
     x, y = lonlat_to_utm(*lonlat, ctx.locale.utm_epsg)
     best = min(ctx.locale.stations, key=lambda s: math.dist((x, y), lonlat_to_utm(*s.lonlat, ctx.locale.utm_epsg)))
     return math.dist((x, y), lonlat_to_utm(*best.lonlat, ctx.locale.utm_epsg)), best
+
+
+MODE_LABELS = {"light_rail": "light rail", "heavy_rail": "Metro rail", "intercity_rail_planned": "planned intercity rail",
+               "frequent_bus": "frequent bus"}
+
+
+def stations_text(ctx: RunContext, limit: int = 8) -> str:
+    """'13 light rail stations: Bell Station, Central Station Main, ... (+5 more)' for tool outputs."""
+    st = ctx.locale.stations
+    if not st:
+        return "no rail stations in this area"
+    modes = sorted({MODE_LABELS.get(s.mode, s.mode) for s in st})
+    names = [s.name for s in st[:limit]] + ([f"+{len(st) - limit} more"] if len(st) > limit else [])
+    return f"{len(st)} {' and '.join(modes)} station{'s' if len(st) > 1 else ''}: {', '.join(names)}"
+
+
+def nearest_station_text(ctx: RunContext, geometry: dict) -> str:
+    """'0.2 mi from Preston Station' (straight line) or '' when the locale has no stations."""
+    d, s = euclid_to_stations(ctx, centroid_lonlat(geometry))
+    return f"{miles(d):.1f} mi from {s.name}" if s is not None else ""

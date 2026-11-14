@@ -89,7 +89,8 @@ For each target parcel/building:
 ```
 New build:   total_cost = land_cost + homes × construction_cost_usd_per_unit
 Conversion:  total_cost = acquisition + rentable_area_sqft × conversion_cost_usd_per_sqft
-noi          = units × rent × 12 × (1 - vacancy_rate - opex_ratio)
+affordable_units = floor(units × affordable_share)   (the same homes that earn tax credit equity)
+noi          = ((units - affordable_units) × rent + affordable_units × affordable_rent) × 12 × (1 - vacancy_rate - opex_ratio)
 value        = noi / cap_rate
 debt         = min(debt_ratio × total_cost, value × max_ltv)
 incentive    = units × per_unit_incentive (only if the factor exists for the locale)
@@ -98,7 +99,15 @@ investor_eq  = target share × total_cost
 gap          = total_cost - debt - incentive - tax_credit - investor_eq
 pencils      = gap <= 0
 compare_options: pick the option with the larger (value - total_cost); ties → conversion (less embodied carbon)
+gap_to_pencil (only when gap > 0, each lever holding everything else fixed):
+  extra incentive per home = gap / units
+  need_debt   = total_cost - incentive - tax_credit - investor_eq
+  break-even rent: rent at which value × max_ltv = need_debt; none when need_debt > debt_ratio × total_cost
+                   (the loan-to-cost cap binds, so no rent closes it)
 ```
+
+Targets and the scoreboard count every site still in the plan (pursued or on watch), not only sites that pencil;
+the UI labels them "if all N candidate sites proceed".
 
 Return every intermediate number.
 

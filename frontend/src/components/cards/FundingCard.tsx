@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { usePlan } from '../../state/PlanContext'
-import { fmtNum, fmtUsd, humanize } from '../../format'
+import { useApp } from '../../state/AppContext'
+import { fmtNum, fmtUsd, parcelLabel, siteNames } from '../../format'
 import { siteLetters } from '../../mapLayers'
 import { CardShell, Empty, Section, td, th } from './common'
-import FactorHover from '../FactorHover'
+import FactorHover, { useFactorLabel } from '../FactorHover'
 import type { CapitalStack, Site } from '../../types'
+
+const INCENTIVE = 'houston_downtown_per_unit_incentive_usd'
+const short = (s: string, n = 24) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 
 const NO_SITES: Site[] = []
 const PARTS: { key: keyof CapitalStack; label: string; color: string }[] = [
@@ -17,6 +21,7 @@ const PARTS: { key: keyof CapitalStack; label: string; color: string }[] = [
 ]
 
 function MathRow({ s }: { s: CapitalStack }) {
+  const label = useFactorLabel()
   return (
     <div className="rounded bg-neutral-950 p-2 text-xs">
       <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 tabular-nums">
@@ -31,13 +36,58 @@ function MathRow({ s }: { s: CapitalStack }) {
       </div>
       <div className="mt-1 text-neutral-400">
         Factors:{' '}
-        {s.assumptions.map((k) => (
-          <FactorHover key={k} keys={[k]}>
-            <code className="mr-1.5 text-neutral-300">{k}</code>
-          </FactorHover>
+        {s.assumptions.map((k, i) => (
+          <span key={k}>
+            <FactorHover keys={[k]}>
+              <span className="text-neutral-300">{label(k)}</span>
+            </FactorHover>
+            {i < s.assumptions.length - 1 && ', '}
+          </span>
         ))}
       </div>
     </div>
+  )
+}
+
+/** One line per open gap: its size per home, cost vs value per home, and what would close it (from the backend). */
+function GapLine({ s, name }: { s: CapitalStack; name: string }) {
+  const g = s.gap_to_pencil
+  const label = useFactorLabel()
+  const { factorNumber } = useApp()
+  if (!g) return null
+  const inc = s.assumptions.includes(INCENTIVE) ? factorNumber(INCENTIVE) : null
+  return (
+    <li>
+      <span className="font-medium text-neutral-100">{name}</span>: gap {fmtUsd(s.gap_usd)}
+      {g.gap_per_home_usd === null ? (
+        '; no homes, so no per-home lever.'
+      ) : (
+        <>
+          {' '}
+          ({fmtUsd(g.gap_per_home_usd)} per home;{' '}
+          <FactorHover keys={g.factor_keys}>
+            cost {fmtUsd(g.cost_per_home_usd)} vs value {fmtUsd(g.value_per_home_usd)} per home
+          </FactorHover>
+          ). Closes with {fmtUsd(g.gap_per_home_usd)} more incentive per home
+          {inc !== null && (
+            <>
+              {' '}
+              on top of the <FactorHover keys={[INCENTIVE]}>{label(INCENTIVE)}</FactorHover> ({fmtUsd(inc)})
+            </>
+          )}
+          {g.break_even_rent_usd_per_unit_month !== null ? (
+            <>
+              , or <FactorHover keys={['rent_usd_per_unit_month']}>rent</FactorHover> of $
+              {fmtNum(g.break_even_rent_usd_per_unit_month)}/mo instead of ${fmtNum(g.rent_usd_per_unit_month)}.
+            </>
+          ) : (
+            <>
+              ; rent alone cannot close it (<FactorHover keys={['debt_ratio']}>{label('debt_ratio')}</FactorHover> cap).
+            </>
+          )}
+        </>
+      )}
+    </li>
   )
 }
 
@@ -49,10 +99,12 @@ export default function FundingCard() {
   const letters = siteLetters(sites)
   const [showMath, setShowMath] = useState(false)
   const siteById = useMemo(() => new Map(sites.map((s) => [s.id, s])), [sites])
+  const names = useMemo(() => siteNames(plan), [plan])
 
   const label = (id: string) => {
-    const s = siteById.get(id)
-    return letters.get(id) ?? (s ? `${humanize(s.kind)} ${id}` : id)
+    const n = names.get(id) ?? id
+    const l = letters.get(id)
+    return l ? `${l} · ${n}` : n
   }
 
   const chart = (stacks ?? []).map((s) => ({
@@ -97,7 +149,13 @@ export default function FundingCard() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chart} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
                   <XAxis type="number" tickFormatter={(v: number) => fmtUsd(v)} tick={{ fill: '#a3a3a3', fontSize: 10 }} />
-                  <YAxis type="category" dataKey="name" width={70} tick={{ fill: '#d4d4d4', fontSize: 11 }} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={150}
+                    tickFormatter={(v: string) => short(v)}
+                    tick={{ fill: '#d4d4d4', fontSize: 10 }}
+                  />
                   <Tooltip
                     formatter={(v) => fmtUsd(Number(v))}
                     contentStyle={{ background: '#171717', border: '1px solid #404040' }}
@@ -123,7 +181,9 @@ export default function FundingCard() {
               <tbody>
                 {stacks.map((s) => (
                   <tr key={s.site_id} className="border-t border-neutral-900">
-                    <td className={td}>{label(s.site_id)}</td>
+                    <td className={td} title={s.site_id}>
+                      {label(s.site_id)}
+                    </td>
                     <td className={`${td} tabular-nums`}>
                       <FactorHover keys={s.assumptions}>{fmtUsd(s.total_cost_usd)}</FactorHover>
                     </td>
@@ -145,6 +205,17 @@ export default function FundingCard() {
               </div>
             )}
           </Section>
+          {stacks.some((s) => s.gap_to_pencil) && (
+            <Section title="Gap to pencil">
+              <ul className="space-y-1.5 text-xs text-neutral-300">
+                {stacks
+                  .filter((s) => s.gap_to_pencil)
+                  .map((s) => (
+                    <GapLine key={s.site_id} s={s} name={label(s.site_id)} />
+                  ))}
+              </ul>
+            </Section>
+          )}
           {comparisons.length > 0 && (
             <Section title="New build vs Convert">
               <table className="w-full text-sm">
@@ -165,7 +236,9 @@ export default function FundingCard() {
                       const st = stackById.get(s.id)
                       return (
                         <tr key={`${pid}-${s.id}`} className={i === 0 ? 'border-t border-neutral-800' : ''}>
-                          <td className={td}>{i === 0 ? pid : ''}</td>
+                          <td className={td} title={pid}>
+                            {i === 0 ? parcelLabel(plan.parcels?.find((p) => p.id === pid), pid) : ''}
+                          </td>
                           <td className={td}>{s.kind === 'new_build' ? 'New build' : 'Convert'}</td>
                           <td className={`${td} tabular-nums`}>{fmtNum(s.homes)}</td>
                           <td className={`${td} tabular-nums`}>{fmtUsd(st?.total_cost_usd)}</td>

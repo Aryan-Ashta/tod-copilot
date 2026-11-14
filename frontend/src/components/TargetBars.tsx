@@ -11,6 +11,20 @@ export const TARGET_LABELS: Record<TargetKey, string> = {
   flood_exposure: 'Flood exposure',
 }
 
+/** Targets and the scoreboard count every site still in the plan (pursued or on watch), not only those that pencil. */
+export function TargetScope({ className = '' }: { className?: string }) {
+  const { state } = usePlan()
+  const inPlan = (state.plan.sites ?? []).filter((s) => s.status !== 'pass')
+  if (!inPlan.length) return null
+  const ids = new Set(inPlan.map((s) => s.id))
+  const yes = (state.plan.stacks ?? []).filter((x) => ids.has(x.site_id) && x.pencils).length
+  return (
+    <p className={`text-amber-200/90 ${className}`}>
+      If all {inPlan.length} candidate sites proceed · {yes} of {inPlan.length} pencil today
+    </p>
+  )
+}
+
 /** Each target as a bar; the tick marks the base plan's value so edits show their effect. */
 export default function TargetBars({ compact = false }: { compact?: boolean }) {
   const { state } = usePlan()
@@ -18,6 +32,8 @@ export default function TargetBars({ compact = false }: { compact?: boolean }) {
   const base = new Map((state.basePlan?.targets ?? []).map((t) => [t.key, t.value]))
   if (!targets) return <p className="text-sm text-neutral-500 italic">Waiting for the sustainability agent…</p>
   return (
+    <>
+    <TargetScope className={compact ? 'mb-1.5 text-[11px]' : 'mb-3 text-xs'} />
     <ul className={compact ? 'space-y-1.5' : 'space-y-3'}>
       {targets.map((t) => {
         const b = base.get(t.key) ?? t.value
@@ -49,5 +65,6 @@ export default function TargetBars({ compact = false }: { compact?: boolean }) {
         )
       })}
     </ul>
+    </>
   )
 }

@@ -1,6 +1,8 @@
 """6. Land deal agent: a strategy per pursued site or conversion, with draft letters (nothing is sent)."""
+import re
 from datetime import date
 
+from backend.agents import common
 from backend.agents.context import RunContext
 from backend.models.deal import deal_strategy
 
@@ -31,7 +33,9 @@ def tools(ctx: RunContext):
                                        s.homes))
         ctx.plan_parts["deals"] = deals
         ctx.step(NAME, f"{len(deals)} deal strategies drafted")
-        return "; ".join(f"{d.site_id}: {d.strategy}" for d in deals)
+        factor_ref = re.compile(r"\s*\(factor `[^`]+`\)")
+        return "; ".join(f"{common.site_label(ctx, d.site_id)}: {d.strategy.replace('_', ' ')} "
+                         f"({factor_ref.sub('', '; '.join(d.reasons))})" for d in deals)
 
     return [deal_strategies]
 
@@ -46,5 +50,5 @@ def explain(ctx: RunContext) -> str:
     for d in deals:
         by[d.strategy] = by.get(d.strategy, 0) + 1
     unknown = sum(1 for d in deals if "lease status unknown, verify before outreach" in d.reasons)
-    return (f"Strategies: {by or 'none'}. Lease status unknown for {unknown} of {len(deals)} sites "
+    return (f"Strategies: {common.counts_text(by)}. Lease status unknown for {unknown} of {len(deals)} sites "
             f"(verify before outreach). Letters are drafts; nothing is sent.")

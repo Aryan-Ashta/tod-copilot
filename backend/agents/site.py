@@ -31,7 +31,7 @@ def tools(ctx: RunContext):
         under = common.underused_parcels(ctx)
         counts = {k: sum(1 for p in under if p.land_use.value == k) for k in common.UNDERUSE}
         ctx.step(NAME, f"{len(under)} underused parcels", {"counts": counts})
-        return f"underused parcels: {counts}"
+        return f"underused parcels: {common.counts_text(counts)}"
 
     def find_combinable() -> str:
         """Union touching underused parcels with the same owner into one site. Returns the site-candidate count."""
@@ -62,7 +62,10 @@ def tools(ctx: RunContext):
         ctx.cache["site_groups"] = groups
         combined = sum(1 for g in groups if len(g) > 1)
         ctx.step(NAME, f"{len(near)} underused parcels within {max_d} m walk of a station; {combined} combined sites")
-        return f"{len(groups)} candidate sites ({combined} combine same-owner touching parcels)"
+        in_flood = sum(1 for p in common.underused_parcels(ctx) if flood.get(p.id))
+        return (f"{len(near)} underused parcels within a {max_d:.0f} m walk of a station, outside FEMA high-risk "
+                f"flood zones ({in_flood} underused parcels in those zones excluded); {len(groups)} candidate sites "
+                f"({combined} combine same-owner touching parcels)")
 
     def homes_for() -> str:
         """Homes per candidate site from its zoning envelope, then rank by homes x distance weight x underuse
@@ -101,7 +104,12 @@ def tools(ctx: RunContext):
             ctx.step(NAME, SKIPPED)
             return SKIPPED
         ctx.step(NAME, f"Top {len(sites)} new-build sites: {sum(s.homes for s in sites)} homes")
-        return "; ".join(f"{s.id}: {s.homes} homes" for s in sites) or "no eligible underused land near stations"
+        def nearest(s):
+            _, st = common.euclid_to_stations(ctx, common.centroid_lonlat(s.geometry))
+            walk = min(sw[p] for p in s.parcel_ids)
+            return f"{walk:.0f} m walk to a station" + (f" (closest: {st.name})" if st is not None else "")
+        return "; ".join(f"{common.site_label(ctx, s.id)}: {s.homes} homes, {nearest(s)}" for s in sites) \
+            or "no eligible underused land near stations"
 
     return [get_parcels, classify_land_use, find_combinable, homes_for]
 
@@ -116,6 +124,12 @@ def explain(ctx: RunContext) -> str:
     n_under = len(common.underused_parcels(ctx)) if "parcels" in ctx.cache else 0
     text = (f"{n_under} underused parcels found; the top {len(sites)} new-build sites near stations hold "
             f"{sum(s.homes for s in sites)} homes. Parcels in FEMA high-risk flood zones were excluded.")
+    parcels = ctx.plan_parts.get("parcels", [])
+    gone = [k.replace("_usd", "").replace("_", " ") for k in common.PARCEL_FIELDS
+            if parcels and all(getattr(p, k).prov.confidence == "missing" for p in parcels)]
+    if gone:
+        text += (f" Missing for every parcel here (no source covers it): {', '.join(gone)}"
+                 + ("; assessed value stands in for the sale price." if "last sale" in gone else "."))
     if ctx.options.focus == "conversions":
         text += f" {SKIPPED[0].upper()}{SKIPPED[1:]}."
     return text

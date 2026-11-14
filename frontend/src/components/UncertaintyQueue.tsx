@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { usePlan } from '../state/PlanContext'
 import { useApp } from '../state/AppContext'
-import { fmtNum, geometryCentroid, haversineM } from '../format'
+import { fmtNum, geometryCentroid, haversineM, siteNames } from '../format'
 import { siteLetters } from '../mapLayers'
 import FactorHover from './FactorHover'
 
@@ -15,6 +15,7 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
   const t = state.plan.transit
   const sites = state.plan.sites ?? []
   const letters = siteLetters(sites)
+  const names = useMemo(() => siteNames(state.plan), [state.plan])
   const catchment = factorNumber('stop_catchment_m')
 
   return (
@@ -71,7 +72,13 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
                           ? '—'
                           : deps.length === 0
                             ? 'no sites within the stop catchment'
-                            : deps.map((s) => (letters.get(s.id) ? `Site ${letters.get(s.id)}` : s.id)).join(', ')}
+                            : deps.map((s, i) => (
+                                <span key={s.id} title={s.id}>
+                                  {letters.get(s.id) ? `Site ${letters.get(s.id)} · ` : ''}
+                                  {names.get(s.id) ?? s.id}
+                                  {i < deps.length - 1 && ', '}
+                                </span>
+                              ))}
                       </div>
                     </div>
                   ) : (

@@ -11,6 +11,7 @@ from backend.data.providers.fcc import served_at
 from backend.data.resolver import Capability
 from backend.models import geo_graph
 from backend.models.infrastructure import readiness as readiness_model
+from backend.models.targets import walk_threshold_m
 from backend.schemas import InfraFeature, Sourced
 
 NAME = "infrastructure"
@@ -22,6 +23,29 @@ WALK_KINDS = ("park", "clinic", "grocery", "school", "frequent_stop")
 
 def _feat(kind, geom, attrs, prov) -> InfraFeature:
     return InfraFeature(kind=kind, geometry=geom, attrs=attrs, prov=prov)
+
+
+LICENSED = {"costar": "CoStar records (building class, vacancy, asking rent, lease expiry)",
+            "matterport": "Matterport interior scans (floor depth, ceiling height, windows)",
+            "vexcel": "Vexcel aerial imagery and footprints"}
+LAYER_LABELS = {"water_main": "water mains", "sewer_main": "sewer mains", "power_substation": "power substations",
+                "school": "schools", "clinic": "clinics", "park": "parks", "grocery": "grocery stores"}
+
+
+def data_gaps(ctx: RunContext) -> list[str]:
+    """What this locale lacks: capabilities with no provider, licensed sources that cover nothing here, and utility or
+    amenity layers with no features in the area."""
+    loc, r = ctx.locale, ctx.resolver
+    gaps = [f"{c.value.replace('_', ' ')} (no source covers this area)" for c in Capability
+            if not r.covering(loc, c) or c.value in ctx.missing]
+    covering = {p.name for c in Capability for p in r.covering(loc, c)}
+    gaps += [label for name, label in LICENSED.items()
+             if name in {p.name for p in getattr(r, "providers", [])} and name not in covering]
+    have = {x.kind for x in ctx.plan_parts.get("infrastructure", [])}
+    absent = [v for k, v in LAYER_LABELS.items() if k not in have]
+    if absent:
+        gaps.append(f"no {common.join_and(absent)} mapped in the area")
+    return gaps
 
 
 def tools(ctx: RunContext):
@@ -84,7 +108,8 @@ def tools(ctx: RunContext):
         for x in feats:
             counts[x.kind] = counts.get(x.kind, 0) + 1
         ctx.step(NAME, f"Mapped {len(feats)} features", {"counts": counts})
-        return f"features by kind: {counts}; missing capabilities: {ctx.missing or 'none'}"
+        return f"{common.stations_text(ctx)}. Features by kind: {common.counts_text(counts)}; data not available " \
+               f"here: {'; '.join(data_gaps(ctx)) or 'none'}"
 
     def readiness() -> str:
         """Score readiness (0-1) of every candidate parcel and building from walk distances, sidewalks, bike lanes,
@@ -221,7 +246,13 @@ def tools(ctx: RunContext):
         ctx.pre.update(walk_m={t: {k: w[k] for k in WALK_KINDS} for t, w in walk_m.items()}, in_flood=in_flood,
                        centroid=cents)
         mean = sum(x.score for x in rd) / len(rd) if rd else 0
-        return f"readiness for {len(rd)} targets, mean {mean:.2f}; {sum(in_flood.values())} targets in flood zones"
+        thr = walk_threshold_m(f)
+        near = sum(1 for x in rd if (walk_m.get(x.target_id) or {}).get("frequent_stop") is not None
+                   and walk_m[x.target_id]["frequent_stop"] <= thr)
+        return (f"readiness for {len(rd)} parcels and buildings, mean {mean:.2f} (0-1); {near} are within a "
+                f"{f['walk_minutes_target']:g}-minute walk of frequent transit; "
+                f"{sum(1 for x in rd if in_flood.get(x.target_id))} sit in "
+                f"FEMA high-risk flood zones")
 
     return [get_infra, readiness]
 
@@ -235,6 +266,7 @@ def explain(ctx: RunContext) -> str:
     feats = ctx.plan_parts.get("infrastructure", [])
     rd = ctx.plan_parts.get("readiness", [])
     mean = sum(x.score for x in rd) / len(rd) if rd else 0
-    miss = ", ".join(sorted(set(ctx.missing))) or "none"
+    gaps = data_gaps(ctx)
     return (f"Mapped {len(feats)} existing infrastructure features and scored {len(rd)} parcels and buildings "
-            f"(mean readiness {mean:.2f}). Data not available here: {miss}.")
+            f"(mean readiness {mean:.2f}). " + (f"Data not available here: {'; '.join(gaps)}." if gaps
+                                                else "Every data layer has a source here."))

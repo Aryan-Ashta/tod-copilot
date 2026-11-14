@@ -81,7 +81,7 @@ function tooltipFor(info: PickingInfo): string | null {
     case 'new_buildings':
       return `New building · ${fmtNum(p.site.homes)} homes · ${fmtNum(p.site.height_ft)} ft`
     case 'proposed_stops':
-      return `Stop ${p.stop.id}\n${fmtNum(p.stop.riders_per_day_low)}–${fmtNum(p.stop.riders_per_day_high)} riders/day (est.)`
+      return `${p.stop.name ?? `Stop ${p.stop.id}`}\n${fmtNum(p.stop.riders_per_day_low)}–${fmtNum(p.stop.riders_per_day_high)} riders/day (est.)`
     case 'proposed_routes':
       return `${humanize(p.route.kind)} · phase ${p.route.phase}${p.route.headway_min ? ` · every ${p.route.headway_min} min` : ''}`
     case 'stations':
