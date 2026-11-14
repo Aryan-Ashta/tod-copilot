@@ -72,7 +72,7 @@ export default function CitationDrawer({ citation, onClose }: { citation: Citati
               <section
                 key={s.section}
                 data-section={s.section}
-                className={`mb-4 p-2 ${active ? 'border-l-2 border-blue bg-blue/[0.06]' : ''}`}
+                className={`mb-4 p-2 ${active ? 'rounded-r-lg border-l-2 border-blue bg-blue/[0.06]' : ''}`}
               >
                 <h3 className="mb-1 font-semibold text-neutral-200">{sectionLabel(s.section)}</h3>
                 <p className="whitespace-pre-wrap text-neutral-300">
@@ -97,7 +97,7 @@ function Highlighted({ text, quotes }: { text: string; quotes: string[] }) {
   let at = 0
   for (const { q, i } of spans) {
     if (i < at) continue
-    out.push(text.slice(at, i), <mark key={i} className="bg-mustard/50 text-ink">{q}</mark>)
+    out.push(text.slice(at, i), <mark key={i} className="rounded-xs bg-mustard/50 text-ink">{q}</mark>)
     at = i + q.length
   }
   out.push(text.slice(at))

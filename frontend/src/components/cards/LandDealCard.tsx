@@ -42,7 +42,7 @@ export default function LandDealCard() {
                   </button>
                   <FactorHover keys={DEAL_KEYS}>
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold">
-                      <span aria-hidden className="inline-block h-2.5 w-2.5 border border-ink" style={{ background: `rgb(${c[0]},${c[1]},${c[2]})` }} />
+                      <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-xs border border-ink" style={{ background: `rgb(${c[0]},${c[1]},${c[2]})` }} />
                       {humanize(d.strategy)}
                     </span>
                   </FactorHover>

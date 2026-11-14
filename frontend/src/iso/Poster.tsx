@@ -37,7 +37,7 @@ export const Poster = memo(function Poster({
   const fg = ink ? ISO.ink : '#FFFFFF'
   const titleTop = 1082 // first title line; further lines every 82 (the site's posters)
   return (
-    <svg viewBox="0 0 1000 1414" role="img" aria-label={label} className="block h-auto w-full">
+    <svg viewBox="0 0 1000 1414" role="img" aria-label={label} className="block h-auto w-full overflow-hidden rounded-2xl">
       <rect width="1000" height="1414" fill={color} />
       <g fill={fg} fontFamily="inherit" fontSize={30} style={{ fontVariantNumeric: 'tabular-nums' }}>
         <text x={72} y={108} fontWeight={600}>
