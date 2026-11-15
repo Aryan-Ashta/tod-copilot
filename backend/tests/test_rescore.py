@@ -1,7 +1,7 @@
 import time
 
 from backend.data.factors import resolve
-from backend.models.rescore import new_build_stack, rescore
+from backend.models.rescore import new_build_stack, optimize_green_space, rescore
 from backend.schemas import Edit, Route, Stop
 from backend.tests.test_rescore_perf import EDITS, P, synthetic_plan
 
@@ -63,6 +63,41 @@ def test_tile_before_suggestions_is_not_duplicated():
     assert on_p1 == ["tile-p1"]
     assert len(r.plan_patch["sites"]) == len(plan.sites)
     assert [s["id"] for s in r.plan_patch["transit"]["stops"]] == ["gtfs-1", "fdr-0-abc-s0", "tile-stop-p30"]
+
+
+def test_slider_counts_unbuilt_new_build_carbon_as_saved():
+    plan, f = plan_with_network()   # five new builds of 120 homes; the slider at 1.0 leaves floor(120 x 0.7) = 84
+    apply = [Edit(kind="apply_suggestions")]
+    per_home = f["avg_unit_sqft_residential"] * f["embodied_co2_kg_per_sqft_new"] / 1000
+    base = rescore(plan, apply, f, from_existing=True).scoreboard
+    full = rescore(plan, [*apply, Edit(kind="slider", value=1.0)], f, from_existing=True).scoreboard
+    assert base.homes - full.homes == 5 * 36
+    assert abs(full.embodied_co2_saved_tonnes - base.embodied_co2_saved_tonnes - 5 * 36 * per_home) < 0.06
+    assert rescore(plan, [*apply, Edit(kind="slider", value=0.0)], f, from_existing=True).scoreboard == base
+    # a park on p1 removes site s0: its unbuilt homes stop counting
+    parked = rescore(plan, [*apply, Edit(kind="slider", value=1.0), Edit(kind="place_tile", tile="park", target_id="p1")],
+                     f, from_existing=True).scoreboard
+    assert abs(parked.embodied_co2_saved_tonnes - base.embodied_co2_saved_tonnes - 4 * 36 * per_home) < 0.06
+
+
+def test_optimize_green_space_picks_the_carbon_best_setting():
+    plan, f = plan_with_network()   # five new builds of 120 homes near frequent transit
+    edits = [Edit(kind="apply_suggestions"), Edit(kind="slider", value=0.4)]   # the current slider value is ignored
+    embodied = f["avg_unit_sqft_residential"] * f["embodied_co2_kg_per_sqft_new"] / 1000          # t per home, once
+    yearly = f["vmt_reduction_per_household_near_transit"] * f["co2_g_per_vehicle_mile"] / 1e6    # t per home a year
+    break_even = embodied / yearly
+    # past break-even the homes avoid more than building them emits: no green space
+    long = optimize_green_space(plan, edits, {**f, "carbon_horizon_years": break_even + 10}, from_existing=True)
+    assert long.value == 0 and long.net_co2_tonnes == 0
+    assert abs(long.full_embodied_saved_tonnes - 5 * 36 * embodied) < 0.06
+    assert abs(long.full_transport_lost_tonnes_per_year - 5 * 36 * yearly) < 0.01
+    assert abs(long.break_even_years - break_even) < 0.1
+    # short of break-even the unbuilt construction carbon wins: full green space, ahead by 10 years of driving
+    short = optimize_green_space(plan, edits, {**f, "carbon_horizon_years": break_even - 10}, from_existing=True)
+    assert short.value == 1.0 and abs(short.net_co2_tonnes - 5 * 36 * yearly * 10) < 1
+    # no new builds: nothing to trade
+    none = optimize_green_space(plan, [], f, from_existing=True)
+    assert none.value == 0 and none.break_even_years is None
 
 
 def test_steps_match_prefix_replays():

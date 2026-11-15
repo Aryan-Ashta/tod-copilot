@@ -7,6 +7,7 @@ import type {
   Edit,
   Factor,
   GeocodeResult,
+  GreenSpaceOptimum,
   LetterDraft,
   LetterKind,
   Locale,
@@ -73,6 +74,9 @@ export const getPlan = (planId: string) => request<Plan>(`/api/plan/${enc(planId
 
 export const rescore = (planId: string, edits: Edit[], fromExisting = true) =>
   post<RescoreResponse>(`/api/plan/${enc(planId)}/rescore`, { edits, from_existing: fromExisting })
+
+export const optimizeGreenSpace = (planId: string, edits: Edit[], fromExisting = true) =>
+  post<GreenSpaceOptimum>(`/api/plan/${enc(planId)}/optimize_green_space`, { edits, from_existing: fromExisting })
 
 export const simulateCount = (planId: string, stop_id: string) =>
   post<SimulatedCount>(`/api/plan/${enc(planId)}/simulate_count`, { stop_id })

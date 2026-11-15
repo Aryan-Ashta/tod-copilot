@@ -22,10 +22,10 @@ from backend.data.http_cache import OfflineCacheMiss, cached_get
 from backend.onboard import geo
 from backend.data.locales import LOCALE_IDS, load_locales
 from backend.models.letters import LetterKind, LetterTargetNotFound, draft_letter
-from backend.models.rescore import rescore
+from backend.models.rescore import optimize_green_space, rescore
 from backend.models.transit import simulate_count
-from backend.schemas import (AgentEvent, Edit, Factor, LetterDraft, Locale, Plan, PlanOptions, RescoreResponse,
-                             SimulatedCount, StockPrompt)
+from backend.schemas import (AgentEvent, Edit, Factor, GreenSpaceOptimum, LetterDraft, Locale, Plan, PlanOptions,
+                             RescoreResponse, SimulatedCount, StockPrompt)
 
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 
@@ -259,6 +259,12 @@ def get_plan(plan_id: str) -> Plan:
 def plan_rescore(plan_id: str, req: RescoreRequest) -> RescoreResponse:
     p = _plan(plan_id)
     return rescore(p, req.edits, resolve(p.locale.id), from_existing=req.from_existing)
+
+
+@app.post("/api/plan/{plan_id}/optimize_green_space")
+def plan_optimize_green_space(plan_id: str, req: RescoreRequest) -> GreenSpaceOptimum:
+    p = _plan(plan_id)
+    return optimize_green_space(p, req.edits, resolve(p.locale.id), from_existing=req.from_existing)
 
 
 @app.post("/api/plan/{plan_id}/simulate_count")
