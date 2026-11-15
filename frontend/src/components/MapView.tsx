@@ -923,7 +923,7 @@ export default function MapView({
   const toolOn = tool ? toolTarget(tool) : null
   // existing + edits, with the agents' plan filling any field the current view lacks (before the first rescore)
   const toolPlan = useMemo(() => ({ ...suggestions, ...plan }), [suggestions, plan])
-  const valid = useMemo(() => (tool ? validTargets(toolPlan, tool) : null), [tool, toolPlan])
+  const valid = useMemo(() => (tool ? validTargets(toolPlan, tool, infraAdded) : null), [tool, toolPlan, infraAdded])
   const lToolParcels = useMemo(
     () => (tool && valid && toolOn === 'parcel' ? toolParcelsLayer(parcels, valid, TILE_COLORS[tool]) : null),
     [tool, valid, toolOn, parcels],
