@@ -287,6 +287,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
 
   const btn =
     'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium whitespace-nowrap text-slate transition-colors duration-150 hover:bg-ink/5 hover:text-ink disabled:opacity-40 aria-pressed:bg-ink aria-pressed:text-paper aria-pressed:hover:bg-ink aria-pressed:hover:text-paper'
+  // only while a draw tool is on; panning needs no instructions
   const hint =
     mode === 'freehand'
       ? 'Press and drag around the area; release to close it'
@@ -294,7 +295,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
         ? 'Click to add corners; click the first corner to finish'
         : mode === 'rectangle'
           ? 'Press and drag across the map; release to finish'
-          : 'Drag to move the map · pick a draw tool to outline an area'
+          : null
 
   // Fills its parent; the draw tools and the current hint float in the top-right corner.
   return (
@@ -330,13 +331,15 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
             Clear
           </button>
         </div>
-        <span
-          key={mode ?? 'none'}
-          className="hint-in rounded-full bg-ink/80 px-2.5 py-1 text-[12px] font-medium text-paper backdrop-blur-md"
-          aria-live="polite"
-        >
-          {hint}
-        </span>
+        {hint && (
+          <span
+            key={mode ?? 'none'}
+            className="hint-in rounded-full bg-ink/80 px-2.5 py-1 text-[12px] font-medium text-paper backdrop-blur-md"
+            aria-live="polite"
+          >
+            {hint}
+          </span>
+        )}
       </div>
     </div>
   )
