@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 
-const WIDTH_PX = 440
+const DEFAULT_WIDTH_PX = 440
 
 /**
  * Fixed-width side panel beside the map that slides shut and open. Its content keeps its width while the panel
@@ -11,6 +11,7 @@ export default function SidePanel({
   label,
   panel,
   demo,
+  width = DEFAULT_WIDTH_PX,
   children,
 }: {
   storageKey: string
@@ -18,6 +19,8 @@ export default function SidePanel({
   panel: ReactNode
   /** `data-demo` hook on the panel's scroll container (the demo sequence scrolls it). */
   demo?: string
+  /** Fixed open width in px. */
+  width?: number
   children: ReactNode
 }) {
   const [open, setOpenState] = useState(() => localStorage.getItem(storageKey) !== 'closed')
@@ -32,12 +35,12 @@ export default function SidePanel({
         aria-label={label}
         inert={!open}
         className={`side-panel shrink-0 overflow-hidden ${open ? 'border-r border-rule' : ''}`}
-        style={{ width: open ? WIDTH_PX : 0 }}
+        style={{ width: open ? width : 0 }}
       >
         <div
           data-demo={demo}
           className={`side-panel-body relative flex h-full flex-col overflow-y-auto ${open ? '' : 'opacity-0'}`}
-          style={{ width: WIDTH_PX, translate: open ? '0' : `-${WIDTH_PX / 4}px 0` }}
+          style={{ width, translate: open ? '0' : `-${width / 4}px 0` }}
         >
           {panel}
         </div>

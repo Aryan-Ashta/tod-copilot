@@ -10,7 +10,7 @@ import HistoryPanel from '../components/HistoryPanel'
 import LayerPanel from '../components/LayerPanel'
 import MapView, { type MapInsets } from '../components/MapView'
 import Scoreboard from '../components/Scoreboard'
-import SplitPane from '../components/SplitPane'
+import SidePanel from '../components/SidePanel'
 import StatsPanel from '../components/StatsPanel'
 import { GreenSpaceSlider } from '../components/TargetsPanel'
 import TileTray, { TileGlyph, tileInfo } from '../components/TileTray'
@@ -91,43 +91,37 @@ function Edit() {
           Plan view
         </Link>
       </Disclaimer>
-      <SplitPane
-        storageKey="tod.split.meeting"
-        defaultFrac={0.26}
-        leftLabel="History and statistics"
-        left={side}
-        right={
-          <div className="absolute inset-0" data-hint-anchor="map">
-            <MapView large insets={EDIT_MAP_INSETS} />
-            <LayerPanel />
-            {state.rejection && <RejectionToast key={state.rejection.nonce} notice={state.rejection} onClose={closeRejection} />}
-            {/* bottom stack: tool hint, green-space slider, tile tray */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex flex-col items-center gap-2.5 px-3">
-              {tool && state.tool && (
-                <div
-                  key={state.tool}
-                  role="status"
-                  className="hint-in flex items-center gap-2 rounded-full border-[1.5px] border-ink bg-paper/95 py-1 pr-3.5 pl-1.5 text-[14px] font-semibold shadow-[1.5px_1.5px_0_var(--color-ink),0_6px_18px_rgb(28_34_48/.14)]"
-                >
-                  <TileGlyph kind={state.tool} className="h-7 w-7" />
-                  <span>
-                    Click a highlighted {tool.target === 'building' ? 'building' : 'lot'}
-                    <span className="font-normal text-slate"> · Esc to cancel</span>
-                  </span>
-                </div>
-              )}
-              {/* also shows a failed rescore, from tiles or the slider */}
-              <GreenSpaceSlider className="pointer-events-auto w-[min(100%,28rem)] rounded-[16px] border border-rule bg-paper/95 py-0.5 pr-1.5 pl-2.5 shadow-[0_6px_18px_rgb(28_34_48/.12)] backdrop-blur-sm" />
-              <div className="pointer-events-auto">
-                <TileTray />
+      <SidePanel storageKey="tod.edit.panel" label="History and statistics" width={380} panel={side}>
+        <div className="absolute inset-0" data-hint-anchor="map">
+          <MapView large insets={EDIT_MAP_INSETS} />
+          <LayerPanel />
+          {state.rejection && <RejectionToast key={state.rejection.nonce} notice={state.rejection} onClose={closeRejection} />}
+          {/* bottom stack: tool hint, green-space slider, tile tray */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex flex-col items-center gap-2.5 px-3">
+            {tool && state.tool && (
+              <div
+                key={state.tool}
+                role="status"
+                className="hint-in flex items-center gap-2 rounded-full border-[1.5px] border-ink bg-paper/95 py-1 pr-3.5 pl-1.5 text-[14px] font-semibold shadow-[1.5px_1.5px_0_var(--color-ink),0_6px_18px_rgb(28_34_48/.14)]"
+              >
+                <TileGlyph kind={state.tool} className="h-7 w-7" />
+                <span>
+                  Click a highlighted {tool.target === 'building' ? 'building' : 'lot'}
+                  <span className="font-normal text-slate"> · Esc to cancel</span>
+                </span>
               </div>
-            </div>
-            {!plan.parcels && !state.loadError && (
-              <div className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 text-xl text-slate">Loading plan…</div>
             )}
+            {/* also shows a failed rescore, from tiles or the slider */}
+            <GreenSpaceSlider className="pointer-events-auto w-[min(100%,28rem)] rounded-[16px] border border-rule bg-paper/95 py-0.5 pr-1.5 pl-2.5 shadow-[0_6px_18px_rgb(28_34_48/.12)] backdrop-blur-sm" />
+            <div className="pointer-events-auto">
+              <TileTray />
+            </div>
           </div>
-        }
-      />
+          {!plan.parcels && !state.loadError && (
+            <div className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 text-xl text-slate">Loading plan…</div>
+          )}
+        </div>
+      </SidePanel>
       <footer className="shrink-0 border-t-[1.5px] border-ink bg-paper">
         <Scoreboard />
       </footer>
