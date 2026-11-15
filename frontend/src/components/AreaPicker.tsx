@@ -3,7 +3,7 @@ import { Map as MlMap, Marker, NavigationControl, type GeoJSONSource } from 'map
 import { TerraDraw, TerraDrawFreehandLineStringMode, TerraDrawPolygonMode, TerraDrawRectangleMode } from 'terra-draw'
 import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter'
 import { metros } from '../api'
-import { BASE_STYLE } from './MapView'
+import { ATTRIBUTION, BASE_STYLE, collapseAttribution } from './MapView'
 import type { Locale } from '../types'
 import type { BBox } from '../geo'
 
@@ -99,10 +99,11 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
       fitBoundsOptions: { padding: paddingRef.current },
       maxBounds: US_LIMIT,
       renderWorldCopies: false,
-      attributionControl: { compact: true },
+      attributionControl: ATTRIBUTION,
     })
     // Offline: tile fetches fail; keep them silent.
     map.on('error', () => {})
+    collapseAttribution(map)
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
     map.on('load', () => {
       // State lines (US Census cartographic boundaries; scripts/build_us_reference.py), under everything else.

@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { stockPrompts } from '../api'
 import { PlanProvider, usePlan } from '../state/PlanContext'
 import ApplySuggestionsButton from '../components/ApplySuggestionsButton'
-import Disclaimer from '../components/Disclaimer'
+import PanelHeader from '../components/PanelHeader'
 import AgentChecklist from '../components/AgentChecklist'
 import AgentCard from '../components/cards/AgentCard'
 import MapView, { type MapInsets } from '../components/MapView'
@@ -36,34 +36,33 @@ function PlanView({ replay }: { replay: boolean }) {
   const tags = tagIds.flatMap((id) => stock.find((p) => p.id === id) ?? [])
   return (
     <div className="flex h-full flex-col">
-      <Disclaimer>
-        {locale && (
-          <span>
-            {locale.name}
-            <span className="ml-2 text-slate">{dataTierLabel(locale)}</span>
-            {locale.sources_from && locale.id.startsWith('area-') && <span className="ml-2 text-slate">recorded live</span>}
-          </span>
-        )}
-        {tags.map((t) => (
-          <span key={t.id} title={t.prompt} className="pop-in rounded-full border border-rule bg-white/60 px-2.5 py-0.5 text-[12px] font-medium whitespace-nowrap text-ink">
-            {t.title}
-          </span>
-        ))}
-        {replay && <span className="text-slate">recorded run</span>}
-        <Link
-          to={`/edit/${state.planId}`}
-          aria-disabled={!state.basePlan}
-          className={`ctl px-3 py-1 text-[13px] no-underline ${state.basePlan ? '' : 'pointer-events-none border-rule text-slate shadow-none'}`}
-        >
-          Edit mode
-        </Link>
-      </Disclaimer>
       <SidePanel
         storageKey="tod.plan.panel"
         label="Agents and results"
         demo="sidebar"
         panel={
           <>
+            <PanelHeader
+              link={
+                <Link
+                  to={`/edit/${state.planId}`}
+                  aria-disabled={!state.basePlan}
+                  className={`ctl px-3 py-1 text-[13px] no-underline ${state.basePlan ? '' : 'pointer-events-none border-rule text-slate shadow-none'}`}
+                >
+                  Edit mode
+                </Link>
+              }
+            >
+              {locale && <span className="font-semibold">{locale.name}</span>}
+              {locale && <span className="text-slate">{dataTierLabel(locale)}</span>}
+              {locale?.sources_from && locale.id.startsWith('area-') && <span className="text-slate">recorded live</span>}
+              {replay && <span className="text-slate">recorded run</span>}
+              {tags.map((t) => (
+                <span key={t.id} title={t.prompt} className="pop-in rounded-full border border-rule bg-white/60 px-2.5 py-0.5 text-[12px] font-medium whitespace-nowrap text-ink">
+                  {t.title}
+                </span>
+              ))}
+            </PanelHeader>
             <AgentChecklist />
             <AgentCard />
             {/* the demo pill sticks to the bottom of the panel */}
