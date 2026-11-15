@@ -88,7 +88,7 @@ DEMO_OFFLINE=1 uv run uvicorn backend.app:app      # API on :8000
 cd frontend && npm install && npm run dev          # UI on :5173
 ```
 
-Live data and agents need API keys. The team keeps them in Doppler (project `tod-copilot`, config `prd`). Others can put the variables listed in `.env.example` into a local `.env`.
+Live data and agents need API keys. The team keeps them in Doppler, others can put the variables listed in `.env.example` into a local `.env`.
 
 ```sh
 doppler run -- uv run uvicorn backend.app:app --reload
