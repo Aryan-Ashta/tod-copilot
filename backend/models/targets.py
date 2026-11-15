@@ -16,6 +16,11 @@ def embodied_co2_saved(area_sqft: float, f: dict) -> float:
     return area_sqft * (f["embodied_co2_kg_per_sqft_new"] - f["embodied_co2_kg_per_sqft_reuse"]) / 1000
 
 
+def embodied_co2_new_build_avoided(forgone_homes: float, f: dict) -> float:
+    """Tonnes CO2e of new construction avoided = forgone new-build homes x avg unit sqft x new kg/sqft / 1000."""
+    return forgone_homes * f["avg_unit_sqft_residential"] * f["embodied_co2_kg_per_sqft_new"] / 1000
+
+
 def rooftop_solar(roof_sqft_list: list[float], kwh_per_kw_year: float, f: dict) -> float:
     """MWh/yr = area_m2 x usable share x kW/m2 x kWh/kW/yr / 1000."""
     area_m2 = sum(roof_sqft_list) * M2_PER_SQFT
@@ -54,23 +59,35 @@ def flood_exposure(homes_by_target: dict[str, int], in_flood: dict[str, bool]) -
     return sum(h for t, h in homes_by_target.items() if in_flood.get(t)) / total
 
 
+def frequent_walk_m(walk: dict) -> Optional[float]:
+    """Walk to the nearest frequent stop, existing ("frequent_stop") or added by the plan's network
+    ("frequent_stop_planned", absent for existing conditions)."""
+    ds = [d for d in (walk.get("frequent_stop"), walk.get("frequent_stop_planned")) if d is not None]
+    return min(ds) if ds else None
+
+
 def households_near_frequent(homes_by_target: dict[str, int], walk_m: dict[str, dict], f: dict) -> int:
     thr = walk_threshold_m(f)
     return sum(h for t, h in homes_by_target.items()
-               if walk_m.get(t, {}).get("frequent_stop") is not None and walk_m[t]["frequent_stop"] <= thr)
+               if (d := frequent_walk_m(walk_m.get(t, {}))) is not None and d <= thr)
 
 
 def build_targets(homes_by_target: dict[str, int], walk_m: dict[str, dict], in_flood: dict[str, bool],
                   conversion_area_sqft: list[float], roof_sqft: list[float], kwh_per_kw_year: Optional[float],
-                  f: dict) -> list[TargetScore]:
+                  f: dict, forgone_new_build_homes: float = 0) -> list[TargetScore]:
+    """forgone_new_build_homes: new-build homes given up to green space (slider, park tiles); their avoided
+    construction carbon adds to embodied_co2_saved on top of the reuse savings."""
     walk_keys = ["walk_speed_m_per_s", "walk_minutes_target"]
     out = [
         TargetScore(key="transport_co2", value=round(transport_co2(households_near_frequent(homes_by_target, walk_m, f), f), 2),
                     unit="t CO2/yr avoided", target=None,
                     factor_keys=["vmt_reduction_per_household_near_transit", "co2_g_per_vehicle_mile", *walk_keys]),
-        TargetScore(key="embodied_co2_saved", value=round(sum(embodied_co2_saved(a, f) for a in conversion_area_sqft), 1),
+        TargetScore(key="embodied_co2_saved",
+                    value=round(sum(embodied_co2_saved(a, f) for a in conversion_area_sqft)
+                                + embodied_co2_new_build_avoided(forgone_new_build_homes, f), 1),
                     unit="t CO2e", target=None,
-                    factor_keys=["embodied_co2_kg_per_sqft_new", "embodied_co2_kg_per_sqft_reuse"]),
+                    factor_keys=["embodied_co2_kg_per_sqft_new", "embodied_co2_kg_per_sqft_reuse",
+                                 *(["avg_unit_sqft_residential"] if forgone_new_build_homes else [])]),
         TargetScore(key="walk_access", value=round(100 * walk_access(homes_by_target, walk_m, f), 1),
                     unit="% of new homes", target=None, factor_keys=walk_keys),
         TargetScore(key="flood_exposure", value=round(100 * flood_exposure(homes_by_target, in_flood), 1),

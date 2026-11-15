@@ -173,8 +173,6 @@ def test_homes_tile_without_capacity_is_rejected_with_reason(ctx):
         assert r.scoreboard == base, pid
 
 
-@pytest.mark.xfail(strict=True, reason="QA-TILES-6: homes-tile rejection says 'no eligible legal path' where the corpus "
-                                       "does not cover the lot or an eligible path allows 0 homes, citing that path")
 def test_legal_rejection_matches_the_envelope(ctx):
     envs = {e.parcel_id: e for e in ctx.plan.envelopes}
     bad = []
@@ -238,8 +236,6 @@ def test_stop_on_a_lot_with_homes_keeps_the_homes(ctx):
     assert b.transport_co2_tonnes_per_year >= with_homes.transport_co2_tonnes_per_year
 
 
-@pytest.mark.xfail(strict=True, reason="QA-TILES-3: a second stop on the same lot appends a duplicate "
-                                       "'tile-stop-<parcel>' stop instead of being idempotent")
 def test_repeated_stop_on_one_lot_is_idempotent(ctx):
     pid = ctx.nb_parcels[0]
     once, twice = ctx.run([stop(pid)]), ctx.run([stop(pid), stop(pid)])
@@ -249,8 +245,6 @@ def test_repeated_stop_on_one_lot_is_idempotent(ctx):
     assert twice.plan_patch["transit"] == once.plan_patch["transit"]
 
 
-@pytest.mark.xfail(strict=True, reason="QA-TILES-1: a stop tile marks its lot as taken, so apply_suggestions afterwards "
-                                       "drops the agents' homes on that lot")
 def test_stop_before_apply_suggestions_keeps_the_agents_site(ctx):
     for pid in ctx.nb_parcels:
         assert ctx.board([stop(pid), APPLY]) == ctx.board([APPLY, stop(pid)]), pid
@@ -319,15 +313,11 @@ def test_illegal_conversion_is_rejected_with_citation(ctx):
     assert r.scoreboard == base.scoreboard
 
 
-@pytest.mark.xfail(strict=True, reason="QA-TILES-7: converting a building to the use it already has (hotel -> hotel) "
-                                       "credits embodied carbon saved and funding")
 def test_converting_to_the_current_use_changes_nothing(ctx):
     bid = _first(ctx.same_use_hotel, "no existing hotel the corpus allows as hotel")
     assert ctx.board([hotel(bid)]) == ctx.board([])
 
 
-@pytest.mark.xfail(strict=True, reason="QA-TILES-2: a conversion tile on a lot that already has a homes tile keeps both "
-                                       "(the homes tile removes a conversion, not vice versa): land counted twice")
 def test_new_build_and_conversion_never_share_a_lot(ctx):
     bid = _first(ctx.res_on_capacity_lot, "no convertible building on a lot with capacity")
     pid = ctx.buildings[bid].parcel_id
@@ -354,8 +344,6 @@ def test_remove_tile_restores_the_scoreboard_exactly(ctx, from_existing):
     assert ctx.board(stacked, from_existing) == base
 
 
-@pytest.mark.xfail(strict=True, reason="QA-TILES-5: remove_tile drops the latest tile on the target even when that tile "
-                                       "was rejected, leaving the applied tile in place")
 def test_remove_tile_after_a_rejected_tile_removes_the_placed_one(ctx):
     pid = _first(ctx.flood, "no flood-zone lot with capacity")
     r = ctx.run([stop(pid), homes(pid), remove(pid)])      # homes(pid) is rejected (flood zone)
@@ -403,8 +391,6 @@ def test_edit_sequences_stay_sane_and_steps_replay(ctx, from_existing):
         _assert_steps_are_prefix_replays(ctx, edits, from_existing)
 
 
-@pytest.mark.xfail(strict=True, reason="QA-TILES-4: only the last edit is validated, and the UI keeps the slider last, "
-                                       "so a refused tile placed while green space is set is never reported")
 def test_refused_tile_is_reported_when_the_slider_comes_last(ctx):
     pid = _first(ctx.flood, "no flood-zone lot with capacity")
     r = ctx.run([homes(pid), Edit(kind="slider", value=0.5)])

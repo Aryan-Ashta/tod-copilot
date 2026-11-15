@@ -47,6 +47,16 @@ def units_for(rentable_sqft: Optional[float], f: dict) -> Optional[int]:
     return int(math.floor(rentable_sqft * f["reuse_efficiency_factor"] / f["avg_unit_sqft_residential"]))
 
 
+def hotel_keys(rentable_sqft: float, f: dict) -> float:
+    """Hotel keys on the building's area: `hotel_key_sqft` is already gross sqft per key (no net/gross efficiency)."""
+    return rentable_sqft / f["hotel_key_sqft"]
+
+
+def mixed_use_retail_sqft(rentable_sqft: float, f: dict) -> float:
+    """Retail area of a mixed-use conversion: the share of the building not given to homes."""
+    return rentable_sqft * (1 - f["mixed_use_residential_share"])
+
+
 def physical_inputs(b: Building, use: str, f: dict, year: int) -> list[tuple[str, Sourced, Optional[float], Optional[float], str, str, Optional[str]]]:
     """(weight key, sourced value, lo, hi, unit, threshold text, factor key) per physical input."""
     smin, smax = f["reuse_floor_sqft_range_residential"]
@@ -111,6 +121,7 @@ def score_reuse(building: Building, legal_paths: Optional[list[LegalPath]], read
 
     # ---- legal
     paths = legal_paths or []
+    unmatched = legal_paths is None   # building has no parcel match (no envelope); [] = jurisdiction not in corpus
     covered = [p for p in paths if p.eligible is not None]
     legal_blockers: list[str] = []
     deciding: dict[str, Optional[LegalPath]] = {}
@@ -120,7 +131,8 @@ def score_reuse(building: Building, legal_paths: Optional[list[LegalPath]], read
             deciding[use] = None
             continue
         if not covered:
-            s, why, dp = 0.3, "legal status not covered by corpus", None
+            s, why, dp = 0.3, ("legal status not evaluated: building not matched to a parcel" if unmatched
+                               else "legal status not covered by corpus"), None
         else:
             s, why, dp = 0.0, "no eligible legal path allows this use", covered[0]
             for p in covered:
@@ -134,7 +146,8 @@ def score_reuse(building: Building, legal_paths: Optional[list[LegalPath]], read
         details.append(ScoreInput(use=use, fit="legal", name="legal path", value=dp.name if dp else None, unit="",
                                   threshold=why, factor_key=None, score=s, prov=_CODE))
     if not covered:
-        legal_blockers.append("legal status not covered by corpus")
+        legal_blockers.append("legal status not evaluated: building not matched to a parcel" if unmatched
+                              else "legal status not covered by corpus")
 
     # ---- market
     vac, rent = building.vacancy_pct, building.asking_rent_usd_sqft_yr
@@ -169,27 +182,28 @@ def score_reuse(building: Building, legal_paths: Optional[list[LegalPath]], read
             if use == "residential":
                 pf = finance.conversion_pro_forma(units, acq, rentable, f, inc)
             elif use == "hotel":
-                keys = rentable * f["reuse_efficiency_factor"] / f["hotel_key_sqft"]
                 pf = finance.conversion_pro_forma(0, acq, rentable, f, 0.0, "hotel_conversion_cost_usd_per_sqft",
-                                                  extra_value_usd=keys * f["hotel_value_usd_per_key"])
+                                                  extra_value_usd=hotel_keys(rentable, f) * f["hotel_value_usd_per_key"])
             else:
-                retail_noi = ((building.typical_floor_sqft.value or 0) * f["retail_rent_usd_sqft_yr"]
+                retail_noi = (mixed_use_retail_sqft(rentable, f) * f["retail_rent_usd_sqft_yr"]
                               * (1 - f["vacancy_rate"] - f["opex_ratio"]))
                 pf = finance.conversion_pro_forma(math.floor(units * f["mixed_use_residential_share"]), acq, rentable,
                                                   f, inc, extra_noi_usd=retail_noi)
         if pf is None:
-            s = miss
+            s = f["reuse_missing_financial_score"]
             margins[use] = None
+            prov = Provenance(source="none", confidence="missing", retrieved_at=_CODE.retrieved_at,
+                              note="pro forma not computed: acquisition basis or rentable area missing")
         else:
             m = pf["margin"]
             margins[use] = m
             s = clamp((m - f["reuse_fin_margin_floor"]) / (f["reuse_fin_margin_ceiling"] - f["reuse_fin_margin_floor"]))
+            prov = acquisition.prov
         fits[use]["financial"] = s
         details.append(ScoreInput(use=use, fit="financial", name="pro forma margin",
                                   value=round(margins[use], 4) if margins[use] is not None else None, unit="fraction",
                                   threshold=f"{f['reuse_fin_margin_floor']} -> 0, {f['reuse_fin_margin_ceiling']} -> 1",
-                                  factor_key="reuse_fin_margin_ceiling", score=round(s, 4),
-                                  prov=acquisition.prov if acquisition is not None else _CODE))
+                                  factor_key="reuse_fin_margin_ceiling", score=round(s, 4), prov=prov))
     fits["keep_current"]["financial"] = 0.5
     if acq is None:
         fin_blockers.append("acquisition basis missing (no last sale or assessed value)")
@@ -208,20 +222,33 @@ def score_reuse(building: Building, legal_paths: Optional[list[LegalPath]], read
                               value=round(loc, 4), unit="score", threshold=None, factor_key="reuse_location_weights",
                               score=round(loc, 4), prov=_CODE))
 
-    # ---- overall, best use
+    # ---- overall, best use (a use that yields no home / no hotel key is not a candidate)
     scores_by_use = {u: FitScores(**{k: round(v, 4) for k, v in fits[u].items()}) for u in USES}
     overall = {u: _wmean(fits[u], f["reuse_weights"]) for u in USES}
-    best_conv = max(CONVERT_USES, key=lambda u: overall[u])
-    best = best_conv if overall[best_conv] >= overall["keep_current"] + f["reuse_keep_margin"] else "keep_current"
+    size_blockers: list[str] = []
+    viable = list(CONVERT_USES)
+    if units is not None:
+        yields = {"residential": units, "mixed_use": math.floor(units * f["mixed_use_residential_share"]),
+                  "hotel": math.floor(hotel_keys(rentable, f))}
+        viable = [u for u in CONVERT_USES if yields[u] >= 1]
+        if yields["residential"] < 1:
+            size_blockers.append(f"too small for one home ({rentable:,.0f} sqft rentable; factor `avg_unit_sqft_residential`)")
+        if yields["hotel"] < 1:
+            size_blockers.append(f"too small for one hotel key ({rentable:,.0f} sqft rentable; factor `hotel_key_sqft`)")
+    best_conv = max(viable or CONVERT_USES, key=lambda u: overall[u])
+    best = best_conv if viable and overall[best_conv] >= overall["keep_current"] + f["reuse_keep_margin"] else "keep_current"
 
-    blockers = phys_blockers[best_conv] + legal_blockers + fin_blockers
+    blockers = phys_blockers[best_conv] + legal_blockers + fin_blockers + size_blockers
     if fits[best_conv]["legal"] == 0:
         blockers.append(f"{best_conv}: no eligible legal path allows it")
 
-    present = [sv.prov for _, sv, *_ in physical_inputs(building, best_conv, f, year) if sv.value is not None]
+    inputs = physical_inputs(building, best_conv, f, year)
+    present = [sv.prov for _, sv, *_ in inputs if sv.value is not None]
     if present:
         conf = min((p.confidence for p in present), key=lambda c: CONF_ORDER[c])
-        if any(p.source == "derived" for p in present) and CONF_ORDER[conf] > CONF_ORDER["low"]:
+        # derived or missing inputs cap confidence at low, so dropping an input never raises it
+        if (any(p.source == "derived" for p in present) or len(present) < len(inputs)) \
+                and CONF_ORDER[conf] > CONF_ORDER["low"]:
             conf = "low"
     else:
         conf = "missing"

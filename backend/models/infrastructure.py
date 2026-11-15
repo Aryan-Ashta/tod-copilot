@@ -33,19 +33,26 @@ def components(t: dict, f: dict) -> tuple[dict[str, float], list[str], list[str]
         s[k] = distance_score(d, f)
         if d is not None and d <= thr:
             present.append(f"{label} {d:.0f} m walk")
-        if s[k] < 0.5:
-            gaps.append(f"no {label} within {thr / 2:.0f} m walk" + (f" (nearest {d:.0f} m)" if d is not None
-                                                                     else " (none reachable)"))
+        else:  # one threshold, the walk threshold; the score still grades distance
+            gaps.append(f"no {label} within {thr:.0f} m walk" + (f" (nearest {d:.0f} m)" if d is not None
+                                                                  else " (none reachable)"))
     sw = t["sidewalk"]
-    if sw["frontages"] == 0 or sw["known"] == 0:
+    if sw["frontages"] == 0:
         s["sidewalk"] = miss
-        gaps.append(f"sidewalk not mapped on {sw['frontages'] - sw['known']} of {sw['frontages']} frontages (OSM); verify")
+        gaps.append("no street frontage found next to this site (OSM); verify sidewalk access")
+    elif sw["known"] == 0:
+        s["sidewalk"] = miss
+        gaps.append(f"sidewalk not mapped on {sw['frontages']} of {sw['frontages']} frontages (OSM); verify")
     else:
-        s["sidewalk"] = sw["with"] / sw["frontages"]
+        # unmapped frontages are unknown, not absent: they score the missing-input value
+        unknown = sw["frontages"] - sw["known"]
+        s["sidewalk"] = (sw["with"] + miss * unknown) / sw["frontages"]
         if sw["with"]:
             present.append(f"sidewalk on {sw['with']} of {sw['frontages']} frontages")
-        if s["sidewalk"] < 0.5:
-            gaps.append(f"no sidewalk on {sw['frontages'] - sw['with']} of {sw['frontages']} frontages")
+        if sw["known"] - sw["with"] > 0:
+            gaps.append(f"no sidewalk on {sw['known'] - sw['with']} of {sw['frontages']} frontages")
+        if unknown:
+            gaps.append(f"sidewalk not mapped on {unknown} of {sw['frontages']} frontages (OSM); verify")
     bike = t.get("bike_m")
     s["bike"] = 1.0 if bike is not None and bike <= f["bike_lane_reach_m"] else 0.0
     if s["bike"]:
@@ -72,6 +79,8 @@ def components(t: dict, f: dict) -> tuple[dict[str, float], list[str], list[str]
         gaps.append("broadband data not available here")
     else:
         s["broadband"] = 1.0 if bb else 0.0
+        (present if bb else gaps).append("broadband 100/20 Mbps served (FCC BDC)" if bb else
+                                         "no 100/20 Mbps broadband at this site (FCC BDC); confirm with providers")
     if t.get("flood_zone"):
         gaps.append(f"inside FEMA high-risk flood zone ({t['flood_zone']}): no new homes")
     return s, present, gaps

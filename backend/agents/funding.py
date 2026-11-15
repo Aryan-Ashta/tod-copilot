@@ -3,7 +3,7 @@ from backend.agents import common
 from backend.agents.context import RunContext
 from backend.data.resolver import Capability
 from backend.models import finance, goals
-from backend.models.rescore import conversion_pro_forma_for, new_build_stack, parcel_basis
+from backend.models.rescore import conversion_pro_forma_for, lot_share, new_build_stack, parcel_basis
 from backend.schemas import CapitalStack, ExistingAffordable
 
 NAME = "funding"
@@ -15,13 +15,15 @@ def tools(ctx: RunContext):
     loc, f = ctx.locale, ctx.f
 
     def pro_forma() -> str:
-        """Pro forma per site: new builds use construction cost per unit; conversions use conversion cost per sqft."""
+        """Pro forma per site: new builds use construction cost per unit; conversions use conversion cost per sqft
+        (conversions on one lot split its acquisition basis by rentable area)."""
         sites = ctx.plan_parts.get("sites")
         if sites is None or "deals" not in ctx.plan_parts:
             raise ValueError("run land_deal first")
         parcels = ctx.cache["parcels_by_id"]
         bmap = {b.id: b for b in ctx.plan_parts.get("buildings", [])}
         convs = {c.building_id: c for c in ctx.plan_parts.get("conversions", [])}
+        rentable = {b.id: b.rentable_area_sqft.value for b in bmap.values()}
         res = {}
         for s in sites:
             if s.kind == "new_build":
@@ -29,6 +31,8 @@ def tools(ctx: RunContext):
             else:
                 b, c = bmap[s.building_id], convs[s.building_id]
                 basis = parcel_basis([parcels[p] for p in s.parcel_ids if p in parcels])
+                if basis is not None:
+                    basis *= lot_share(s, sites, rentable)
                 pf = conversion_pro_forma_for(c.best_use, c.est_units, b.rentable_area_sqft.value,
                                               b.typical_floor_sqft.value, basis, f, loc.id)
                 inc = finance.incentive_per_unit(loc.id, f) if c.best_use != "hotel" else 0.0
@@ -114,16 +118,16 @@ def tools(ctx: RunContext):
         existing, no_li = None, 0
         if inv is not None and inv.prov.confidence != "missing":
             hud = [x for x in ctx.plan_parts.get("infrastructure", []) if x.kind == "affordable_housing"]
-            no_li = sum(1 for x in hud if x.attrs.get("li_units") is None)
             existing = ExistingAffordable(properties=len(hud),
                                           affordable_homes=sum(int(x.attrs.get("li_units") or 0) for x in hud),
-                                          total_homes=sum(int(x.attrs.get("units") or 0) for x in hud), prov=inv.prov)
+                                          total_homes=sum(int(x.attrs.get("units") or 0) for x in hud),
+                                          properties_without_li_units=sum(1 for x in hud
+                                                                          if x.attrs.get("li_units") is None),
+                                          prov=inv.prov)
         rep = goals.report(sites, ctx.plan_parts["stacks"], g, ctx.plan_parts.get("transit"), existing)
         units = {x.site_id: x.units for x in ctx.plan_parts["stacks"]}
         rep.notes += [f"{common.site_label(ctx, sid)}: affordable homes raised from {old} to {new} of {units[sid]}"
                       for sid, (old, new) in sel.raised.items()]
-        if no_li:
-            rep.notes.append(f"{no_li} HUD LIHTC properties report no low-income unit count")
         ctx.plan_parts["goals_report"] = rep
         ctx.step(NAME, f"{rep.sites_funded} sites funded; housing funding required "
                        f"${rep.housing_funding_required_usd:,.0f}")

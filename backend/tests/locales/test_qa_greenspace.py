@@ -9,7 +9,7 @@ import pytest
 
 from backend.data.factors import resolve
 from backend.models.rescore import in_plan, rescore
-from backend.models.targets import walk_threshold_m
+from backend.models.targets import embodied_co2_new_build_avoided, walk_threshold_m
 from backend.schemas import Edit
 
 LOCALES = ["houston_downtown", "la_wilshire_koreatown", "brevard_cocoa"]
@@ -148,17 +148,36 @@ def test_slider_keeps_scoreboard_and_stacks_consistent(plans, lid, v):
     assert b.funding_required_usd == pytest.approx(sum(max(x["funding_required_usd"], 0.0) for x in funded), abs=0.05)
 
 
+def _slider_forgone_homes(p, r) -> int:
+    """In-plan new-build homes the edits took away (the agents' plan minus the rescored plan)."""
+    after = {s["id"]: s["homes"] or 0 for s in r.plan_patch["sites"]
+             if s["kind"] == "new_build" and s["status"] in ("pursue", "watch")}
+    return sum((s.homes or 0) - after.get(s.id, 0) for s in _new_builds(p))
+
+
 @pytest.mark.parametrize("lid", LOCALES)
 @pytest.mark.parametrize("v", [0.0, 0.5, 1.0])
-def test_embodied_carbon_saved_is_the_pursued_conversions_reuse_savings(plans, lid, v):
-    """Scoreboard embodied CO2 saved == the reuse model's per-building savings over the plan's conversion sites."""
+def test_embodied_carbon_saved_is_reuse_savings_plus_new_construction_given_up(plans, lid, v):
+    """Scoreboard embodied CO2 saved == the reuse model's per-building savings over the plan's conversion sites
+    + the embodied carbon of the new-build homes the slider gave up to green space (design decision D1)."""
     p = plans(lid)
+    f = resolve(lid)
     cand = {c.building_id: c for c in p.conversions}
     conv = [cand[s.building_id] for s in p.sites
             if s.kind == "conversion" and in_plan(s) and s.building_id in cand
             and cand[s.building_id].best_use != "keep_current" and cand[s.building_id].embodied_co2_saved_tonnes]
-    expected = sum(c.embodied_co2_saved_tonnes for c in conv)
-    assert _board(p, [S(v)]).embodied_co2_saved_tonnes == pytest.approx(expected, abs=0.05 * len(conv) + 0.1)
+    r = rescore(p, [S(v)], f)
+    expected = sum(c.embodied_co2_saved_tonnes for c in conv) + embodied_co2_new_build_avoided(_slider_forgone_homes(p, r), f)
+    assert r.scoreboard.embodied_co2_saved_tonnes == pytest.approx(expected, abs=0.05 * len(conv) + 0.1)
+
+
+@pytest.mark.parametrize("lid", LOCALES)
+def test_more_green_space_raises_embodied_carbon_saved(plans, lid):
+    """D1: new construction given up to green space counts as embodied CO2 saved, so it rises strictly with the slider."""
+    p = plans(lid)
+    assert sum(s.homes or 0 for s in _new_builds(p))
+    saved = [_board(p, [S(v)]).embodied_co2_saved_tonnes for v in SWEEP]
+    assert all(b > a for a, b in zip(saved, saved[1:])), saved
 
 
 @pytest.mark.parametrize("lid", LOCALES)
@@ -182,7 +201,6 @@ def test_removing_a_tile_keeps_the_slider(plans, lid):
     assert _board(p, [S(0.5), P(e), R(e)]) == _board(p, [S(0.5)])
 
 
-@pytest.mark.xfail(strict=True, reason="QA-GREENSPACE-1: a second slider edit stacks on the first instead of replacing it")
 @pytest.mark.parametrize("lid", LOCALES)
 def test_last_slider_value_wins(plans, lid):
     p = plans(lid)
@@ -190,14 +208,12 @@ def test_last_slider_value_wins(plans, lid):
     assert _board(p, [S(1.0), S(0.0)]) == _board(p, [])
 
 
-@pytest.mark.xfail(strict=True, reason="QA-GREENSPACE-1: a slider before apply_suggestions is lost (one-shot, not a setting)")
 @pytest.mark.parametrize("lid", LOCALES)
 def test_slider_applies_to_suggestions_brought_in_later(plans, lid):
     p = plans(lid)
     assert _board(p, [S(0.5), APPLY], from_existing=True) == _board(p, [APPLY, S(0.5)], from_existing=True)
 
 
-@pytest.mark.xfail(strict=True, reason="QA-GREENSPACE-1: a homes tile placed after the slider keeps all its homes")
 @pytest.mark.parametrize("lid", LOCALES)
 def test_slider_applies_to_homes_tiles_placed_later(plans, lid):
     p = plans(lid)
@@ -207,7 +223,6 @@ def test_slider_applies_to_homes_tiles_placed_later(plans, lid):
     assert _board(p, [S(0.5), P(q, "homes")]) == _board(p, [P(q, "homes"), S(0.5)])
 
 
-@pytest.mark.xfail(strict=True, reason="QA-GREENSPACE-2: new-build roof area ignores the slider's open space")
 @pytest.mark.parametrize("lid", LOCALES)
 def test_more_green_space_shrinks_new_build_rooftop_solar(plans, lid):
     p = plans(lid)
@@ -216,7 +231,6 @@ def test_more_green_space_shrinks_new_build_rooftop_solar(plans, lid):
     assert _targets(rescore(p, [S(1.0)], f))["rooftop_solar"] < _targets(rescore(p, [S(0.0)], f))["rooftop_solar"]
 
 
-@pytest.mark.xfail(strict=True, reason="QA-GREENSPACE-3: any slider > 0 counts on-site open space as a park, whatever its size")
 @pytest.mark.parametrize("lid", LOCALES)
 def test_smallest_slider_step_does_not_create_park_access(plans, lid):
     """At 0.05 the open space is 1.5 % of each lot (<= 1,764 sqft on the demo sites): not a park."""
@@ -226,10 +240,14 @@ def test_smallest_slider_step_does_not_create_park_access(plans, lid):
     far = [s for s in _new_builds(p) if (p.precomputed.walk_m.get(s.parcel_ids[0], {}).get("park") or math.inf) > thr]
     if not far:
         pytest.skip("every new build already has a park within the walk threshold")
-    assert _homes_lacking_park(_board(p, [S(0.05)])) == pytest.approx(_homes_lacking_park(_board(p, [])), abs=0.5)
+    # The slider also removes homes, so compare the far sites' (shrunk) homes, not the base count: all still lack a park.
+    r = rescore(p, [S(0.05)], f)
+    far_ids = {s.id for s in far}
+    far_homes = sum(s["homes"] or 0 for s in r.plan_patch["sites"] if s["id"] in far_ids)
+    assert far_homes > 0
+    assert _homes_lacking_park(r.scoreboard) >= far_homes - 0.5
 
 
-@pytest.mark.xfail(strict=True, reason="QA-GREENSPACE-5: a NaN slider value is clamped to 1 (full green space)")
 @pytest.mark.parametrize("lid", LOCALES)
 def test_nan_slider_changes_nothing(plans, lid):
     p = plans(lid)
@@ -264,7 +282,6 @@ def test_repeated_park_on_one_parcel_scores_once(plans, lid):
     assert _board(p, [P(e), P(e)]) == _board(p, [P(e)])
 
 
-@pytest.mark.xfail(strict=True, reason="QA-GREENSPACE-4: a repeated park tile adds a duplicate proposed park feature")
 @pytest.mark.parametrize("lid", LOCALES)
 def test_repeated_park_on_one_parcel_proposes_one_park(plans, lid):
     p = plans(lid)
@@ -297,7 +314,9 @@ def test_park_on_a_new_build_parcel_removes_exactly_that_site(plans, lid):
         sum(max(x.funding_required_usd, 0.0) for x in funded), abs=0.05)
     assert b.transport_co2_tonnes_per_year <= a.transport_co2_tonnes_per_year
     assert _targets(r1)["rooftop_solar"] < _targets(r0)["rooftop_solar"]
-    assert b.embodied_co2_saved_tonnes == a.embodied_co2_saved_tonnes
+    assert b.embodied_co2_saved_tonnes == pytest.approx(
+        a.embodied_co2_saved_tonnes + embodied_co2_new_build_avoided(sum(s.homes or 0 for s in gone if s.kind == "new_build"), f),
+        abs=0.1)
 
 
 @pytest.mark.parametrize("lid", LOCALES)

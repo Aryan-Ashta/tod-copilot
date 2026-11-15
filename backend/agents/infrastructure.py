@@ -190,6 +190,8 @@ def tools(ctx: RunContext):
                          for kind in ("park", "clinic", "grocery", "school", "frequent_stop", "ev")}
             station_m[t] = best("station", nodes, d0s)
         ctx.cache["station_walk_m"] = station_m
+        # the transit agent measures walks to the plan's new frequent stops from the same entry nodes
+        ctx.cache["walk_snap"] = (tids, tnodes, snap)
         # flood
         flood = layers[Capability.FLOOD].value or []
         fgeoms = [shape(z["geometry"]) for z in flood]

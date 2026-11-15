@@ -6,7 +6,7 @@ from backend.agents import common
 from backend.agents.context import RunContext
 from backend.data.geo import lonlat_to_utm
 from backend.data.resolver import Capability
-from backend.models import transit
+from backend.models import geo_graph, transit
 from backend.models.rescore import in_plan
 from backend.schemas import TransitPlan
 
@@ -63,6 +63,10 @@ def tools(ctx: RunContext):
         ctx.step(NAME, f"Selecting from {len(cands)} candidates to reach {goal:g}% of demand within a frequent stop")
         res = transit.optimize_network(ctx.cache["existing"], ctx.cache["grid"], cands, goal, f, epsg, loc.id, to_lonlat)
         ctx.cache["net"] = res
+        for c in ctx.pre.get("demand_cells", []):   # rescore's stop tile updates coverage from these
+            c["covered_baseline"] = c["h3"] in res["covered_baseline_h3"]
+            c["covered"] = c["h3"] in res["covered_h3"]
+        _planned_frequent_walks(ctx, res["selected"])
         def describe(c):
             what = {"upgrade": f"route {c.get('name') or c['id']} from every {c.get('old_headway_min') or 0:.0f} to "
                                f"every {c['headway_min']} min",
@@ -92,6 +96,8 @@ def tools(ctx: RunContext):
             names[sid] = s["properties"]["name"]
             stops.append({"id": sid, "lonlat": (lon, lat), "xy": lonlat_to_utm(lon, lat, epsg),
                           "route_ids": s["properties"]["route_ids"], "name": names[sid]})
+        # counts are only suggested at stops that run today, never at a proposed feeder's stops
+        ctx.cache["feed_stop_ids"] = {s["id"] for s in stops}
         for c in net["selected"]:
             if c["type"] != "feeder":
                 continue
@@ -113,7 +119,7 @@ def tools(ctx: RunContext):
         """Rank stops by ridership range width x demand and suggest counts that would narrow the range most."""
         if "stops" not in ctx.cache:
             raise ValueError("run estimate_ridership first")
-        ms = transit.suggest_measurements(ctx.cache["stops"], ctx.cache["covered"], ctx.cache["stop_names"], f)
+        ms = transit.suggest_measurements(_feed_stops(ctx), ctx.cache["covered"], ctx.cache["stop_names"], f)
         net = ctx.cache["net"]
         ctx.plan_parts["transit"] = TransitPlan(routes=net["routes"], stops=ctx.cache["stops"], measurements=ms,
                                                 coverage_goal_pct=ctx.cache["coverage_goal"],
@@ -138,8 +144,29 @@ def finalize_measurements(ctx: RunContext) -> None:
     if tp is None or not sites or "stops" not in ctx.cache:
         return
     pts = tuple((common.centroid_lonlat(s.geometry), s.homes) for s in sites if in_plan(s) and s.homes)
-    ms = transit.suggest_measurements(ctx.cache["stops"], ctx.cache["covered"], ctx.cache["stop_names"], ctx.f, pts)
+    ms = transit.suggest_measurements(_feed_stops(ctx), ctx.cache["covered"], ctx.cache["stop_names"], ctx.f, pts)
     ctx.plan_parts["transit"] = tp.model_copy(update={"measurements": ms})
+
+
+def _feed_stops(ctx: RunContext) -> list:
+    return [s for s in ctx.cache["stops"] if s.id in ctx.cache["feed_stop_ids"]]
+
+
+def _planned_frequent_walks(ctx: RunContext, selected: list[dict]) -> None:
+    """walk_m[t]["frequent_stop_planned"]: walk metres from each target to the nearest frequent stop the network
+    adds (upgraded-route, feeder and BRT stops), from the infrastructure agent's walk graph and entry nodes.
+    "frequent_stop" stays the walk to existing service."""
+    walk_m, snap, idx = ctx.pre.get("walk_m"), ctx.cache.get("walk_snap"), ctx.cache.get("node_index")
+    if not walk_m or snap is None or idx is None or ctx.graph is None:
+        return
+    xy = [p for c in selected if c.get("headway_min") is not None
+          and c["headway_min"] <= ctx.f["readiness_frequent_headway_max_min"] for p in c["stops_xy"]]
+    dist = geo_graph.dist_from_sources(ctx.graph, idx.nearest(xy)[0]) if xy else {}
+    for t, nodes, d0s in zip(*snap):
+        if t not in walk_m:
+            continue
+        vals = [dist[n] + d0 for n, d0 in zip(nodes, d0s) if n in dist]
+        walk_m[t] = {**walk_m[t], "frequent_stop_planned": round(min(vals), 1) if vals else None}
 
 
 def explain(ctx: RunContext) -> str:

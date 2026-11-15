@@ -20,6 +20,7 @@ def scorer(ctx: RunContext) -> Callable[[Building, Optional[Parcel]], Conversion
     acquisition basis. `parcel` overrides the plan's parcel record (the research gap queue probes parcel values)."""
     loc, f = ctx.locale, ctx.f
     envs = {e.parcel_id: e for e in ctx.plan_parts["envelopes"]}
+    covered = bool(ctx.cache.get("path_names"))   # jurisdiction has corpus rules (zoning agent's apply_rules)
     rd = {x.target_id: x for x in ctx.plan_parts["readiness"]}
     parcels = ctx.cache["parcels_by_id"]
     walk = ctx.pre["walk_m"]
@@ -30,9 +31,11 @@ def scorer(ctx: RunContext) -> Callable[[Building, Optional[Parcel]], Conversion
         acq = None
         if p is not None:
             basis = acquisition_basis(p.last_sale_usd.value, p.assessed_value_usd.value)
-            src = p.last_sale_usd if p.last_sale_usd.value is not None else p.assessed_value_usd
+            src = p.last_sale_usd if (p.last_sale_usd.value or 0) > 0 else p.assessed_value_usd
             acq = Sourced(value=basis, prov=src.prov) if basis is not None else None
-        return reuse.score_reuse(b, conversion_paths(env.paths) if env else None, rd.get(b.id),
+        # no envelope: None (building not matched to a parcel) where the corpus has rules, [] (not covered) elsewhere
+        paths = conversion_paths(env.paths) if env else (None if covered else [])
+        return reuse.score_reuse(b, paths, rd.get(b.id),
                                  walk.get(b.id, {}), acq, f, locale_id=loc.id, data_tier=loc.data_tier)
     return score
 
@@ -85,7 +88,11 @@ def tools(ctx: RunContext):
         if convs is None:
             raise ValueError("run score_reuse first")
         bmap = {b.id: b for b in ctx.plan_parts["buildings"]}
-        picked = [c for c in convs if c.best_use != "keep_current" and c.overall >= f["reuse_feasible_threshold"]]
+        flood = ctx.pre["in_flood"]
+        # no new homes inside a FEMA high-risk flood zone (same rule as the convert tile); a hotel adds none
+        picked = [c for c in convs if c.best_use != "keep_current" and c.overall >= f["reuse_feasible_threshold"]
+                  and not (conversion_homes(c.best_use, c.est_units, f) > 0
+                           and (flood.get(c.building_id) or flood.get(bmap[c.building_id].parcel_id)))]
         if ctx.options.focus == "new_build":
             picked = []
         sites = []

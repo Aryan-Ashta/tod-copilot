@@ -9,7 +9,7 @@ import pytest
 
 from backend.data.factors import resolve
 from backend.models import finance, goals
-from backend.models.rescore import conversion_pro_forma_for, new_build_stack, parcel_basis, rescore
+from backend.models.rescore import conversion_pro_forma_for, lot_share, new_build_stack, parcel_basis, rescore
 from backend.schemas import CapitalStack, DealStrategy, Edit, GoalReport, PlanGoals, Site
 
 HOU, LA, BRE = "houston_downtown", "la_wilshire_koreatown", "brevard_cocoa"
@@ -52,6 +52,8 @@ def _math(plan, f, site):
     b = next(x for x in plan.buildings if x.id == site.building_id)
     c = next(x for x in plan.conversions if x.building_id == site.building_id)
     basis = parcel_basis([parcels[p] for p in site.parcel_ids if p in parcels])
+    if basis is not None:   # conversions sharing a lot split its basis by rentable area (QA-FIN-3)
+        basis *= lot_share(site, plan.sites, {x.id: x.rentable_area_sqft.value for x in plan.buildings})
     pf = conversion_pro_forma_for(c.best_use, c.est_units, b.rentable_area_sqft.value, b.typical_floor_sqft.value,
                                   basis, f, lid)
     if pf is None:
@@ -110,16 +112,20 @@ def test_stack_homes_match_site_homes_and_affordable_share(plans, lid):
 
 @pytest.mark.parametrize("lid", LOCALES)
 def test_stack_lines_are_per_unit_and_per_sqft_factors_times_quantities(plans, lid):
-    """USD/unit factors x homes, USD/sqft x rentable sqft, USD/affordable unit x affordable homes; land = parcel basis."""
+    """USD/unit factors x homes, USD/sqft x rentable sqft, USD/affordable unit x affordable homes; land = parcel basis
+    (conversions sharing a lot: their rentable-area share of it)."""
     p, f = plans(lid), resolve(lid)
     parcels = {x.id: x for x in p.parcels}
     buildings = {b.id: b for b in p.buildings}
     convs = {c.building_id: c for c in p.conversions}
+    rentable = {b.id: b.rentable_area_sqft.value for b in p.buildings}
     inc = finance.incentive_per_unit(lid, f)
     for x in p.stacks:
         s = next(s for s in p.sites if s.id == x.site_id)
         use = convs[s.building_id].best_use if s.kind == "conversion" else "new_build"
         basis = parcel_basis([parcels[q] for q in s.parcel_ids if q in parcels])
+        if s.kind == "conversion":
+            basis *= lot_share(s, p.sites, rentable)
         if s.kind == "new_build":
             hard = x.units * f["construction_cost_usd_per_unit"]
         else:
@@ -226,8 +232,6 @@ def test_rescore_without_edits_reproduces_the_plans_funding_numbers(plans, lid):
 
 
 @pytest.mark.parametrize("lid", [HOU, BRE])
-@pytest.mark.xfail(strict=True, reason="QA-FIN-6: rescore's goals report drops the plan's HUD 'no low-income unit "
-                                       "count' note")
 def test_rescore_without_edits_keeps_the_goals_report_notes(plans, lid):
     p, f = plans(lid), resolve(lid)
     *_, gr = _after(p, f, [])
@@ -285,8 +289,8 @@ def test_homes_tile_on_priced_parcel_adds_its_stack_and_remove_restores(plans, l
 
 @pytest.mark.parametrize("lid,edit", [
     (HOU, _tile("homes", "0010950000001")),                 # the agents' own new build parcel
-    (HOU, _tile("convert_residential", "osm:510323326")),   # the agents' own residential conversion
-    (LA, _tile("convert_residential", "osm:427462762")),
+    (HOU, _tile("convert_hotel", "osm:54358538")),          # the agents' own hotel conversion (shares its lot)
+    (LA, _tile("homes", "5093026038")),                     # LA's agents convert only to mixed use (no tile for it)
     (BRE, _tile("homes", "24 3618-00-765")),
 ])
 def test_placing_the_agents_own_choice_changes_no_number(plans, lid, edit):
@@ -323,8 +327,6 @@ def test_agents_site_status_follows_price_and_deal(plans, lid):
 
 @pytest.mark.parametrize("lid,edit", [(HOU, _tile("convert_residential", "osm:470281208")),
                                       (HOU, _tile("homes", "0020380000001"))])
-@pytest.mark.xfail(strict=True, reason="QA-FIN-2: meeting-mode tiles pursue and fund a site whose deal is 'pass' "
-                                       "(active lease); the agents put such sites on watch")
 def test_tile_on_a_pass_deal_is_not_funded(plans, lid, edit):
     p, f = plans(lid), resolve(lid)
     r, sites, _, deals, _, _ = _after(p, f, [edit])
@@ -340,15 +342,11 @@ def test_acquisition_basis_prefers_sale_then_assessed_and_missing_is_none():
     assert finance.acquisition_basis(7.0, 5.0) == 7.0
 
 
-@pytest.mark.xfail(strict=True, reason="QA-FIN-1: a $0 assessed value (exempt/unvalued parcel) is used as a $0 "
-                                       "acquisition basis instead of missing")
 def test_zero_assessed_value_is_missing_not_free_land():
     assert finance.acquisition_basis(None, 0.0) is None
 
 
 @pytest.mark.parametrize("lid,parcel", [(HOU, None), (HOU, "0300920000010"), (BRE, "24 3618-00-10")])
-@pytest.mark.xfail(strict=True, reason="QA-FIN-1: pursued new builds priced with $0 land (HCAD/Brevard $0 "
-                                       "assessed value read as a price)")
 def test_pursued_new_build_never_gets_free_land(plans, lid, parcel):
     p, f = plans(lid), resolve(lid)
     _, sites, stacks, *_ = _after(p, f, [_tile("homes", parcel)] if parcel else [])
@@ -369,8 +367,6 @@ def test_agents_plan_pays_for_each_parcel_once(plans, lid):
 @pytest.mark.parametrize("lid,building", [(HOU, "osm:54358538"),    # 2nd building on the parcel of conv-osm:510323326
                                           (LA, "osm:427462795"),     # 2nd building on the parcel of conv-osm:427462762
                                           (LA, "osm:402036180")])    # building on the agents' new build site-5093026038
-@pytest.mark.xfail(strict=True, reason="QA-FIN-3: a conversion tile on a parcel that already holds a pursued site "
-                                       "charges the parcel's full acquisition basis a second time")
 def test_conversion_tile_does_not_buy_the_same_parcel_twice(plans, lid, building):
     p, f = plans(lid), resolve(lid)
     _assert_parcels_paid_once(p, f, [_tile("convert_residential", building)])
@@ -390,8 +386,6 @@ def _assert_parcels_paid_once(p, f, edits):
 # ---------------------------------------------------------------- conversions: hotel keys, zero-home conversions
 
 
-@pytest.mark.xfail(strict=True, reason="QA-FIN-4: hotel keys apply the residential net/gross efficiency to "
-                                       "hotel_key_sqft, which is already gross sqft per key (25% fewer keys)")
 def test_hotel_keys_use_gross_sqft_per_key(plans):
     p, f = plans(HOU), resolve(HOU)
     b = next(x for x in p.buildings if x.id == "osm:510323326")
@@ -401,8 +395,6 @@ def test_hotel_keys_use_gross_sqft_per_key(plans):
     assert pf["value_usd"] == pytest.approx(rentable / f["hotel_key_sqft"] * f["hotel_value_usd_per_key"], rel=1e-9)
 
 
-@pytest.mark.xfail(strict=True, reason="QA-FIN-5: a residential conversion that yields 0 homes is accepted and its "
-                                       "cost added to funding required")
 def test_residential_conversion_with_no_homes_adds_no_funding(plans):
     p, f = plans(BRE), resolve(BRE)
     c = next(x for x in p.conversions if x.building_id == "osm:909804874")
@@ -449,9 +441,7 @@ def test_raised_affordable_gaps_clamp_the_same_way_in_scoreboard_and_report(plan
     assert r.scoreboard.affordable_homes == sum(x.affordable_units for x in fs) <= r.scoreboard.homes
 
 
-@pytest.mark.parametrize("lid", [HOU, LA, pytest.param(BRE, marks=pytest.mark.xfail(strict=True, reason=(
-    "QA-FIN-7: a priced site whose default affordable count rounds to 0 (Brevard's 4-home site) is never selected "
-    "for an affordable goal, so the goal falls short while the report says every priced site was used")))])
+@pytest.mark.parametrize("lid", [HOU, LA, BRE])
 def test_affordable_goal_equal_to_every_priced_home_is_met(plans, lid):
     p, f = plans(lid), resolve(lid)
     units, (r, sites, stacks, _, _, gr) = _all_affordable(p, f)

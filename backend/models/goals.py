@@ -4,6 +4,7 @@ Sites are added in order of cheapest funding required per goal unit. A site's su
 site requires (no cross-subsidy). If every affordable-capable site is in and the affordable goal is still short, the
 affordable count per site is raised (up to all its homes) in order of cheapest marginal funding required.
 """
+import math
 from typing import NamedTuple, Optional
 
 from backend.models import finance
@@ -44,8 +45,9 @@ def select_sites(cands: list[tuple[Site, dict]], goals: PlanGoals, f: dict) -> S
                 break
             take(s, m)
     if goals.affordable_homes is not None:
-        pool = [c for c in remaining() if c[1]["affordable_units"] > 0]
-        pool.sort(key=lambda c: (need(c[1]) / c[1]["affordable_units"], -c[1]["affordable_units"], c[0].id))
+        pool = [c for c in remaining() if c[1]["units"] > 0]   # 0-affordable sites last; the raise loop can lift them
+        pool.sort(key=lambda c: (need(c[1]) / c[1]["affordable_units"] if c[1]["affordable_units"] else math.inf,
+                                 -c[1]["affordable_units"], c[0].id))
         for s, m in pool:
             if aff_sum() >= goals.affordable_homes:
                 break
@@ -106,6 +108,8 @@ def report(sites: list[Site], stacks: list[CapitalStack], goals: PlanGoals, tran
                 notes.append(f"{LABELS[key]} goal {goal:,g}% of demand: {achieved:,g}% reached with every candidate route")
             else:
                 notes.append(f"{LABELS[key]} goal {goal:,g}: {achieved:,g} reached with every priced candidate site")
+    if existing is not None and existing.properties_without_li_units:
+        notes.append(f"{existing.properties_without_li_units} HUD LIHTC properties report no low-income unit count")
     return GoalReport(
         goals=progress, sites_funded=len(funded),
         total_cost_usd=round(sum(x.total_cost_usd for _, x in funded), 2),

@@ -198,8 +198,7 @@ def test_a_missing_physical_input_never_scores_as_a_met_threshold(plans, L):
         assert _wmean(c.scores_by_use["residential"], w) < _wmean(full.scores_by_use["residential"], w), k
 
 
-@pytest.mark.parametrize("L", _xfail(2, "confidence is the min over present inputs, so dropping one can raise it",
-                                     "houston_downtown", "la_wilshire_koreatown"))
+@pytest.mark.parametrize("L", LOCALES)
 def test_removing_a_physical_input_never_raises_confidence(plans, L):
     lc = _Locale(plans(L))
     b = lc.anchor()
@@ -211,7 +210,7 @@ def test_removing_a_physical_input_never_raises_confidence(plans, L):
         assert CONF[c.confidence] <= CONF[base], (k, base, c.confidence)
 
 
-@pytest.mark.parametrize("L", _xfail(3, "missing acquisition/rentable scores 0.5 financial, above every measured building"))
+@pytest.mark.parametrize("L", LOCALES)
 def test_missing_financial_inputs_score_no_better_than_every_measured_building(plans, L):
     lc = _Locale(plans(L))
     measured = [d.score for c in lc.p.conversions for d in c.details
@@ -224,7 +223,7 @@ def test_missing_financial_inputs_score_no_better_than_every_measured_building(p
 # ---------------------------------------------------------------- mixed use and zero-unit edge cases
 
 
-@pytest.mark.parametrize("L", _xfail(1, "mixed-use retail NOI on the typical floor is not taken out of the residential area"))
+@pytest.mark.parametrize("L", LOCALES)
 def test_mixed_use_cannot_outearn_both_pure_uses_on_the_same_building(plans, L):
     """Mixed use splits one building's area between homes and retail at the same cost, so its margin cannot beat both
     all-residential and all-retail (retail priced as the model prices mixed-use retail)."""
@@ -246,7 +245,7 @@ def test_mixed_use_cannot_outearn_both_pure_uses_on_the_same_building(plans, L):
     assert not bad, f"{len(bad)} buildings, e.g. {bad[:3]}"
 
 
-@pytest.mark.parametrize("L", _xfail(1, "mixed-use retail NOI is earned even with zero rentable area"))
+@pytest.mark.parametrize("L", LOCALES)
 def test_zero_rentable_area_earns_nothing_in_any_use(plans, L):
     lc = _Locale(plans(L))
     c = lc.score(_with(lc.anchor(), rentable_area_sqft=0.0))
@@ -254,8 +253,7 @@ def test_zero_rentable_area_earns_nothing_in_any_use(plans, L):
     assert {u: c.scores_by_use[u].financial for u in reuse.CONVERT_USES} == {u: 0.0 for u in reuse.CONVERT_USES}
 
 
-@pytest.mark.parametrize("L", _xfail(7, "a building too small for one home is still recommended for homes",
-                                     "houston_downtown", "la_wilshire_koreatown"))
+@pytest.mark.parametrize("L", LOCALES)
 def test_a_building_too_small_for_one_home_is_not_recommended_for_homes(plans, L):
     lc = _Locale(plans(L))
     small = 0.5 * lc.f["avg_unit_sqft_residential"] / lc.f["reuse_efficiency_factor"]
@@ -343,7 +341,6 @@ def test_conversion_legal_fit_comes_from_cited_conversion_paths(plans, L):
             assert c.legal_path is not None and c.legal_path.eligible and c.legal_path.citations, c.building_id
 
 
-@pytest.mark.xfail(strict=True, reason="QA-REUSE-5: buildings with no parcel match are labeled 'not covered by corpus'")
 def test_houston_candidates_never_reported_uncovered_by_the_corpus(plans):
     p = plans("houston_downtown")
     assert p.envelopes and all(e.covered for e in p.envelopes)   # Houston development rules cover every parcel
@@ -351,7 +348,7 @@ def test_houston_candidates_never_reported_uncovered_by_the_corpus(plans):
     assert not bad, bad
 
 
-@pytest.mark.parametrize("L", _xfail(4, "financial inputs without a value carry a model/county confidence, not 'missing'"))
+@pytest.mark.parametrize("L", LOCALES)
 def test_score_inputs_without_a_value_are_labeled_missing(plans, L):
     bad = [(c.building_id, d.use, d.prov.source, d.prov.confidence) for c in plans(L).conversions for d in c.details
            if d.fit in ("physical", "market", "financial") and d.value is None and d.prov.confidence != "missing"]
@@ -367,7 +364,7 @@ def test_brevard_reuse_is_screening_only_and_never_better_than_low_confidence(pl
 # ---------------------------------------------------------------- flood
 
 
-@pytest.mark.parametrize("L", _xfail(6, "convert tiles (and the reuse agent) add homes inside FEMA high-risk flood zones"))
+@pytest.mark.parametrize("L", LOCALES)
 def test_converting_a_flooded_building_adds_no_homes_in_a_flood_zone(plans, L):
     p = plans(L)
     lc = _Locale(p)

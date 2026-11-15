@@ -9,10 +9,11 @@ NOI_KEYS = ["rent_usd_per_unit_month", "affordable_rent_usd_per_unit_month", "af
 
 
 def acquisition_basis(last_sale_usd: Optional[float], assessed_value_usd: Optional[float]) -> Optional[float]:
-    """Last sale if known, else assessed value; None when both are missing."""
-    if last_sale_usd is not None:
+    """Last sale if known, else assessed value; None when both are missing. A $0 value (exempt or unvalued parcel) is
+    missing, never free land."""
+    if last_sale_usd is not None and last_sale_usd > 0:
         return float(last_sale_usd)
-    if assessed_value_usd is not None:
+    if assessed_value_usd is not None and assessed_value_usd > 0:
         return float(assessed_value_usd)
     return None
 

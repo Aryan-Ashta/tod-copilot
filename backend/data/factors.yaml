@@ -789,3 +789,21 @@ onboard_sample_box_m:
   verified: false
   note: "team design choice, labeled (docs/12 §14): side of the square around the area centre (or county interior
     point) in which proposed layers are sampled"
+reuse_missing_financial_score:
+  label: reuse financial fit when the pro forma cannot be computed
+  value: 0.29
+  unit: score 0-1
+  source_url: team choice
+  verified: false
+  note: "team design choice, labeled (QA-REUSE-3): about the median measured residential financial fit across the
+    three demo locales (0.26-0.30, QA probe 2026-11-15), so a missing acquisition basis or rentable area never scores
+    better than measured buildings"
+min_park_area_sqft:
+  label: smallest open space counted as a park
+  value: 2500
+  unit: sqft
+  source_url: http://info.cityoflex.com/pubrecdocs/compplan/tbl_38_parks_classifications.pdf
+  verified: false
+  note: "QA-GREENSPACE-3: lower bound of the NRPA mini-park class ('between 2500 sq. ft. and one acre'), Mertes &
+    Hall 1996, Park, Recreation, Open Space and Greenway Guidelines (NRPA), as reproduced in this city plan table;
+    smaller open space from the slider or a park tile does not count as a park within walk"

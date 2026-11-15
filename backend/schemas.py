@@ -266,6 +266,7 @@ class ExistingAffordable(BaseModel):   # HUD LIHTC properties in the area
     properties: int
     affordable_homes: int      # sum of LI_UNITS
     total_homes: int           # sum of N_UNITS
+    properties_without_li_units: int = 0   # HUD records with no LI_UNITS
     prov: Provenance
 
 

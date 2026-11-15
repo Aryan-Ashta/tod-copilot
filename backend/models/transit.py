@@ -101,7 +101,7 @@ def candidates(existing: dict, grid: list[dict], G: nx.Graph, stations: list[dic
                 line = LineString(pts)
                 vehicles, cost = new_route_cost(line.length / 1000, f["frequent_bus_headway_min"], f)
                 ll = LineString([to_lonlat(x, y) for x, y in line.simplify(10).coords])
-                out.append({"id": f"fdr-{si}-{c['h3'][-6:]}", "kind": "frequent_bus", "type": "feeder", "phase": 2,
+                out.append({"id": f"fdr-{si}-{c['h3']}", "kind": "frequent_bus", "type": "feeder", "phase": 2,
                             "geometry": mapping(ll), "headway_min": f["frequent_bus_headway_min"], "cost": cost,
                             "vehicles": vehicles, "stops_xy": _stops_along(line, f["stop_spacing_m"]),
                             "length_km": line.length / 1000, "name": f"Feeder {st['name']}"})
@@ -126,7 +126,7 @@ def optimize_network(existing: dict, grid: list[dict], cands: list[dict], covera
     def pct(cov: set) -> float:
         return 100 * sum(demand[h] for h in cov) / total_demand if total_demand else 0.0
 
-    baseline = pct(covered)
+    baseline, covered_baseline = pct(covered), set(covered)
     for c in cands:
         c["cover"] = _covered(grid, c["stops_xy"], f["stop_catchment_m"])
     selected, spent, notes = [], 0.0, []
@@ -153,7 +153,7 @@ def optimize_network(existing: dict, grid: list[dict], cands: list[dict], covera
             break
         _, c = max(scored, key=lambda s: s[0])
         take(c)
-        pool = [p for p in pool if p["id"] != c["id"]]
+        pool = [p for p in pool if p is not c]
     coverage = pct(covered)
     if coverage < coverage_goal_pct:
         notes.append(f"frequent stops reach {coverage:.1f}% of demand, short of the {coverage_goal_pct:g}% goal: "
@@ -196,7 +196,8 @@ def optimize_network(existing: dict, grid: list[dict], cands: list[dict], covera
         routes.append(Route(id=c["id"], kind=c["kind"], geometry=c["geometry"], headway_min=_int(c["headway_min"]),
                             phase=c["phase"], annual_operating_cost_usd=round(c["cost"], 2)))
     return {"routes": routes, "selected": selected, "spent": spent, "notes": notes,
-            "coverage_baseline_pct": round(baseline, 1), "coverage_pct": round(coverage, 1)}
+            "coverage_baseline_pct": round(baseline, 1), "coverage_pct": round(coverage, 1),
+            "covered_baseline_h3": covered_baseline, "covered_h3": set(covered)}
 
 
 def _int(v) -> Optional[int]:
@@ -212,14 +213,24 @@ def _coords(geom: dict) -> list:
 
 
 # ---------------------------------------------------------------- ridership + measurements
+def stop_cell(lonlat: tuple[float, float]) -> str:
+    """The demand cell (H3_RES) a stop lies in."""
+    return h3.latlng_to_cell(lonlat[1], lonlat[0], H3_RES)
+
+
 def estimate_ridership(stops: list[dict], grid: list[dict], f: dict, prov: Provenance) -> list[Stop]:
-    """stops: [{id, lonlat, xy, route_ids}]; a cell's demand is split evenly among stops covering it."""
+    """stops: [{id, lonlat, xy, route_ids}]; a stop covers a cell when the cell centroid is within its catchment or
+    the stop lies inside the cell (its catchment then overlaps the cell even when the centroid, ~800 m from the next
+    one, is out of reach). A cell's demand is split evenly among the stops covering it, so none is counted twice."""
     if not stops:
         return []
     tree = cKDTree(np.asarray([s["xy"] for s in stops]))
+    inside: dict[str, set[int]] = {}
+    for i, s in enumerate(stops):
+        inside.setdefault(stop_cell(s["lonlat"]), set()).add(i)
     share = [0.0] * len(stops)
     for c in grid:
-        hits = tree.query_ball_point(c["xy"], f["stop_catchment_m"])
+        hits = set(tree.query_ball_point(c["xy"], f["stop_catchment_m"])) | inside.get(c["h3"], set())
         for i in hits:
             share[i] += c["demand"] / len(hits)
     out = []

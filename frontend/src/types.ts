@@ -296,6 +296,7 @@ export interface ExistingAffordable {
   properties: number
   affordable_homes: number
   total_homes: number
+  properties_without_li_units: number
   prov: Provenance
 }
 

@@ -107,7 +107,10 @@ def proposed_only(plan, stop) -> bool:
 
 
 def reached_demand(cells, stops_ll, radius) -> float:
-    return sum(c["demand"] for c in cells if any(lonlat_dist_m(tuple(c["lonlat"]), s) <= radius for s in stops_ll))
+    """Demand of cells a stop covers: the centroid within `radius`, or the stop inside the cell (transit.stop_cell)."""
+    inside = {transit.stop_cell(s) for s in stops_ll}
+    return sum(c["demand"] for c in cells
+               if c["h3"] in inside or any(lonlat_dist_m(tuple(c["lonlat"]), s) <= radius for s in stops_ll))
 
 
 def uncovered_stop_parcel(plan, f, lid):
@@ -157,10 +160,7 @@ def test_ridership_never_exceeds_the_demand_its_stops_reach(plans, lid):
     assert reach <= sum(c["demand"] for c in cells)
 
 
-@pytest.mark.parametrize("lid", [
-    xf(H, "QA-TRANSIT-3: stops get 0 riders/day when no H3 cell centroid lies within 400 m (110 of 274 stops)"),
-    xf(LA, "QA-TRANSIT-3: Wilshire/Vermont Station and 47 other stops show 0 riders/day inside busy cells"),
-    xf(B, "QA-TRANSIT-3: 9 stops in cells with demand show 0 riders/day")])
+@pytest.mark.parametrize("lid", LOCALES)
 def test_stop_inside_a_cell_with_demand_has_riders(plans, lid):
     p = plans(lid)
     demand = {c["h3"]: c["demand"] for c in p.precomputed.demand_cells}
@@ -169,8 +169,7 @@ def test_stop_inside_a_cell_with_demand_has_riders(plans, lid):
     assert not zero
 
 
-@pytest.mark.parametrize("lid", [H, LA, xf(B, "QA-TRANSIT-4: a count is suggested at a stop of a proposed feeder "
-                                                "that does not run yet")])
+@pytest.mark.parametrize("lid", LOCALES)
 def test_measurements_count_at_stops_that_exist_today(plans, lid):
     p = plans(lid)
     stops = {s.id: s for s in p.transit.stops}
@@ -237,16 +236,14 @@ def test_brevard_upgrades_an_existing_route_and_phases_station_feeders_later(pla
     assert len(ids) == len(set(ids))
 
 
-@pytest.mark.parametrize("lid", [xf(H, "QA-TRANSIT-1: feeder ids use h3[-6:], nearly constant: ids collide"), LA,
-                                 xf(B, "QA-TRANSIT-1: two Brevard feeders share id fdr-0-5fffff")])
+@pytest.mark.parametrize("lid", LOCALES)
 def test_transit_candidate_ids_are_unique(lid):
     ctx, _ = agent_inputs(lid)
     ids = [c["id"] for c in candidates_for(ctx)[0]]
     assert len(ids) == len(set(ids))
 
 
-@pytest.mark.parametrize("lid", [H, xf(B, "QA-TRANSIT-1: a colliding feeder id drops a feeder from the greedy pool "
-                                          "(coverage 57.6% instead of 59.7%)")])
+@pytest.mark.parametrize("lid", [H, B])
 def test_network_selection_does_not_depend_on_candidate_ids(plans, lid):
     """Renaming candidates must not change what the greedy picks; the plan also says no remaining route adds
     coverage when it stops short of the goal."""
@@ -282,8 +279,7 @@ def test_stop_tile_never_lowers_coverage_walk_or_transport_co2(plans, lid):
     assert len(new) == 1 and 0 <= new[0]["riders_per_day_low"] <= new[0]["riders_per_day_high"]
 
 
-@pytest.mark.parametrize("lid", [xf(H, "QA-TRANSIT-5: a stop tile never updates coverage_pct (docs/05 says it does)"),
-                                 xf(B, "QA-TRANSIT-5: a stop tile never updates coverage_pct (docs/05 says it does)")])
+@pytest.mark.parametrize("lid", [H, B])
 def test_stop_tile_on_uncovered_demand_raises_coverage(plans, lid):
     p, f = plans(lid), resolve(lid)
     gain = uncovered_stop_parcel(p, f, lid)
@@ -292,10 +288,7 @@ def test_stop_tile_on_uncovered_demand_raises_coverage(plans, lid):
     assert r.plan_patch["transit"]["coverage_pct"] > p.transit.coverage_pct
 
 
-@pytest.mark.parametrize("lid", [xf(H, "QA-TRANSIT-6: a stop tile takes the full demand of cells other stops "
-                                       "already share"),
-                                 xf(LA, "QA-TRANSIT-6: a stop tile takes the full demand of cells other stops "
-                                        "already share")])
+@pytest.mark.parametrize("lid", [H, LA])
 def test_stop_tile_next_to_existing_stops_creates_no_riders_from_nothing(plans, lid):
     p, f = plans(lid), resolve(lid)
     pid = parcel_nearest_busy_stop(p)
@@ -306,8 +299,7 @@ def test_stop_tile_next_to_existing_stops_creates_no_riders_from_nothing(plans, 
     assert total <= reach * 1.01 + 1
 
 
-@pytest.mark.parametrize("lid", [xf(H, "QA-TRANSIT-7: placing the same stop twice adds a duplicate stop id"),
-                                 xf(B, "QA-TRANSIT-7: placing the same stop twice adds a duplicate stop id")])
+@pytest.mark.parametrize("lid", [H, B])
 def test_stop_tile_is_idempotent(plans, lid):
     p, f = plans(lid), resolve(lid)
     pid = parcel_nearest_busy_stop(p)
@@ -317,8 +309,6 @@ def test_stop_tile_is_idempotent(plans, lid):
     assert twice.plan_patch["transit"]["stops"] == once.plan_patch["transit"]["stops"]
 
 
-@pytest.mark.xfail(strict=True, reason="QA-TRANSIT-8: transport CO2 only counts walks to existing frequent stops, so "
-                                       "homes beside the plan's own feeder get 0 t")
 def test_brevard_homes_beside_a_planned_feeder_stop_avoid_transport_co2(plans):
     p, f = plans(B), resolve(B)
     pre, thr = p.precomputed, walk_threshold_m(f)
@@ -350,12 +340,14 @@ def test_transport_co2_is_households_within_the_walk_of_frequent_transit(plans, 
     assert rescore(p, [], f).scoreboard.transport_co2_tonnes_per_year == t["transport_co2"]
     # doubling the homes near frequent stops doubles it
     assert score(p, f, homes_scale=2)["transport_co2"] == pytest.approx(2 * t["transport_co2"], abs=0.02)
-    # a target one step beyond the walk threshold drops out; exactly at it counts
+    # a target one step beyond the walk threshold (to existing and planned frequent stops) drops out; exactly at it
+    # counts
     thr = walk_threshold_m(f)
     tid = max((k for k in homes if (walk.get(k) or {}).get("frequent_stop") is not None
                and walk[k]["frequent_stop"] <= thr), key=lambda k: (homes[k], k))
     for d, expect in ((thr, hh), (thr + 0.1, hh - homes[tid])):
-        assert households_near_frequent(homes, {**walk, tid: {**walk[tid], "frequent_stop": d}}, f) == expect
+        at = {**walk[tid], "frequent_stop": d, "frequent_stop_planned": d}
+        assert households_near_frequent(homes, {**walk, tid: at}, f) == expect
 
 
 @pytest.mark.parametrize("lid", LOCALES)
@@ -420,8 +412,7 @@ def test_dense_grids_score_higher_readiness_than_brevard(plans):
     assert med[H] > med[B] and med[LA] > med[B]
 
 
-@pytest.mark.parametrize("lid", [xf(lid, "QA-TRANSIT-9: present lists amenities within 640 m while gaps flag those "
-                                         "beyond 320 m, so one amenity is both") for lid in LOCALES])
+@pytest.mark.parametrize("lid", LOCALES)
 def test_no_amenity_is_both_present_and_a_gap(plans, lid):
     both = []
     for r in plans(lid).readiness:
@@ -432,15 +423,13 @@ def test_no_amenity_is_both_present_and_a_gap(plans, lid):
     assert not both
 
 
-@pytest.mark.parametrize("lid", [xf(lid, "QA-TRANSIT-10: gap text 'sidewalk not mapped on 0 of 0 frontages' when no "
-                                         "street lies within 25 m") for lid in LOCALES])
+@pytest.mark.parametrize("lid", LOCALES)
 def test_sidewalk_gap_text_never_reads_0_of_0(plans, lid):
     bad = [r.target_id for r in plans(lid).readiness if any(" 0 of 0 frontages" in g for g in r.gaps)]
     assert not bad
 
 
-@pytest.mark.parametrize("lid", [xf(lid, "QA-TRANSIT-11: frontages with no OSM sidewalk tag are reported as having "
-                                         "no sidewalk") for lid in LOCALES])
+@pytest.mark.parametrize("lid", LOCALES)
 def test_unmapped_frontages_are_not_reported_as_missing_sidewalks(lid):
     _, measures = agent_inputs(lid)
     f = resolve(lid)
@@ -458,7 +447,6 @@ def test_unmapped_frontages_are_not_reported_as_missing_sidewalks(lid):
     assert not wrong
 
 
-@pytest.mark.xfail(strict=True, reason="QA-TRANSIT-12: broadband False lowers the score but lists no gap")
 def test_brevard_unserved_broadband_is_listed_as_a_gap():
     _, measures = agent_inputs(B)
     f = resolve(B)
