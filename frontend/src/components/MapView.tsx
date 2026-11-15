@@ -1020,13 +1020,13 @@ export default function MapView({
 
   // ---------------------------------------------------------------- agent emphasis (plan screen)
   // Each pick in the agent list (state.agentPick counts them; the value at mount is ignored) emphasises the selected
-  // agent's contributions, eases the camera to them and shows a caption; its ✕ clears the emphasis.
+  // agent's contributions and eases the camera to them; the emphasis stays until the next pick.
   const pick = state.agentPick
   const [mountPick] = useState(pick)
-  const [clearedPick, setClearedPick] = useState<number | null>(null)
   const picked = focusAgents && pick !== mountPick
   const selectedAgent = state.selectedAgent
   const frame = locale?.bbox ?? null
+  // The emphasis in force: null before the first pick and for the coordinator (its overlays fade out).
   const agentView = useMemo(
     () =>
       picked
@@ -1041,8 +1041,6 @@ export default function MapView({
         : null,
     [picked, selectedAgent, suggestions, plan, buildingData, storyHeightFt, lineIndex, frame],
   )
-  /** The emphasis in force: null before the first pick, for the coordinator and once cleared (its overlays fade out). */
-  const focusView = clearedPick !== pick ? agentView : null
 
   const cameraPick = useRef(mountPick)
   useEffect(() => {
@@ -1064,15 +1062,9 @@ export default function MapView({
     easeIso(map, pts, { top: top + m, right: right + m, bottom: bottom + m, left: left + m }, bearing, FOCUS_MAX_ZOOM)
   }, [pick, picked, loaded, agentView, selectedAgent, locale, top, right, bottom, left, hasSelection])
 
-  const clearFocus = () => {
-    setClearedPick(pick)
-    const map = mapRef.current
-    if (map && locale) easeIso(map, outlinePoints(locale.boundary, locale.bbox), { top, right, bottom, left }, ISO_CAMERA.bearing)
-  }
-
   // ---------------------------------------------------------------- compose + animate
   // null: no emphasis in force; '' : emphasis that keeps no map layer (its overlays carry it)
-  const emphKey = focusView ? focusView.emphasize.join(',') : null
+  const emphKey = agentView ? agentView.emphasize.join(',') : null
   const fadeTargets = useMemo((): Fades => {
     const emph = new Set(emphKey ? emphKey.split(',') : [])
     const t = { ...REST }
@@ -1132,7 +1124,7 @@ export default function MapView({
     kick()
   }, [pick, picked, fadeAt, kick])
 
-  const live = !REDUCED_MOTION && (toolOn !== null || focusView?.animate !== undefined)
+  const live = !REDUCED_MOTION && (toolOn !== null || agentView?.animate !== undefined)
   useEffect(() => {
     anim.current.live = live
     if (live) kick()
@@ -1162,7 +1154,7 @@ export default function MapView({
 
   // Transit draws over the other ground layers (parcels, sidewalks) so lines stay legible; buildings still hide it.
   useEffect(() => {
-    const emph = new Set<FadeGroup>(focusView?.emphasize ?? [])
+    const emph = new Set<FadeGroup>(agentView?.emphasize ?? [])
     composeRef.current = (now) => {
       const v = fadeAt(now)
       const out: Layer[] = []
@@ -1221,10 +1213,8 @@ export default function MapView({
   }, [
     lWalk, lUtil, lAmen, lFlood, lBoundary, lParcels, lSelParcel, lLawns, lTransit, lFeedStops, lProp, lStops, lStations,
     lBuildings, lDemo, lSelBuilding, lSites, lNew, lDecor, lBuild, fountains, lToolParcels, lToolBuildings, agentView,
-    focusView, fadeAt, push, large,
+    fadeAt, push, large,
   ])
-
-  const caption = focusView?.caption ?? null
 
   // maplibre's own CSS sets `.maplibregl-map { position: relative }`, so the map gets a sized inner box.
   return (
@@ -1233,34 +1223,6 @@ export default function MapView({
       {pings.map((p) => (
         <PlacePing key={p.id} ping={p} onDone={pingDone} />
       ))}
-      {caption && (
-        <div
-          key={pick}
-          role="status"
-          // bottom-left, just above the panels along the map's bottom edge: clear of everything floating at the top
-          style={{ bottom: bottom + 32 }}
-          className="pop-in absolute left-3 z-20 w-max max-w-[min(30rem,calc(100%-1.5rem))] rounded-[12px] border-[1.5px] border-ink bg-paper py-2.5 pr-2.5 pl-3.5 shadow-[1.5px_1.5px_0_var(--color-ink),0_8px_24px_rgb(28_34_48/.12)]"
-        >
-          <div className="flex items-start gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="text-[15px] leading-tight font-bold">{caption.title}</div>
-              <div className="mt-0.5 text-[13px] leading-snug text-slate">{caption.summary}</div>
-              <div className="mt-1 text-[13px] leading-snug">
-                <span className="font-semibold">Unlocks:</span> {caption.unlocks}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={clearFocus}
-              aria-label="Clear agent emphasis"
-              title="Clear emphasis"
-              className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[13px] text-slate transition-colors duration-150 hover:bg-ink/[0.07] hover:text-ink"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
