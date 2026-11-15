@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useId, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react'
 
 /**
  * Panel over the map: paper, hairline border, collapsible (the map gets the room when collapsed). The body opens
@@ -10,6 +10,7 @@ export default function MapPanel({
   className = '',
   right,
   children,
+  ...rest
 }: {
   title: ReactNode
   defaultOpen?: boolean
@@ -17,11 +18,12 @@ export default function MapPanel({
   /** Shown in the header next to the toggle (e.g. "updating…"). */
   right?: ReactNode
   children: ReactNode
-}) {
+} & Omit<ComponentPropsWithoutRef<'section'>, 'title' | 'className' | 'children'>) {
   const [open, setOpen] = useState(defaultOpen)
   const id = useId()
   return (
     <section
+      {...rest}
       className={`overflow-hidden rounded-[12px] border border-rule bg-paper/95 text-[13px] leading-snug shadow-[0_6px_20px_rgb(28_34_48/.1)] backdrop-blur-sm ${className}`}
     >
       <button

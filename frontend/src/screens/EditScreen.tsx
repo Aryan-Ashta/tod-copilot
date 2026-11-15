@@ -101,8 +101,8 @@ function Edit() {
           <MapView large insets={EDIT_MAP_INSETS} />
           <LayerPanel />
           {state.rejection && <RejectionToast key={state.rejection.nonce} notice={state.rejection} onClose={closeRejection} />}
-          {/* bottom stack: tool hint, green-space slider, tile tray */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-10 z-10 flex flex-col items-center gap-2.5 px-3">
+          {/* bottom stack: tool hint, green-space slider, tile tray; each item is a floor for the Layers panel */}
+          <div data-map-floor-items className="pointer-events-none absolute inset-x-0 bottom-10 z-10 flex flex-col items-center gap-2.5 px-3">
             {tool && state.tool && (
               <div
                 key={state.tool}

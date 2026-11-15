@@ -76,6 +76,7 @@ export default function TargetsPanel() {
         </>
       }
       className="absolute right-3 bottom-8 left-14 z-10"
+      data-map-floor
     >
       <TargetBars row />
       <GreenSpaceSlider className="mt-2 border-t border-rule pt-1.5" />

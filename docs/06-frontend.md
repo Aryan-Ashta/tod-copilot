@@ -14,7 +14,7 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Light p
 
 ## Map layers (bottom → top), each toggleable
 
-The Layers panel (`components/LayerPanel.tsx`, top-left of the map on the plan screen and in edit mode) is a collapsible map panel with an "N on" count in its header: Base, Infrastructure and Plan groups, one row per layer with a round colour dot, its name (grey when off) and an on/off switch. While a layer is on, its colour key (`LAYER_KEY` in `src/mapLayers.ts`) shows under its name: sidewalk / bike lane / missing sidewalk, the amenity kinds, frequent bus / BRT, the conversion uses, pencils today / on watch.
+The Layers panel (`components/LayerPanel.tsx`, top-left of the map on the plan screen and in edit mode) is a collapsible map panel with an "N on" count in its header: Base, Infrastructure and Plan groups, one row per layer with an on/off switch on the left, a round colour dot and its name (grey when off). While a layer is on, its colour key (`LAYER_KEY` in `src/mapLayers.ts`) shows under its name: sidewalk / bike lane / missing sidewalk, the amenity kinds, frequent bus / BRT, the conversion uses, pencils today / on watch. The list grows down to the first map UI under the panel (the targets strip, edit mode's bottom stack items and the zoom control, marked `data-map-floor` / `data-map-floor-items`; else the map's bottom edge, 12 px clear) and scrolls only when the screen is too short for it.
 
 | Group | Layer | Style |
 | --- | --- | --- |
