@@ -57,7 +57,7 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
   const sharedNarrowing = narrowings.size === 1 ? [...narrowings][0] : null
 
   return (
-    <MapPanel title="What would make this plan more certain" className={className}>
+    <MapPanel title="Transit projections" className={className}>
       <div className="max-h-[52vh] overflow-y-auto">
         {!t ? (
           <p className="text-slate italic">Waiting for the transit agent…</p>

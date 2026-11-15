@@ -15,7 +15,7 @@ import DemoSequence from '../components/DemoSequence'
 import { dataTierLabel } from '../format'
 import type { StockPrompt } from '../types'
 
-// Layers (top-left), the Apply button (top centre) and "more certain" bars (top-right) along the top; the Targets
+// Layers (top-left), the Apply button (top centre) and the Transit projections bars (top-right) along the top; the Targets
 // strip (TargetsPanel) along the bottom.
 const PLAN_MAP_INSETS: MapInsets = { top: 84, right: 24, bottom: 242, left: 24 }
 
