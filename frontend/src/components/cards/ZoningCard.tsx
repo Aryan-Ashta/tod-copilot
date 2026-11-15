@@ -5,7 +5,9 @@ import { EnvelopeFigures } from './EnvelopeFigures'
 import { fmtNum, fmtValue, humanize, parcelLabel } from '../../format'
 import { CardShell, CiteList, Empty, Section } from './common'
 import { SourcedValue } from '../SourceBadge'
-import type { LegalPath, Plan, ZoningEnvelope } from '../../types'
+import type { LegalPath, ZoningEnvelope } from '../../types'
+import { bothLawExamples } from '../../zoningExamples'
+import LetterDraft from '../LetterDraft'
 
 function PathColumn({ path, recommended }: { path: LegalPath; recommended: boolean }) {
   const status =
@@ -70,34 +72,6 @@ function PickLine({ env }: { env: ZoningEnvelope }) {
         : `, ${fmtNum(rec.homes)} homes vs ${others.map((o) => `${fmtNum(o.homes)} under ${o.name}`).join(', ')} (most homes wins).`}
     </p>
   )
-}
-
-/** Up to 3 addressed parcels where 2+ paths are eligible with different homes: the less often recommended path
- *  first (the surprising pick), then the building's best reuse score, then the larger homes gain. Plan data only. */
-function bothLawExamples(plan: Partial<Plan>): { id: string; label: string; at: [number, number] }[] {
-  const envs = plan.envelopes ?? []
-  const centroid = plan.precomputed?.centroid ?? {}
-  const parcels = new Map((plan.parcels ?? []).map((p) => [p.id, p]))
-  const recCount = new Map<string, number>()
-  for (const e of envs) if (e.recommended_path) recCount.set(e.recommended_path, (recCount.get(e.recommended_path) ?? 0) + 1)
-  const reuseScore = new Map<string, number>()
-  const parcelOf = new Map((plan.buildings ?? []).map((b) => [b.id, b.parcel_id]))
-  for (const c of plan.conversions ?? []) {
-    const pid = parcelOf.get(c.building_id)
-    if (pid) reuseScore.set(pid, Math.max(reuseScore.get(pid) ?? 0, c.overall))
-  }
-  return envs
-    .flatMap((e) => {
-      const el = e.paths.filter((p) => p.eligible && p.homes != null)
-      const homes = el.map((p) => p.homes as number)
-      const addr = parcels.get(e.parcel_id)?.address.value
-      const at = centroid[e.parcel_id]
-      if (el.length < 2 || new Set(homes).size < 2 || !e.recommended_path || !addr || !at) return []
-      return [{ id: e.parcel_id, label: addr, at, rarity: recCount.get(e.recommended_path) ?? 0,
-                score: reuseScore.get(e.parcel_id) ?? 0, gain: Math.max(...homes) - Math.min(...homes) }]
-    })
-    .sort((a, b) => a.rarity - b.rarity || b.score - a.score || b.gain - a.gain)
-    .slice(0, 3)
 }
 
 export default function ZoningCard() {
@@ -204,15 +178,18 @@ export default function ZoningCard() {
                     Not a candidate parcel (not underused and no convertible building), so no legal paths were evaluated here.
                   </Empty>
                 ) : (
-                  <>
+                  <div data-demo="zoning-recommendation" className="space-y-3">
                     <PickLine env={env} />
                     <EnvelopeFigures env={env} parcel={parcel} building={building} storyFt={factorNumber('story_height_ft')} />
-                    <div className={`grid gap-2 ${env.paths.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    <div data-demo="zoning-paths" className={`grid gap-2 ${env.paths.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                       {env.paths.map((p) => (
                         <PathColumn key={p.name} path={p} recommended={env.recommended_path === p.name} />
                       ))}
                     </div>
-                  </>
+                    {env.covered && (
+                      <LetterDraft key={parcelId} kind="pre_application" targetId={parcelId} label="Draft pre-application letter" />
+                    )}
+                  </div>
                 )}
               </div>
             )}

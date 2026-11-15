@@ -8,6 +8,7 @@ import FactorHover, { useFactorLabel } from '../FactorHover'
 import SourceBadge from '../SourceBadge'
 import { CapitalStacksFigure, SLICES } from './CapitalStacksFigure'
 import { ISO } from '../../iso'
+import LetterDraft from '../LetterDraft'
 import type { CapitalStack, GoalKey, GoalReport, Site } from '../../types'
 
 const INCENTIVE = 'houston_downtown_per_unit_incentive_usd'
@@ -251,6 +252,9 @@ export default function FundingCard() {
                 <ul>
                   <GapLine s={sel} name={label(sel.site_id)} />
                 </ul>
+              )}
+              {siteById.get(sel.site_id)?.status === 'pursue' && (
+                <LetterDraft key={sel.site_id} kind="funding_request" targetId={sel.site_id} label="Draft funding request" />
               )}
             </div>
           )}

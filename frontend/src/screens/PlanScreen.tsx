@@ -11,6 +11,7 @@ import LayerPanel from '../components/LayerPanel'
 import TargetsPanel from '../components/TargetsPanel'
 import UncertaintyQueue from '../components/UncertaintyQueue'
 import SplitPane from '../components/SplitPane'
+import DemoSequence from '../components/DemoSequence'
 import { dataTierLabel } from '../format'
 import type { StockPrompt } from '../types'
 
@@ -61,10 +62,13 @@ function PlanView({ replay }: { replay: boolean }) {
         storageKey="tod.split.plan"
         defaultFrac={0.3}
         leftLabel="Agents and results"
+        leftDemo="sidebar"
         left={
           <>
             <AgentChecklist />
             <AgentCard />
+            {/* the demo pill sticks to the bottom of the panel */}
+            <DemoSequence />
           </>
         }
         right={

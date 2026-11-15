@@ -414,6 +414,17 @@ class SimulatedCount(BaseModel):
     label: str = "Simulated count (demo)"
 
 
+class LetterDraft(BaseModel):   # Addition: outreach letter filled from plan data (models/letters.py), never an LLM
+    kind: Literal["owner_outreach", "pre_application", "funding_request"]
+    target_id: str              # site id (owner_outreach, funding_request) or parcel id (pre_application)
+    to: str                     # owner name / "Planning Department, <jurisdiction>" / "Housing finance agency"
+    subject: str
+    body: str                   # empty when refused
+    citations: list[Citation]   # pre_application: the recommended path's corpus citations; else empty
+    figures: dict[str, float]   # every number used in the body, keyed (money rounded to whole dollars)
+    refusal: Optional[str]      # why no letter applies here; None when drafted
+
+
 class Factor(BaseModel):
     key: str
     value: Any

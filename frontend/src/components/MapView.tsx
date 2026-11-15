@@ -966,9 +966,17 @@ export default function MapView({
   const agentView = useMemo(
     () =>
       picked
-        ? agentFocus(selectedAgent, { plan: suggestions, current: plan, buildings: buildingData, storyHeightFt, lines: lineIndex, frame })
+        ? agentFocus(selectedAgent, {
+            plan: suggestions,
+            current: plan,
+            buildings: buildingData,
+            storyHeightFt,
+            lines: lineIndex,
+            frame,
+            factor: (k) => factorNumber(k, locale?.id),
+          })
         : null,
-    [picked, selectedAgent, suggestions, plan, buildingData, storyHeightFt, lineIndex, frame],
+    [picked, selectedAgent, suggestions, plan, buildingData, storyHeightFt, lineIndex, frame, factorNumber, locale?.id],
   )
   /** The emphasis in force: null before the first pick, for the coordinator and once cleared (its overlays fade out). */
   const focusView = clearedPick !== pick ? agentView : null
