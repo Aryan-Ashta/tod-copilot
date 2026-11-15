@@ -137,7 +137,7 @@ export default function Scoreboard() {
           )
         })}
       </div>
-      <TargetScope className="border-t border-rule px-5 py-1.5 text-sm" />
+      <TargetScope line className="h-8 border-t border-rule px-5 py-1.5 text-sm leading-5" />
     </div>
   )
 }

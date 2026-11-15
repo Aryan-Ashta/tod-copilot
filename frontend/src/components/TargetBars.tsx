@@ -63,20 +63,26 @@ export function BarMarkers({
 
 const clampPct = (v: number) => Math.min(100, Math.max(0, v))
 
-/** Targets and the scoreboard count every site in the plan (funded or on watch); reserve and passed sites are out. */
-export function TargetScope({ className = '' }: { className?: string }) {
+/**
+ * Targets and the scoreboard count every site in the plan (funded or on watch); reserve and passed sites are out.
+ * `line`: one truncated line that stays even with no sites (the caller fixes its height), so whatever it heads never
+ * changes height.
+ */
+export function TargetScope({ className = '', line = false }: { className?: string; line?: boolean }) {
   const { state } = usePlan()
   const inPlan = (state.current.sites ?? []).filter((s) => s.status === 'pursue' || s.status === 'watch')
-  if (!inPlan.length) return null
+  if (!inPlan.length) {
+    return line ? <p className={`truncate text-slate ${className}`}>No sites in the plan yet</p> : null
+  }
   const funded = new Set(inPlan.filter((s) => s.status === 'pursue').map((s) => s.id))
   const watch = inPlan.filter((s) => s.status === 'watch').length
   const required = (state.current.stacks ?? [])
     .filter((x) => funded.has(x.site_id))
     .reduce((a, x) => a + Math.max(x.funding_required_usd, 0), 0)
+  const text = `Counts ${inPlan.length} sites in the plan (${watch} on watch: no price, or the owner will not sell) · funding required for the ${funded.size} funded sites ${fmtUsd(required)}`
   return (
-    <p className={`text-amber-200 ${className}`}>
-      Counts {inPlan.length} sites in the plan ({watch} on watch: no price, or the owner will not sell) · funding
-      required for the {funded.size} funded sites {fmtUsd(required)}
+    <p title={line ? text : undefined} className={`text-amber-200 ${line ? 'truncate' : ''} ${className}`}>
+      {text}
     </p>
   )
 }
@@ -128,7 +134,7 @@ export default function TargetBars({ row = false }: { row?: boolean }) {
   }
   return (
     <>
-      <TargetScope className={row ? 'mb-1.5 text-xs' : 'mb-3 text-sm'} />
+      <TargetScope line={row} className={row ? 'mb-1.5 h-4 text-xs leading-4' : 'mb-3 text-sm'} />
       <ul className={row ? 'grid grid-cols-5 divide-x divide-rule text-xs' : 'divide-y divide-rule text-sm'}>
         {targets.map((t) => {
           const lower = LOWER_IS_BETTER[t.key]
@@ -136,25 +142,28 @@ export default function TargetBars({ row = false }: { row?: boolean }) {
           const existing = statValue(state.existing, t.key)
           const agents = statValue(state.suggested, t.key)
           const vsAgents = agents === null ? 0 : Number((t.value - agents).toFixed(1))
+          const vs = vsAgents !== 0 && (
+            <span
+              key={`${t.key}-${vsAgents}`}
+              className={`hint-in font-normal ${row ? '' : 'ml-1'} ${(lower ? vsAgents < 0 : vsAgents > 0) ? 'text-green' : 'text-gap'}`}
+            >
+              ({fmtDelta(vsAgents, 1)} vs agents)
+            </span>
+          )
           return (
-            <li key={t.key} data-stat={t.key} className={row ? 'px-2 first:pl-0 last:pr-0' : 'py-2'}>
+            <li key={t.key} data-stat={t.key} className={row ? 'min-w-0 px-2 first:pl-0 last:pr-0' : 'py-2'}>
               <FactorHover keys={t.factor_keys}>
                 <span>{TARGET_LABELS[t.key]}</span>
               </FactorHover>
-              <div className={`font-semibold tabular-nums ${misses ? 'text-gap' : ''}`}>
+              {/* in the strip: value on one truncated line, the comparison on its own fixed-height line below */}
+              <div className={`font-semibold tabular-nums ${misses ? 'text-gap' : ''} ${row ? 'truncate whitespace-nowrap' : ''}`}>
                 <AnimatedNumber value={t.value} format={(v) => fmtNum(v, 1)} /> {t.unit}
                 {t.target !== null && (
                   <span className="font-normal text-slate"> · {misses ? 'target' : 'meets target'} {fmtNum(t.target, 1)}</span>
                 )}
-                {vsAgents !== 0 && (
-                  <span
-                    key={`${t.key}-${vsAgents}`}
-                    className={`hint-in ml-1 font-normal ${(lower ? vsAgents < 0 : vsAgents > 0) ? 'text-green' : 'text-gap'}`}
-                  >
-                    ({fmtDelta(vsAgents, 1)} vs agents)
-                  </span>
-                )}
+                {!row && vs}
               </div>
+              {row && <div className="h-4 truncate leading-4">{vs}</div>}
               <TargetBar t={t} existing={existing} agents={agents} />
             </li>
           )
