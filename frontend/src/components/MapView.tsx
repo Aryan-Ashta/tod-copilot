@@ -473,7 +473,13 @@ function PlacePing({ ping, onDone }: { ping: Ping; onDone: (id: number) => void 
   )
 }
 
-function tooltipFor(info: PickingInfo): string | null {
+/** What a tooltip needs beyond the picked object: buildings the plan converts (to their new use) and parcel land uses. */
+interface TipContext {
+  converted: ReadonlyMap<string, UseType>
+  parcelUse: ReadonlyMap<string, string | null>
+}
+
+function tooltipFor(info: PickingInfo, ctx: TipContext): string | null {
   const p = decodePick(info)
   if (!p) return null
   switch (p.layer) {
@@ -481,15 +487,20 @@ function tooltipFor(info: PickingInfo): string | null {
       return `${p.parcel.address.value ?? `parcel ${p.parcel.id}`}\n${humanize(p.parcel.land_use.value ?? 'land use missing')}`
     case 'buildings': {
       const name = p.building.name.value ?? `building ${p.building.id}`
-      if (!p.conversion) return `${name}\n${humanize(p.building.property_type.value ?? 'type missing')}`
-      return `${name}\nbest use: ${humanize(p.conversion.best_use)} · overall ${fmtNum(p.conversion.overall, 2)}`
+      const was = humanize(p.building.property_type.value ?? 'type missing')
+      const now = ctx.converted.get(p.building.id)
+      if (now) return `${name}\n${humanize(now)} · was ${was}`
+      if (!p.conversion) return `${name}\n${was}`
+      return `${name}\n${was} · best use: ${humanize(p.conversion.best_use)} · overall ${fmtNum(p.conversion.overall, 2)}`
     }
     case 'sites': {
       const d = p.site
       return `Site ${d.letter} · ${humanize(d.site.kind)} · ${fmtNum(d.site.homes)} homes${d.strategy ? ` · ${humanize(d.strategy)}` : ''}`
     }
-    case 'new_buildings':
-      return `New building · ${fmtNum(p.site.homes)} homes · ${fmtNum(p.site.height_ft)} ft${p.site.status === 'watch' ? '\non watch: does not pencil yet' : ''}`
+    case 'new_buildings': {
+      const was = p.site.parcel_ids.map((id) => ctx.parcelUse.get(id)).find((u) => u)
+      return `New building · ${fmtNum(p.site.homes)} homes · ${fmtNum(p.site.height_ft)} ft${was ? ` · was ${humanize(was)}` : ''}${p.site.status === 'watch' ? '\non watch: does not pencil yet' : ''}`
+    }
     case 'stops':
       return `${p.stop.name ?? `Stop ${p.stop.id}`}\n${fmtNum(p.stop.riders_per_day_low)}–${fmtNum(p.stop.riders_per_day_high)} riders/day (est.)`
     case 'proposed_routes': {
@@ -567,6 +578,8 @@ export default function MapView({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MlMap | null>(null)
   const overlayRef = useRef<MapboxOverlay | null>(null)
+  // read by the overlay's tooltip, which is created once with the map
+  const tipRef = useRef<TipContext>({ converted: new Map(), parcelUse: new Map() })
   const [loaded, setLoaded] = useState(false)
   const [hoverKeys, setHoverKeys] = useState('')
   // MapLibre's click handler is bound once at map creation; it calls through this to see the current render.
@@ -604,7 +617,7 @@ export default function MapView({
       // so the pointer shows exactly over what a click would place the tile on
       getCursor: ({ isDragging, isHovering }) => (isDragging ? 'grabbing' : isHovering ? 'pointer' : 'grab'),
       getTooltip: (info) => {
-        const text = tooltipFor(info)
+        const text = tooltipFor(info, tipRef.current)
         return text
           ? {
               text,
@@ -680,6 +693,7 @@ export default function MapView({
   const deals = plan.deals
   const L = state.layers
   const sel = state.selected
+  const hasSelection = !!(sel.buildingId || sel.parcelId || sel.stopId)
   const storyHeightFt = factorNumber('story_height_ft')
 
   const strategyBySite = useMemo(() => new Map<string, DealKind>((deals ?? []).map((d) => [d.site_id, d.strategy])), [deals])
@@ -896,6 +910,10 @@ export default function MapView({
     }
     return m
   }, [convertedKey])
+  const parcelUse = useMemo(() => new Map(parcels.map((p) => [p.id, p.land_use.value])), [parcels])
+  useEffect(() => {
+    tipRef.current = { converted, parcelUse }
+  }, [converted, parcelUse])
   const lBuildings = useMemo(
     () => buildingsLayer(buildingData, storyHeightFt, L.buildings || large, hidden, converted),
     [buildingData, storyHeightFt, L.buildings, large, hidden, converted],
@@ -1031,7 +1049,8 @@ export default function MapView({
     const map = mapRef.current
     if (!map || !loaded || !picked || cameraPick.current === pick) return
     cameraPick.current = pick
-    if (!agentView) return
+    // a building, parcel or stop in focus keeps the camera: picking an agent does not pull the view away from it
+    if (!agentView || hasSelection) return
     const b = agentView.bbox
     const pts: [number, number][] | null = b
       ? [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]
@@ -1043,7 +1062,7 @@ export default function MapView({
     const bearing = ISO_CAMERA.bearing + (i % 2 === 0 ? -1 : 1) * FOCUS_BEARING_NUDGE_DEG
     const m = FOCUS_MARGIN_PX
     easeIso(map, pts, { top: top + m, right: right + m, bottom: bottom + m, left: left + m }, bearing, FOCUS_MAX_ZOOM)
-  }, [pick, picked, loaded, agentView, selectedAgent, locale, top, right, bottom, left])
+  }, [pick, picked, loaded, agentView, selectedAgent, locale, top, right, bottom, left, hasSelection])
 
   const clearFocus = () => {
     setClearedPick(pick)
@@ -1174,7 +1193,7 @@ export default function MapView({
       add(lFlood, 'flood')
       add(lBoundary)
       add(lParcels, 'parcels')
-      add(lSelParcel, 'parcels')
+      add(lSelParcel)
       add(lLawns, 'new_buildings')
       lTransit.forEach((l) => add(l, 'transit_existing'))
       add(lFeedStops, 'transit_existing')
@@ -1188,7 +1207,7 @@ export default function MapView({
       }
       lBuildings.forEach((l) => add(l, 'buildings'))
       lDemo.forEach((l) => add(l, 'buildings'))
-      lSelBuilding.forEach((l) => add(l, 'buildings'))
+      lSelBuilding.forEach((l) => add(l))
       lToolBuildings?.forEach((l) => addTool(l))
       lSites.forEach((l) => add(l, 'sites'))
       lNew.forEach((l) => add(l, 'new_buildings'))
