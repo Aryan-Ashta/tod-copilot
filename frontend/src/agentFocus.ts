@@ -1,7 +1,7 @@
 // Plan screen: what the map emphasises when an agent is picked in the agent list. Per agent, overlay layers built
 // from the agents' suggestions (`state.plan`, applied or not), the map layers it speaks to (the rest fade), the box
 // its contributions span (MapView eases the camera there) and a caption: what it found and what it unlocks in
-// meeting mode. Pure: counts come straight from plan data, nothing here is a planning figure.
+// Edit mode. Pure: counts come straight from plan data, nothing here is a planning figure.
 import { GeoJsonLayer, PolygonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers'
 import { PathStyleExtension } from '@deck.gl/extensions'
 import type { Color, Layer } from '@deck.gl/core'
@@ -224,7 +224,7 @@ function infrastructure({ plan, frame }: FocusInput): AgentFocus {
     caption: {
       title: AGENT_LABELS.infrastructure,
       summary: `${plural(amenities.length, 'amenity', 'amenities')} · ${plural(walk.length, 'sidewalk or bike segment', 'sidewalk and bike segments')} · ${plural(utilities.length, 'utility feature')} mapped`,
-      unlocks: `Park tiles on ${plural((plan.parcels ?? []).length, 'lot')} in Meeting mode`,
+      unlocks: `Park tiles on ${plural((plan.parcels ?? []).length, 'lot')} in Edit mode`,
     },
     animate: REDUCED_MOTION ? undefined : breathing(halo),
   }
@@ -310,7 +310,7 @@ function transitNetwork({ plan, current, lines, frame }: FocusInput): AgentFocus
     caption: {
       title: AGENT_LABELS.transit_network,
       summary: `${plural(keys.size, 'new or upgraded route')} · ${plural(stops.length, 'stop')}${coverage}`,
-      unlocks: `Stop tiles on ${plural(validTargets(plan, 'stop').size, 'lot')} in Meeting mode`,
+      unlocks: `Stop tiles on ${plural(validTargets(plan, 'stop').size, 'lot')} in Edit mode`,
     },
     animate: REDUCED_MOTION || !fleet ? undefined : fleet.at,
   }
@@ -349,7 +349,7 @@ function zoning({ plan, frame }: FocusInput): AgentFocus {
     caption: {
       title: AGENT_LABELS.zoning_legislation,
       summary: `${plural(n.get('eligible') ?? 0, 'lot')} with an eligible legal path · ${fmtNum(n.get('ineligible') ?? 0)} without · ${fmtNum(n.get('uncovered') ?? 0)} not covered`,
-      unlocks: `Homes tiles on ${plural(homes, 'eligible lot')} in Meeting mode`,
+      unlocks: `Homes tiles on ${plural(homes, 'eligible lot')} in Edit mode`,
     },
   }
 }
@@ -415,7 +415,7 @@ function buildingReuse({ plan, buildings, storyHeightFt, frame }: FocusInput): A
     caption: {
       title: AGENT_LABELS.building_reuse,
       summary: `${plural((plan.conversions ?? []).length, 'building')} screened · ${fmtNum(cands.length)} with a better use${byUse ? `: ${byUse}` : ''}`,
-      unlocks: `Convert to housing (${fmtNum(validTargets(plan, 'convert_residential').size)}) · Convert to hotel (${fmtNum(validTargets(plan, 'convert_hotel').size)}) in Meeting mode`,
+      unlocks: `Convert to housing (${fmtNum(validTargets(plan, 'convert_residential').size)}) · Convert to hotel (${fmtNum(validTargets(plan, 'convert_hotel').size)}) in Edit mode`,
     },
     animate: REDUCED_MOTION ? undefined : breathing(halo, 1400, 0.35),
   }
@@ -433,7 +433,7 @@ function landDeal({ plan, frame }: FocusInput): AgentFocus {
     caption: {
       title: AGENT_LABELS.land_deal,
       summary: [...n].map(([k, v]) => `${fmtNum(v)} ${humanize(k)}`).join(' · ') || 'No deals yet',
-      unlocks: 'Apply agent suggestions starts these deals · each Homes tile gets its own deal in Meeting mode',
+      unlocks: 'Apply agent suggestions starts these deals · each Homes tile gets its own deal in Edit mode',
     },
   }
 }
@@ -450,7 +450,7 @@ function funding({ plan, frame }: FocusInput): AgentFocus {
     caption: {
       title: AGENT_LABELS.funding,
       summary: `${plural(ok, 'capital stack')} pencil · ${fmtNum(sites.length - ok)} need outside funding`,
-      unlocks: 'Apply agent suggestions funds these sites · each Homes tile gets its own capital stack in Meeting mode',
+      unlocks: 'Apply agent suggestions funds these sites · each Homes tile gets its own capital stack in Edit mode',
     },
   }
 }
