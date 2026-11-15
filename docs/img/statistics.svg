@@ -1,0 +1,284 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1368" width="1600" height="1368">  <defs>
+    <style>
+      text { font-family: Inter, "Segoe UI", "Helvetica Neue", "DejaVu Sans", Arial, sans-serif; fill: #0f172a; }
+      .mono { font-family: "JetBrains Mono", "JetBrainsMono Nerd Font Mono", "SFMono-Regular", Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+      .h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+      .lead { font-size: 15px; fill: #475569; }
+      .colt { font-size: 19px; font-weight: 700; fill: #ffffff; }
+      .cols { font-size: 12px; fill: #ffffff; fill-opacity: 0.85; }
+      .bt { font-size: 13.5px; font-weight: 600; }
+      .bm { font-size: 13px; font-weight: 600; }
+      .bs { font-size: 12px; fill: #475569; }
+      .os { font-size: 11.5px; fill: #475569; }
+      .chip { font-size: 11.5px; }
+      .tag { font-size: 10px; font-weight: 700; fill: #ffffff; letter-spacing: 0.6px; }
+      .foot { font-size: 12px; fill: #475569; }
+      .al { font-size: 11px; }
+      .h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+      .tt { font-size: 14.5px; font-weight: 700; }
+      .td { font-size: 12.5px; fill: #475569; }
+      .card { fill: #ffffff; stroke: #e2e8f0; }
+      .code { fill: #f1f5f9; stroke: #cbd5e1; }
+      .neutral { fill: #ffffff; stroke: #cbd5e1; }
+      .note { fill: #f8fafc; stroke: #cbd5e1; stroke-dasharray: 5 4; }
+      .arrow { stroke: #94a3b8; stroke-width: 2; fill: none; }
+    </style>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+    <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#1e40af"/><stop offset="1" stop-color="#3b82f6"/></linearGradient>
+    <linearGradient id="g2" x1="0" x2="1"><stop offset="0" stop-color="#6d28d9"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
+    <linearGradient id="g3" x1="0" x2="1"><stop offset="0" stop-color="#047857"/><stop offset="1" stop-color="#10b981"/></linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1600" height="1368" fill="#f8fafc"/>
+  <!-- Header -->
+  <text x="40" y="68" class="h1">How TOD Copilot computes each statistic</text>
+  <text x="40" y="98" class="lead">Recorded data with provenance, measured once when the plan is built, then turned into every scoreboard and target number by pure functions.</text>
+  <rect x="1236" y="40" width="324" height="40" rx="20" fill="#0f172a"/>
+  <text x="1398" y="65.5" text-anchor="middle" style="font-size:15px;font-weight:700;fill:#ffffff">Data in · code computes</text>
+  <rect x="1240" y="96" width="44" height="18" rx="9" fill="#2563eb"/>
+  <text x="1262" y="108.5" text-anchor="middle" class="tag">DATA</text>
+  <text x="1292" y="109.5" class="bs">recorded source</text>
+  <rect x="1414" y="96" width="46" height="18" rx="9" fill="#334155"/>
+  <text x="1437" y="108.5" text-anchor="middle" class="tag">CODE</text>
+  <text x="1468" y="109.5" class="bs">deterministic</text>
+  <!-- ============ 1: Inputs ============ -->
+  <g transform="translate(40,0)">
+    <rect x="0" y="132" width="1520" height="194" rx="18" class="card" filter="url(#shadow)"/>
+    <path d="M0,150 a18,18 0 0 1 18,-18 h1484 a18,18 0 0 1 18,18 v46 h-1520 z" fill="url(#g1)"/>
+    <circle cx="38" cy="164" r="16" fill="#ffffff" fill-opacity="0.22"/>
+    <text x="38" y="169.5" text-anchor="middle" style="font-size:16px;font-weight:800;fill:#ffffff">1</text>
+    <text x="66" y="161" class="colt">Inputs: recorded data, each value with its provenance</text>
+    <text x="66" y="182" class="cols mono">backend/data/providers/ · the resolver takes the first provider that covers the locale</text>
+    <rect x="24.0" y="198" width="236" height="110" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+    <rect x="36.0" y="189" width="44" height="18" rx="9" fill="#2563eb"/><text x="58.0" y="201.5" text-anchor="middle" class="tag">DATA</text>
+    <text x="40.0" y="228" class="bt" style="fill:#1e3a8a">Parcels &amp; buildings</text>
+    <text x="40.0" y="250" class="os">CoStar kit, else county ArcGIS</text>
+    <text x="40.0" y="266" class="os">acres · last sale or assessed $</text>
+    <text x="40.0" y="282" class="os">rentable sqft (CoStar RBA)</text>
+    <text x="40.0" y="298" class="os">roof: Vexcel, else OSM footprint</text>
+    <rect x="271.2" y="198" width="236" height="110" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+    <rect x="283.2" y="189" width="44" height="18" rx="9" fill="#2563eb"/><text x="305.2" y="201.5" text-anchor="middle" class="tag">DATA</text>
+    <text x="287.2" y="228" class="bt" style="fill:#1e3a8a">Zoning corpus</text>
+    <text x="287.2" y="250" class="os">legal paths per parcel (rules)</text>
+    <text x="287.2" y="266" class="os">max_units_per_acre · max_far</text>
+    <text x="287.2" y="282" class="os">max_height_ft, cited to the code</text>
+    <text x="287.2" y="298" class="os">→ homes_by_parcel (best path)</text>
+    <rect x="518.4" y="198" width="236" height="110" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+    <rect x="530.4" y="189" width="44" height="18" rx="9" fill="#2563eb"/><text x="552.4" y="201.5" text-anchor="middle" class="tag">DATA</text>
+    <text x="534.4" y="228" class="bt" style="fill:#1e3a8a">OSM amenities + walks</text>
+    <text x="534.4" y="250" class="os">parks · clinics · groceries</text>
+    <text x="534.4" y="266" class="os">pedestrian network (OSM ways)</text>
+    <text x="534.4" y="282" class="os">network walk metres per lot</text>
+    <text x="534.4" y="298" class="os">via walk_snap_nodes entry nodes</text>
+    <rect x="765.6" y="198" width="236" height="110" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+    <rect x="777.6" y="189" width="44" height="18" rx="9" fill="#2563eb"/><text x="799.6" y="201.5" text-anchor="middle" class="tag">DATA</text>
+    <text x="781.6" y="228" class="bt" style="fill:#1e3a8a">GTFS stops &amp; headways</text>
+    <text x="781.6" y="250" class="os">frequent stop: peak headway</text>
+    <text x="781.6" y="266" class="os">≤ 15 min (readiness factor)</text>
+    <text x="781.6" y="282" class="os">+ the agents' planned stops</text>
+    <text x="781.6" y="298" class="os">→ frequent_stop_planned walks</text>
+    <rect x="1012.8" y="198" width="236" height="110" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+    <rect x="1024.8" y="189" width="44" height="18" rx="9" fill="#2563eb"/><text x="1046.8" y="201.5" text-anchor="middle" class="tag">DATA</text>
+    <text x="1028.8" y="228" class="bt" style="fill:#1e3a8a">FEMA flood zones</text>
+    <text x="1028.8" y="250" class="os">National Flood Hazard Layer</text>
+    <text x="1028.8" y="266" class="os">high-risk SFHA polygons</text>
+    <text x="1028.8" y="282" class="os">in_flood = lot or building</text>
+    <text x="1028.8" y="298" class="os">centroid inside a zone</text>
+    <rect x="1260.0" y="198" width="236" height="110" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+    <rect x="1272.0" y="189" width="44" height="18" rx="9" fill="#2563eb"/><text x="1294.0" y="201.5" text-anchor="middle" class="tag">DATA</text>
+    <text x="1276.0" y="228" class="bt" style="fill:#1e3a8a">NREL PVWatts</text>
+    <text x="1276.0" y="250" class="os">annual kWh per kW at the locale</text>
+    <text x="1276.0" y="266" class="os">fallback factor:</text>
+    <text x="1276.0" y="282" class="os">solar_kwh_per_kw_year</text>
+    <text x="1276.0" y="298" class="os">cached in plan.precomputed</text>
+  </g>
+  <line x1="280" y1="326" x2="280" y2="369" class="arrow" marker-end="url(#ah)"/>
+  <text x="292" y="352" class="al mono" style="fill:#2563eb">agents measure once, when the plan is built</text>
+  <!-- ============ 2: precompute, score_plan, factors ============ -->
+  <rect x="40" y="370" width="480" height="150" rx="10" class="code"/>
+  <rect x="52" y="361" width="46" height="18" rx="9" fill="#334155"/><text x="75" y="373.5" text-anchor="middle" class="tag">CODE</text>
+  <text x="280" y="396" text-anchor="middle" class="bm mono">plan.precomputed + plan sites</text>
+  <text x="56" y="420" class="bs"><tspan class="mono" fill="#0f172a">walk_m[target]</tspan>: metres to park · clinic · grocery · frequent stop</text>
+  <text x="56" y="440" class="bs"><tspan class="mono" fill="#0f172a">in_flood[target]</tspan> · <tspan class="mono" fill="#0f172a">homes_by_parcel</tspan> · <tspan class="mono" fill="#0f172a">solar_kwh_per_kw_year</tspan></text>
+  <text x="56" y="460" class="bs">sites (pursue · watch · pass · reserve) and capital stacks</text>
+  <text x="56" y="480" class="bs">target = the building (conversion) or first parcel (new build)</text>
+  <text x="56" y="500" class="os">agents/infrastructure.py · zoning_legislation.py · transit_network.py</text>
+  <line x1="520" y1="445" x2="559" y2="445" class="arrow" marker-end="url(#ah)"/>
+
+  <rect x="560" y="370" width="480" height="150" rx="10" fill="#ffffff" stroke="#334155" stroke-width="1.5"/>
+  <rect x="572" y="361" width="46" height="18" rx="9" fill="#334155"/><text x="595" y="373.5" text-anchor="middle" class="tag">CODE</text>
+  <text x="800" y="396" text-anchor="middle" class="bm mono">score_plan(sites, stacks, …)</text>
+  <text x="800" y="415" text-anchor="middle" class="os mono">models/rescore.py → build_targets() in models/targets.py</text>
+  <text x="800" y="440" text-anchor="middle" class="bs">in plan = <tspan font-weight="700" fill="#0f172a">pursue + watch</tspan> sites · funded = <tspan font-weight="700" fill="#0f172a">pursue</tspan> only</text>
+  <text x="800" y="460" text-anchor="middle" class="bs">homes_by_target: each in-plan site's homes on its target</text>
+  <text x="800" y="480" text-anchor="middle" class="bs">walk threshold = walk_speed_m_per_s × 60 × walk_minutes_target</text>
+  <text x="800" y="500" text-anchor="middle" class="os">returns TargetScore[] (value, unit, factor_keys) + Scoreboard</text>
+
+  <rect x="1080" y="370" width="480" height="150" rx="10" class="note"/>
+  <text x="1320" y="396" text-anchor="middle" class="bm mono">backend/data/factors.yaml</text>
+  <text x="1320" y="420" text-anchor="middle" class="bs">every constant: value · unit · source_url · note</text>
+  <text x="1320" y="440" text-anchor="middle" class="bs">per-locale values resolved per area (factors.resolve)</text>
+  <text x="1320" y="460" text-anchor="middle" class="bs">keys named in <tspan class="mono" fill="#0f172a">mono</tspan> on each card below; the UI shows</text>
+  <text x="1320" y="480" text-anchor="middle" class="bs">them on hover from each score's factor_keys</text>
+  <text x="1320" y="500" text-anchor="middle" class="os">e.g. walk 1.067 m/s × 60 × 10 min ≈ 640 m</text>
+  <line x1="1080" y1="445" x2="1041" y2="445" class="arrow" marker-end="url(#ah)"/>
+
+  <line x1="800" y1="520" x2="800" y2="555" class="arrow" marker-end="url(#ah)"/>
+  <!-- ============ 2: statistics ============ -->
+  <g transform="translate(40,0)">
+    <rect x="0" y="556" width="1520" height="698" rx="18" class="card" filter="url(#shadow)"/>
+    <path d="M0,574 a18,18 0 0 1 18,-18 h1484 a18,18 0 0 1 18,18 v46 h-1520 z" fill="url(#g3)"/>
+    <circle cx="38" cy="588" r="16" fill="#ffffff" fill-opacity="0.22"/>
+    <text x="38" y="593.5" text-anchor="middle" style="font-size:16px;font-weight:800;fill:#ffffff">2</text>
+    <text x="66" y="585" class="colt">The statistics: scoreboard and target bars</text>
+    <text x="66" y="606" class="cols mono">Scoreboard.tsx (6 stats) · TargetBars.tsx (5 targets) · StatsPanel.tsx (all 8)</text>
+    <g transform="translate(24,624)">
+      <rect width="356" height="298" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="32" class="tt">Homes</text>
+      <text x="20" y="50" class="os">homes</text>
+      <rect x="290" y="18" width="50" height="18" rx="9" fill="#0f172a"/><text x="315.0" y="30.5" text-anchor="middle" class="tag">BOARD</text>
+      <text x="20" y="74" class="bm mono" style="fill:#047857">rescore.score_plan · zoning.homes_for</text>
+      <text x="20" y="98" class="td" xml:space="preserve">Σ homes of in-plan sites (pursue + watch)</text>
+      <text x="20" y="116" class="td" xml:space="preserve">New build: min(max_units_per_acre × acres,</text>
+      <text x="20" y="134" class="td" xml:space="preserve">  floor area ÷ avg_unit_sqft_residential);</text>
+      <text x="20" y="152" class="td" xml:space="preserve">  floor = FAR × lot, or lot × coverage × stories</text>
+      <text x="20" y="170" class="td" xml:space="preserve">Conversion: reuse.units_for = rentable sqft ×</text>
+      <text x="20" y="188" class="td" xml:space="preserve">  efficiency ÷ unit sqft (mixed use × share; hotel 0)</text>
+      <line x1="20" y1="204" x2="336" y2="204" stroke="#e2e8f0"/>
+      <text x="20" y="224" class="os mono">avg_unit_sqft_residential · story_height_ft</text>
+      <text x="20" y="239" class="os mono">site_lot_coverage_ratio</text>
+      <text x="20" y="254" class="os mono">newbuild_assumed_stories</text>
+      <text x="20" y="269" class="os mono">reuse_efficiency_factor</text>
+      <text x="20" y="284" class="os mono">mixed_use_residential_share</text>
+    </g>
+    <g transform="translate(396,624)">
+      <rect width="356" height="298" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="32" class="tt">Affordable homes</text>
+      <text x="20" y="50" class="os">homes</text>
+      <rect x="290" y="18" width="50" height="18" rx="9" fill="#0f172a"/><text x="315.0" y="30.5" text-anchor="middle" class="tag">BOARD</text>
+      <text x="20" y="74" class="bm mono" style="fill:#047857">finance.capital_stack · affordable_units</text>
+      <text x="20" y="98" class="td" xml:space="preserve">Σ affordable_units of the capital stacks</text>
+      <text x="20" y="116" class="td" xml:space="preserve">of funded sites only (status pursue)</text>
+      <text x="20" y="134" class="td" xml:space="preserve">per site: floor(homes × affordable_share);</text>
+      <text x="20" y="152" class="td" xml:space="preserve">a slider re-price keeps the site's count</text>
+      <text x="20" y="170" class="td" xml:space="preserve">  (capped at its homes, finance.with_affordable)</text>
+      <text x="20" y="188" class="td" xml:space="preserve">they rent at the affordable rent in the NOI</text>
+      <line x1="20" y1="204" x2="336" y2="204" stroke="#e2e8f0"/>
+      <text x="20" y="224" class="os mono">affordable_share</text>
+      <text x="20" y="239" class="os mono">affordable_rent_usd_per_unit_month</text>
+    </g>
+    <g transform="translate(768,624)">
+      <rect width="356" height="298" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="32" class="tt">Funding required</text>
+      <text x="20" y="50" class="os">USD</text>
+      <rect x="290" y="18" width="50" height="18" rx="9" fill="#0f172a"/><text x="315.0" y="30.5" text-anchor="middle" class="tag">BOARD</text>
+      <text x="20" y="74" class="bm mono" style="fill:#047857">finance.capital_stack (pro formas)</text>
+      <text x="20" y="98" class="td" xml:space="preserve">Σ max(required, 0) over funded (pursue) sites</text>
+      <text x="20" y="116" class="td" xml:space="preserve">required = total cost − debt − incentive</text>
+      <text x="20" y="134" class="td" xml:space="preserve">  − tax-credit equity − investor equity</text>
+      <text x="20" y="152" class="td" xml:space="preserve">debt = min(debt_ratio × cost, max_ltv × value)</text>
+      <text x="20" y="170" class="td" xml:space="preserve">value = NOI ÷ cap_rate · credits = affordable ×</text>
+      <text x="20" y="188" class="td" xml:space="preserve">  per-unit equity · incentive = incentive_per_unit</text>
+      <line x1="20" y1="204" x2="336" y2="204" stroke="#e2e8f0"/>
+      <text x="20" y="224" class="os mono">debt_ratio · max_ltv · cap_rate</text>
+      <text x="20" y="239" class="os mono">investor_equity_share</text>
+      <text x="20" y="254" class="os mono">per_unit_credit_equity_usd</text>
+      <text x="20" y="269" class="os mono">construction_cost_usd_per_unit</text>
+      <text x="20" y="284" class="os mono">conversion_cost_usd_per_sqft</text>
+    </g>
+    <g transform="translate(1140,624)">
+      <rect width="356" height="298" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="32" class="tt">Walk access</text>
+      <text x="20" y="50" class="os">% of new homes</text>
+      <rect x="284" y="18" width="56" height="18" rx="9" fill="#047857"/><text x="312.0" y="30.5" text-anchor="middle" class="tag">TARGET</text>
+      <rect x="228" y="18" width="50" height="18" rx="9" fill="#0f172a"/><text x="253.0" y="30.5" text-anchor="middle" class="tag">BOARD</text>
+      <text x="20" y="74" class="bm mono" style="fill:#047857">targets.walk_access · walk_gaps</text>
+      <text x="20" y="98" class="td" xml:space="preserve">share of new homes with a park, clinic AND</text>
+      <text x="20" y="116" class="td" xml:space="preserve">grocery all within the walk threshold</text>
+      <text x="20" y="134" class="td" xml:space="preserve">  (network metres from walk_m)</text>
+      <text x="20" y="152" class="td" xml:space="preserve">per amenity: % of new homes within reach of each</text>
+      <text x="20" y="170" class="td" xml:space="preserve">Green space counts as a park (walk 0 / new park)</text>
+      <text x="20" y="188" class="td" xml:space="preserve">  only if its open area ≥ min_park_area_sqft</text>
+      <line x1="20" y1="204" x2="336" y2="204" stroke="#e2e8f0"/>
+      <text x="20" y="224" class="os mono">walk_speed_m_per_s · walk_minutes_target</text>
+      <text x="20" y="239" class="os mono">min_park_area_sqft · walk_detour_factor</text>
+    </g>
+    <g transform="translate(24,938)">
+      <rect width="356" height="298" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="32" class="tt">Transport CO₂ avoided</text>
+      <text x="20" y="50" class="os">t CO₂/yr</text>
+      <rect x="284" y="18" width="56" height="18" rx="9" fill="#047857"/><text x="312.0" y="30.5" text-anchor="middle" class="tag">TARGET</text>
+      <rect x="228" y="18" width="50" height="18" rx="9" fill="#0f172a"/><text x="253.0" y="30.5" text-anchor="middle" class="tag">BOARD</text>
+      <text x="20" y="74" class="bm mono" style="fill:#047857">targets.transport_co2</text>
+      <text x="20" y="98" class="td" xml:space="preserve">households = new homes whose nearest frequent</text>
+      <text x="20" y="116" class="td" xml:space="preserve">stop (existing or planned) is within the walk</text>
+      <text x="20" y="134" class="td" xml:space="preserve">  threshold (households_near_frequent)</text>
+      <text x="20" y="152" class="td" xml:space="preserve">× vmt_reduction_per_household_near_transit</text>
+      <text x="20" y="170" class="td" xml:space="preserve">× co2_g_per_vehicle_mile ÷ 1,000,000</text>
+      <text x="20" y="188" class="td" xml:space="preserve">walk = min(frequent_stop, planned stop)</text>
+      <line x1="20" y1="204" x2="336" y2="204" stroke="#e2e8f0"/>
+      <text x="20" y="224" class="os mono">vmt_reduction_per_household_near_transit</text>
+      <text x="20" y="239" class="os mono">co2_g_per_vehicle_mile · walk_speed_m_per_s</text>
+      <text x="20" y="254" class="os mono">walk_minutes_target</text>
+    </g>
+    <g transform="translate(396,938)">
+      <rect width="356" height="298" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="32" class="tt">Embodied carbon saved</text>
+      <text x="20" y="50" class="os">t CO₂e</text>
+      <rect x="284" y="18" width="56" height="18" rx="9" fill="#047857"/><text x="312.0" y="30.5" text-anchor="middle" class="tag">TARGET</text>
+      <rect x="228" y="18" width="50" height="18" rx="9" fill="#0f172a"/><text x="253.0" y="30.5" text-anchor="middle" class="tag">BOARD</text>
+      <text x="20" y="74" class="bm mono" style="fill:#047857">targets.embodied_co2_saved</text>
+      <text x="20" y="98" class="td" xml:space="preserve">Reuse: Σ rentable sqft of in-plan conversions</text>
+      <text x="20" y="116" class="td" xml:space="preserve">  (best use ≠ keep current) × (new − reuse</text>
+      <text x="20" y="134" class="td" xml:space="preserve">  kg CO₂e/sqft) ÷ 1000</text>
+      <text x="20" y="152" class="td" xml:space="preserve">+ embodied_co2_new_build_avoided: new-build</text>
+      <text x="20" y="170" class="td" xml:space="preserve">  homes given up to the slider or a park tile</text>
+      <text x="20" y="188" class="td" xml:space="preserve">  × avg unit sqft × new kg/sqft ÷ 1000</text>
+      <line x1="20" y1="204" x2="336" y2="204" stroke="#e2e8f0"/>
+      <text x="20" y="224" class="os mono">embodied_co2_kg_per_sqft_new</text>
+      <text x="20" y="239" class="os mono">embodied_co2_kg_per_sqft_reuse</text>
+      <text x="20" y="254" class="os mono">avg_unit_sqft_residential</text>
+    </g>
+    <g transform="translate(768,938)">
+      <rect width="356" height="298" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="32" class="tt">Rooftop solar</text>
+      <text x="20" y="50" class="os">MWh/yr</text>
+      <rect x="284" y="18" width="56" height="18" rx="9" fill="#047857"/><text x="312.0" y="30.5" text-anchor="middle" class="tag">TARGET</text>
+      <text x="20" y="74" class="bm mono" style="fill:#047857">targets.rooftop_solar</text>
+      <text x="20" y="98" class="td" xml:space="preserve">roof = in-plan conversion building roofs +</text>
+      <text x="20" y="116" class="td" xml:space="preserve">  new-build lot × site_lot_coverage_ratio</text>
+      <text x="20" y="134" class="td" xml:space="preserve">  × (1 − open-space share from the slider)</text>
+      <text x="20" y="152" class="td" xml:space="preserve">m² × usable_roof_share × solar_kw_per_m2</text>
+      <text x="20" y="170" class="td" xml:space="preserve">× PVWatts kWh/kW/yr ÷ 1000</text>
+      <text x="20" y="188" class="td" xml:space="preserve">omitted when the plan has no solar yield</text>
+      <line x1="20" y1="204" x2="336" y2="204" stroke="#e2e8f0"/>
+      <text x="20" y="224" class="os mono">usable_roof_share · solar_kw_per_m2</text>
+      <text x="20" y="239" class="os mono">solar_kwh_per_kw_year (fallback)</text>
+      <text x="20" y="254" class="os mono">site_lot_coverage_ratio</text>
+    </g>
+    <g transform="translate(1140,938)">
+      <rect width="356" height="298" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+      <text x="20" y="32" class="tt">Flood exposure</text>
+      <text x="20" y="50" class="os">% of new homes · target 0</text>
+      <rect x="284" y="18" width="56" height="18" rx="9" fill="#047857"/><text x="312.0" y="30.5" text-anchor="middle" class="tag">TARGET</text>
+      <text x="20" y="74" class="bm mono" style="fill:#047857">targets.flood_exposure</text>
+      <text x="20" y="98" class="td" xml:space="preserve">new homes on targets whose centroid lies in</text>
+      <text x="20" y="116" class="td" xml:space="preserve">a FEMA high-risk (SFHA) zone ÷ new homes</text>
+      <text x="20" y="134" class="td" xml:space="preserve">target 0 %; a rise reads red (lower is better)</text>
+      <text x="20" y="152" class="td" xml:space="preserve">the only target with a fixed goal; the others</text>
+      <text x="20" y="170" class="td" xml:space="preserve">  compare to existing conditions and the</text>
+      <text x="20" y="188" class="td" xml:space="preserve">  agents' plan</text>
+      <line x1="20" y1="204" x2="336" y2="204" stroke="#e2e8f0"/>
+      <text x="20" y="224" class="os mono">no factors: FEMA NFHL data only</text>
+    </g>
+  </g>
+
+  <!-- Footer -->
+  <rect x="40" y="1272" width="1520" height="70" rx="10" class="note"/>
+  <text x="60" y="1300" class="foot"><tspan font-weight="700" fill="#0f172a">Every number comes from pure functions in </tspan><tspan class="mono" fill="#0f172a">backend/models/</tspan><tspan font-weight="700" fill="#0f172a">; every constant from </tspan><tspan class="mono" fill="#0f172a">backend/data/factors.yaml</tspan><tspan font-weight="700" fill="#0f172a"> with a source.</tspan> No LLM computes or edits a statistic.</text>
+  <text x="60" y="1322" class="foot">Meeting mode: each slider move or tile (homes, park, stop, convert) is an Edit; <tspan class="mono" fill="#0f172a">rescore()</tspan> replays the edits on the plan, shortens walks to new parks and stops by straight line × walk_detour_factor, and re-runs <tspan class="mono" fill="#0f172a">score_plan</tspan> in &lt;300 ms.</text>
+</svg>

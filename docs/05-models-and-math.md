@@ -113,6 +113,10 @@ Return every intermediate number.
 
 ## Targets (`models/targets.py`)
 
+![How TOD Copilot computes each statistic](img/statistics.png)
+
+The image shows what goes into each scoreboard and target statistic: the input data, the function in `backend/models/` and the `factors.yaml` keys. Source for the image: `img/statistics.svg`. To render it again: `google-chrome --headless=new --force-device-scale-factor=2 --window-size=1600,1368 --screenshot=docs/img/statistics.png docs/img/statistics.svg`.
+
 - **Transport CO₂ avoided:** households near frequent transit × VMT reduction × g/mile ÷ 1e6.
 - **Embodied carbon saved:** for each conversion, `area × (new − reuse)` kg CO₂e per sqft ÷ 1000.
 - **Rooftop solar:** usable roof area → kW → annual MWh via PVWatts (cached).
@@ -121,13 +125,16 @@ Return every intermediate number.
 
 ## Re-score (`models/rescore.py`)
 
-`rescore(plan, edits, from_existing=False) -> (plan, deltas)` under 300 ms. With `from_existing` the edits start from existing conditions (no agent sites, stacks or deals; existing route kinds only; feed stops kept; coverage = `coverage_baseline_pct`). It also returns a score snapshot after each edit plus snapshots of existing conditions and the agents' plan; `deltas` stay relative to the agents' plan. Walk distances (`precomputed.walk_m`) already describe existing conditions and are not changed by either.
+`rescore(plan, edits, from_existing=False) -> (plan, deltas)` under 300 ms. With `from_existing` the edits start from existing conditions (no agent sites, stacks or deals; existing route kinds only; feed stops kept; coverage = `coverage_baseline_pct`). It also returns a score snapshot after each edit plus snapshots of existing conditions and the agents' plan; `deltas` stay relative to the agents' plan. Walk distances (`precomputed.walk_m`) already describe existing conditions; only their `frequent_stop_planned` key (walks to the agents' planned stops) is dropped from existing conditions and restored by `apply_suggestions`.
 
-- `apply_suggestions` → restore the agents' sites, stacks, deals, routes and stops (skipping targets an earlier edit took); a no-op without `from_existing`.
-- `place_tile(homes, parcel)` → new-build site with cached envelope.
+Every tile is checked against the base plan alone; a refused tile changes nothing and the latest refused edit still in the list is reported (with its corpus citation, or "not covered by the legal corpus"). `remove_tile` removes the latest tile that took effect on its target; placing the same tile on the same target again counts once.
+
+- `apply_suggestions` → restore the agents' sites, stacks, deals, routes and stops (skipping targets an earlier homes, park or conversion tile took, and new builds on a converted building's lot); a no-op without `from_existing`.
+- `place_tile(homes, parcel)` → new-build site with cached envelope; replaces every site on the lot.
 - `place_tile(park, parcel)` → open space; update homes, finance, walk access, CO₂.
-- `place_tile(stop, parcel)` → add a stop; update coverage, walk, CO₂ (no full re-optimization).
-- `place_tile(convert_residential|convert_hotel, building)` → force that use; recompute that building's units, finance, embodied carbon.
-- `slider(v)` → trade homes for green space across pursued sites.
+- `place_tile(stop, parcel)` → add a stop; update coverage, walk, CO₂ (no full re-optimization). The demand cells it covers are re-split among all stops covering them, so ridership moves between stops instead of being counted twice. A stop takes no lot.
+- `place_tile(convert_residential|convert_hotel, building)` → force that use; recompute that building's units, finance, embodied carbon. It replaces new builds on the lot; conversions sharing a lot split its acquisition basis by rentable area. Refused when the corpus gives no legal path, the building already has that use, it yields no home, or it adds homes in a FEMA high-risk flood zone.
+- Homes and conversion tiles whose deal is `pass` go on watch with their stack, as the agents' sites do.
+- `slider(v)` → trade homes for green space across pursued new builds. It is one plan-wide setting: the last slider value applies after all other edits; 0 is the agents' plan.
 
 Precompute walk distances, envelopes, readiness and PVWatts when the plan is built.
