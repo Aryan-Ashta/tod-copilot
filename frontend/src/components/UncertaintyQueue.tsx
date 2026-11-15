@@ -13,13 +13,12 @@ const NARROWING_FACTORS = ['count_range_narrowing_pct', 'ridership_rate_low', 'r
  * suggestions that differ only by stop can share one line. */
 const methodOf = (m: MeasurementSuggestion, stop: Stop | undefined) =>
   stop?.name ? m.what.replace(new RegExp(`\\s*(at )?(stop )?${stop.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), '') : m.what
-const MAX_LINE_CHIPS = 4
 
 /**
- * Transit measurements that would narrow ridership ranges, one card per stop. What every suggestion shares (the
- * count method, the narrowing) is said once above the cards; each card leads with its stop, its lines and its range
- * now against the range after a count, on one riders/day scale for all cards. "Simulate count" applies a labeled
- * demo count and draws the resulting range.
+ * Transit measurements that would narrow ridership ranges, one row per stop, widest range first. What every
+ * suggestion shares (the count method, the narrowing) is said once above the rows; each row is the stop, its range now
+ * and after a count, and one thin bar on a riders/day scale shared by all rows. "Simulate count" applies a labeled
+ * demo count and the bar moves to the resulting range.
  */
 export default function UncertaintyQueue({ className = '' }: { className?: string }) {
   const { state, runSimulation, dispatch } = usePlan()
@@ -43,7 +42,7 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
       .sort((a, b) => b.width - a.width) // widest range (most to learn) first
   }, [t])
 
-  // one riders/day scale for every card, so ranges compare at a glance
+  // one riders/day scale for every row, so ranges compare at a glance
   const scaleMax = Math.max(
     1,
     ...items.map(({ stop }) => stop?.riders_per_day_high ?? 0),
@@ -59,135 +58,92 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
 
   return (
     <MapPanel title="What would make this plan more certain" className={className}>
-      <div className="max-h-[52vh] overflow-y-auto pr-1">
+      <div className="max-h-[52vh] overflow-y-auto">
         {!t ? (
           <p className="text-slate italic">Waiting for the transit agent…</p>
         ) : items.length === 0 ? (
           <p className="text-slate italic">No measurements suggested.</p>
         ) : (
           <>
-            <p className="mb-3 text-[13px] leading-snug text-slate">
-              {sharedMethod ? `${sharedMethod} at each stop below.` : 'Measure at each stop below.'}{' '}
+            <p className="mb-1 text-[12.5px] leading-snug text-slate">
+              {sharedMethod ?? 'A count at each stop'}
               {sharedNarrowing !== null && (
-                <FactorHover keys={NARROWING_FACTORS}>
-                  <span>
-                    Each count cuts that stop&apos;s ridership range by <b className="text-ink">{fmtNum(sharedNarrowing)}%</b>.
-                  </span>
-                </FactorHover>
-              )}{' '}
-              Widest range first.
+                <>
+                  {': '}
+                  <FactorHover keys={NARROWING_FACTORS}>
+                    <span>narrows each stop&apos;s range by {fmtNum(sharedNarrowing)}%</span>
+                  </FactorHover>
+                </>
+              )}
             </p>
-            <ol className="space-y-2.5">
-              {items.map(({ m, stop }, i) => {
-                const sim = state.simulated[m.target_id]
-                const selected = state.selected.stopId === m.target_id
-                const deps =
-                  stop && catchment !== null
-                    ? sites.filter((s) => {
-                        const c = geometryCentroid(s.geometry)
-                        return c !== null && haversineM(c, stop.lonlat) <= catchment
-                      })
-                    : null
+            <ol className="divide-y divide-rule">
+              {items.map(({ m, stop }) => {
                 if (!stop) {
                   return (
-                    <li key={m.target_id + m.what} className="rounded-xl border border-rule p-3 text-slate">
+                    <li key={m.target_id + m.what} className="py-2.5 text-slate">
                       Stop {m.target_id} is not in the transit plan.
                     </li>
                   )
                 }
+                const sim = state.simulated[m.target_id]
+                const selected = state.selected.stopId === m.target_id
                 const lo = stop.riders_per_day_low
                 const hi = stop.riders_per_day_high
                 const mid = (lo + hi) / 2
                 const after = (hi - lo) * (1 - m.expected_range_narrowing_pct / 100)
-                const stopLines = stop.route_ids.map((k) => lines.get(k)).filter((l) => l !== undefined)
+                const stopLines = stop.route_ids.map((k) => lines.get(k)?.name ?? k)
+                const firstLine = lines.get(stop.route_ids[0])
+                const deps =
+                  catchment !== null
+                    ? sites.filter((s) => {
+                        const c = geometryCentroid(s.geometry)
+                        return c !== null && haversineM(c, stop.lonlat) <= catchment
+                      })
+                    : []
+                const meta = [
+                  firstLine
+                    ? `${lineLabel(firstLine)}${stopLines.length > 1 ? `, ${stopLines.slice(1, 3).join(', ')}` : ''}${stopLines.length > 3 ? ` +${stopLines.length - 3}` : ''}`
+                    : null,
+                  deps.length ? `sites ${deps.map((s) => letters.get(s.id) ?? '•').join(' ')}` : null,
+                  sharedNarrowing === null ? `−${fmtNum(m.expected_range_narrowing_pct)}% range` : null,
+                ].filter(Boolean)
                 return (
-                  <li
-                    key={m.target_id + m.what}
-                    className={`rounded-xl border bg-white/50 p-3 transition-colors ${selected ? 'border-ink' : 'border-rule hover:border-ink/40'}`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => dispatch({ type: 'select', selected: { stopId: m.target_id, flyTo: stop.lonlat } })}
-                      className="flex w-full items-start gap-2.5 text-left"
-                      title="Show this stop on the map"
-                    >
-                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-transit text-[12px] font-bold text-white tabular-nums">
-                        {i + 1}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[15px] leading-tight font-bold">{stop.name ?? `Stop ${stop.id}`}</span>
-                        <span className="mt-1 flex flex-wrap items-center gap-1">
-                          {stopLines.slice(0, MAX_LINE_CHIPS).map((l) => (
-                            <span
-                              key={l.key}
-                              className="inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-1.5 py-px text-[11px] font-semibold"
-                            >
-                              <span className="h-2 w-2 rounded-full" style={{ background: `rgb(${l.color[0]} ${l.color[1]} ${l.color[2]})` }} />
-                              {lineLabel(l)}
-                            </span>
-                          ))}
-                          {stopLines.length > MAX_LINE_CHIPS && (
-                            <span className="text-[11px] text-slate">+{stopLines.length - MAX_LINE_CHIPS} lines</span>
-                          )}
-                          <span className="text-[11px] text-slate">stop {stop.id}</span>
-                        </span>
-                      </span>
-                    </button>
-
-                    {!sharedMethod && <p className="mt-2 text-[12px] text-slate">{m.what}</p>}
-
-                    {/* range now (light) against the expected range after a count (solid) or the simulated one (mustard) */}
-                    <div className="mt-3 flex items-baseline gap-2 tabular-nums">
-                      <span className="text-[18px] leading-none font-bold">
-                        {fmtNum(lo)}–{fmtNum(hi)}
-                      </span>
-                      <span className="text-[12px] text-slate">riders/day now</span>
-                      <span className="ml-auto text-[12px] text-slate">after a count</span>
-                      <span className={`text-[18px] leading-none font-bold ${sim ? 'text-amber-200' : 'text-transit'}`}>
-                        {sim ? `${fmtNum(sim.after[0])}–${fmtNum(sim.after[1])}` : `±${fmtNum(after / 2)}`}
+                  <li key={m.target_id + m.what} className="py-2.5">
+                    <div className="flex items-baseline gap-3">
+                      <button
+                        type="button"
+                        onClick={() => dispatch({ type: 'select', selected: { stopId: m.target_id, flyTo: stop.lonlat } })}
+                        title="Show this stop on the map"
+                        className={`min-w-0 flex-1 truncate text-left text-[14px] font-semibold hover:underline ${selected ? 'text-transit' : ''}`}
+                      >
+                        {stop.name ?? `Stop ${stop.id}`}
+                      </button>
+                      <span className="shrink-0 text-[13px] tabular-nums">
+                        <span className="text-slate">{fmtNum(lo)}–{fmtNum(hi)}</span>
+                        <span className="mx-1 text-slate">→</span>
+                        <b className={sim ? 'text-amber-200' : 'text-transit'}>
+                          {sim ? `${fmtNum(sim.after[0])}–${fmtNum(sim.after[1])}` : `±${fmtNum(after / 2)}`}
+                        </b>
                       </span>
                     </div>
-                    <div className="relative mt-2 h-5" aria-hidden>
-                      <div className="absolute inset-x-0 top-1/2 h-px bg-rule" />
-                      <div className="uq-bar absolute top-0.5 h-1.5 rounded-full bg-transit/25" style={span(lo, hi)} />
+                    <div className="relative mt-1.5 h-1" aria-hidden>
+                      <div className="uq-bar absolute inset-y-0 rounded-full bg-ink/10" style={span(lo, hi)} />
+                      <div
+                        className={`uq-bar absolute inset-y-0 rounded-full ${sim ? 'bg-mustard' : 'bg-transit'}`}
+                        style={sim ? span(sim.after[0], sim.after[1]) : span(mid - after / 2, mid + after / 2)}
+                      />
+                    </div>
+                    <div className="mt-1.5 flex items-baseline gap-3 text-[12px] text-slate">
+                      <span className="min-w-0 flex-1 truncate" title={deps.map((s) => names.get(s.id) ?? s.id).join(', ')}>
+                        {meta.join(' · ')}
+                      </span>
                       {sim ? (
-                        <>
-                          <div className="uq-bar absolute bottom-0.5 h-1.5 rounded-full bg-mustard" style={span(sim.after[0], sim.after[1])} />
-                          <div className="absolute top-0 bottom-0 w-0.5 rounded bg-ink" style={{ left: x(sim.count_per_day) }} />
-                        </>
-                      ) : (
-                        <div className="uq-bar absolute bottom-0.5 h-1.5 rounded-full bg-transit" style={span(mid - after / 2, mid + after / 2)} />
-                      )}
-                    </div>
-                    {!sharedNarrowing && (
-                      <FactorHover keys={NARROWING_FACTORS}>
-                        <span className="text-[12px] text-slate">range narrows by {fmtNum(m.expected_range_narrowing_pct)}%</span>
-                      </FactorHover>
-                    )}
-
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
-                      <span className="text-slate">Sites that hinge on it</span>
-                      {deps === null ? (
-                        <span className="text-slate">—</span>
-                      ) : deps.length === 0 ? (
-                        <span className="text-slate">none in the stop&apos;s catchment</span>
-                      ) : (
-                        deps.map((s) => (
-                          <span key={s.id} title={s.id} className="rounded-full border border-rule bg-paper px-2 py-px">
-                            {letters.get(s.id) && <b className="mr-1">{letters.get(s.id)}</b>}
-                            {names.get(s.id) ?? s.id}
-                          </span>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="mt-2.5 flex items-center gap-2">
-                      {sim ? (
-                        <span className="rounded-full bg-mustard/25 px-2 py-0.5 text-[12px]">
-                          <b>{sim.label}</b> {fmtNum(sim.count_per_day)} riders/day
+                        <span className="shrink-0">
+                          {sim.label}: {fmtNum(sim.count_per_day)}/day
                         </span>
                       ) : (
                         <button
+                          type="button"
                           disabled={busy !== null || !state.basePlan}
                           onClick={async () => {
                             setBusy(m.target_id)
@@ -200,12 +156,13 @@ export default function UncertaintyQueue({ className = '' }: { className?: strin
                               setBusy(null)
                             }
                           }}
-                          className="ctl px-2.5 py-0.5 text-xs"
+                          className="shrink-0 font-semibold text-ink underline decoration-rule underline-offset-2 hover:decoration-ink disabled:text-slate disabled:no-underline"
                         >
                           {busy === m.target_id ? 'Simulating…' : 'Simulate count'}
                         </button>
                       )}
                     </div>
+                    {!sharedMethod && <p className="mt-1 text-[12px] text-slate">{m.what}</p>}
                   </li>
                 )
               })}
