@@ -451,12 +451,18 @@ export default function PromptScreen() {
           <div className="enter mb-3" style={d(0)}>
             <Brand className="text-[19px]" />
           </div>
-          <h1 className="line-reveal display text-[54px]">
+          {/* sized so the longer line spans the search bar's 560px */}
+          <h1 className="line-reveal display text-[44.5px]">
             <span>
-              <span style={d(0)}>Plan transit and</span>
+              <span style={d(0)}>Planning sustainable</span>
             </span>
             <span>
-              <span style={d(1)}>the homes around it</span>
+              <span style={d(1)}>
+                cities around transit
+                {/* Archivo's full stop is square; a round dot in its place, the real "." kept for screen readers */}
+                <span className="sr-only">.</span>
+                <span aria-hidden className="ml-[0.07em] inline-block h-[0.19em] w-[0.19em] rounded-full bg-current" />
+              </span>
             </span>
           </h1>
           <div className="enter mt-5" style={d(3)}>
