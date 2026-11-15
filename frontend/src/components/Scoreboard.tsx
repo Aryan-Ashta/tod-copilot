@@ -1,4 +1,4 @@
-import { usePlan, statValue, type ScoreKey, type StatKey } from '../state/PlanContext'
+import { usePlan, statValue, lastStatChange, type ScoreKey, type StatKey } from '../state/PlanContext'
 import { TARGET_LABELS, TargetScope } from './TargetBars'
 import { fmtDelta, fmtNum, fmtUsd } from '../format'
 import AnimatedNumber from './AnimatedNumber'
@@ -65,6 +65,10 @@ export const deltaShown = (m: StatMeta, d: number) => (m.usd ? Math.abs(d) >= 1 
 
 export const deltaGood = (m: StatMeta, d: number) => (m.lower ? d < 0 : d > 0)
 
+/** Text colour for a stat the latest change moved: green when it got better, red when worse; none when it stayed. */
+export const statTone = (m: StatMeta, d: number | null) =>
+  d === null || !deltaShown(m, d) ? '' : deltaGood(m, d) ? 'text-green' : 'text-gap'
+
 const SCORE_META = STAT_META.slice(0, 6) as (StatMeta & { key: ScoreKey })[]
 
 /** Edit mode's bottom bar: the headline stats in a row, each with its change since the last edit and its
@@ -96,7 +100,7 @@ export default function Scoreboard() {
                 </FactorHover>
               </div>
               <div className="flex items-baseline gap-3 whitespace-nowrap">
-                <span className="display text-[34px]">
+                <span className={`display text-[34px] transition-colors duration-500 ${statTone(m, lastStatChange(state, m.key))}`}>
                   <AnimatedNumber value={v} format={(n) => fmtStat(m, n)} />
                   {m.unit && <span className="ml-1 text-lg font-normal text-slate">{m.unit}</span>}
                 </span>

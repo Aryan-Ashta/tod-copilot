@@ -64,6 +64,17 @@ export function statValue(s: ScoreSnapshot | null | undefined, k: StatKey): numb
   return s.targets.find((t) => t.key === k)?.value ?? null
 }
 
+/**
+ * How the latest score change moved stat `k` (current minus the score before that change); null before any change.
+ * A stat the latest change left alone reads 0, so its colour resets.
+ */
+export function lastStatChange(s: PlanState, k: StatKey): number | null {
+  if (!s.scoreboard || !s.prevSnapshot) return null
+  const now = statValue({ scoreboard: s.scoreboard, targets: s.current.targets ?? [] }, k)
+  const before = statValue(s.prevSnapshot, k)
+  return now === null || before === null ? null : now - before
+}
+
 const TILE_TITLES: Record<TileKind, string> = {
   homes: 'New homes',
   park: 'Park',
@@ -142,6 +153,8 @@ export interface PlanState {
   scoredKey: string | null
   scoreboard: Scoreboard | null
   prevScoreboard: Scoreboard | null
+  /** Score (scoreboard + targets) before the latest change that moved it: drives the up/down colour of each stat. */
+  prevSnapshot: ScoreSnapshot | null
   /** Deltas vs the agents' plan, from the server. */
   deltas: Record<string, number>
   /** Increments whenever the scoreboard changes (keys the delta animation). */
@@ -272,6 +285,7 @@ function initState(planId: string, isStatic: boolean): PlanState {
     scoredKey: null,
     scoreboard: null,
     prevScoreboard: null,
+    prevSnapshot: null,
     deltas: {},
     scoreTick: 0,
     existing: null,
@@ -442,6 +456,8 @@ function reducer(s: PlanState, a: PlanAction): PlanState {
       const lastChangeId = fresh.length ? Math.max(...fresh.map((e) => e.id)) : null
       const { plan: current, infraAdded } = applyPatch(s.basePlan, res)
       const changed = JSON.stringify(s.scoreboard) !== JSON.stringify(res.scoreboard)
+      const moved = changed || JSON.stringify(s.current.targets ?? []) !== JSON.stringify(current.targets ?? [])
+      const before: ScoreSnapshot | null = s.scoreboard ? { scoreboard: s.scoreboard, targets: s.current.targets ?? [] } : null
       return {
         ...s,
         current,
@@ -449,6 +465,7 @@ function reducer(s: PlanState, a: PlanAction): PlanState {
         edits,
         scoredKey: editsKey(accepted),
         prevScoreboard: changed ? s.scoreboard : s.prevScoreboard,
+        prevSnapshot: moved ? before : s.prevSnapshot,
         scoreboard: res.scoreboard,
         scoreTick: changed ? s.scoreTick + 1 : s.scoreTick,
         deltas: res.deltas,
