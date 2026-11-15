@@ -13,6 +13,8 @@ Judging is Sunday 9:30 am–2:30 pm. Pitch is 2 minutes live plus an optional 2-
 
 If time is short, drop step 4.
 
+**Demo walk-through** (`components/DemoSequence.tsx`): on the Houston and LA demo plans, → and ← step through the eight agents, and the map focus shifts with each step. In LA a rezoning step follows Zoning: it selects a parcel both legal paths apply to, flies the map there and scrolls the side panel to the recommendation; the next → deselects it, scrolls back to the top and carries on. Keys only; there is no on-screen control.
+
 ## Modes
 
 | Mode | How | When |

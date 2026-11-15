@@ -8,6 +8,8 @@ import {
   buildDuration,
   CLEARED_MS,
   constructionLayer,
+  fountainAt,
+  fountainDropsLayer,
   parkDecorLayers,
   progress,
   REDUCED_MOTION,
@@ -334,6 +336,8 @@ const TOOL_LAYER_ID = { parcel: 'tool_parcels', building: 'tool_buildings' } as 
 /** An armed tile's targets breathe between these opacities, once per PULSE_MS. */
 const PULSE_MS = 1100
 const PULSE_LOW = 0.55
+/** Finished parks' fountains play on at about 30 fps: their droplets read as moving water without a full-rate loop. */
+const SPRAY_FRAME_MS = 33
 /** The animation loop gives up on the pulse (targets stay lit, still) after this many frames in a row slower than
  *  SLOW_FRAME_MS: every frame redraws the whole map, which a software-rendered or weak GPU cannot afford. Fades end
  *  on their own either way. */
@@ -884,12 +888,14 @@ export default function MapView({
     return newBuildingsLayer(plots, showNew, rise, stage.clock)
   }, [plots, showNew, stage])
   const lLawns = useMemo(() => lawnLayer(plots, showNew), [plots, showNew])
-  // trees and fountains for the settled lawns, faded in over the end of the slider's ease (hidden while it moves)
+  // trees for the settled lawns (no fountains: a lawn beside a home is not a park), faded in over the end of the
+  // slider's ease (hidden while it moves)
   const decor = useMemo(
     () =>
       parkDecorLayers(
         'green_decor',
         settledPlots.flatMap((p) => (p.lawn ? [{ key: p.key, ring: p.lawn[0] as [number, number][] }] : [])),
+        { fountains: false },
       ),
     [settledPlots],
   )
@@ -899,6 +905,16 @@ export default function MapView({
     [decor, decorAlpha, showNew],
   )
   const lBuild = useMemo(() => constructionLayer(stage.builds.values(), stage.clock), [stage])
+  // New parks with a fountain: its droplets play for as long as the park stands. They are a layer of their own, built
+  // at compose time, so the spray loop below redraws them without touching the construction layers.
+  const fountains = useMemo(
+    () => [...stage.builds.values()].flatMap((b) => {
+      const at = fountainAt(b)
+      return at ? [{ b, at }] : []
+    }),
+    [stage.builds],
+  )
+  const fountainsDone = fountains.some(({ b }) => progress(b, stage.clock) >= 1)
 
   // ---------------------------------------------------------------- click-twice tiles
   // The tray arms a tile (state.tool); its valid targets (tools.ts, the backend's own checks) light up in the tile's
@@ -1074,6 +1090,28 @@ export default function MapView({
     if (live) kick()
   }, [live, kick])
 
+  // Finished parks' fountains play on after the stage clock stops: a light loop (one redraw per SPRAY_FRAME_MS) pushes
+  // the layers to deck while such a fountain is in view, and only the droplet layer is rebuilt for it. None runs
+  // without one, with reduced motion (the spray holds still), while the main loop already redraws every frame, or
+  // once that loop found the map too slow to animate.
+  useEffect(() => {
+    if (REDUCED_MOTION || !fountainsDone) return
+    let id = 0
+    let last = 0
+    const tick = (t: number) => {
+      const a = anim.current
+      if (a.starved) return
+      id = requestAnimationFrame(tick)
+      if (a.raf || t - last < SPRAY_FRAME_MS) return
+      last = t
+      const view = mapRef.current?.getBounds()
+      const now = performance.now()
+      if (view && fountains.some(({ b, at }) => progress(b, now) >= 1 && view.contains(at))) push()
+    }
+    id = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(id)
+  }, [fountainsDone, fountains, push])
+
   // Transit draws over the other ground layers (parcels, sidewalks) so lines stay legible; buildings still hide it.
   useEffect(() => {
     const emph = new Set<FadeGroup>(focusView?.emphasize ?? [])
@@ -1127,14 +1165,15 @@ export default function MapView({
       lNew.forEach((l) => add(l, 'new_buildings'))
       lDecor.forEach((l) => add(l, 'new_buildings'))
       lBuild.forEach((l) => add(l))
+      if (fountains.length) add(fountainDropsLayer(fountains.map((f) => f.b), now))
       if (agentView) addAgent(agentView.above)
       return out
     }
     push()
   }, [
     lWalk, lUtil, lAmen, lFlood, lBoundary, lParcels, lSelParcel, lLawns, lTransit, lFeedStops, lProp, lStops, lStations,
-    lBuildings, lDemo, lSelBuilding, lSites, lNew, lDecor, lBuild, lToolParcels, lToolBuildings, agentView, focusView, fadeAt,
-    push, large,
+    lBuildings, lDemo, lSelBuilding, lSites, lNew, lDecor, lBuild, fountains, lToolParcels, lToolBuildings, agentView,
+    focusView, fadeAt, push, large,
   ])
 
   const caption = focusView?.caption ?? null
