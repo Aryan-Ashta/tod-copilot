@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { usePlan, statValue, type HistoryItem } from '../state/PlanContext'
-import { STAT_META, deltaGood, deltaShown, fmtStat, fmtStatDelta, type StatMeta } from './Scoreboard'
+import { usePlan, statValue, lastStatChange, type HistoryItem } from '../state/PlanContext'
+import { STAT_META, deltaGood, deltaShown, fmtStat, fmtStatDelta, statTone, type StatMeta } from './Scoreboard'
 import { BarMarkers, currentSnapshot } from './TargetBars'
 import { historyColor, historyInk, setHistoryFocus, useHistoryFocus } from './HistoryPanel'
 import AnimatedNumber from './AnimatedNumber'
@@ -8,19 +8,6 @@ import FactorHover from './FactorHover'
 
 /** A segment shows its entry's number when at least this wide (px). */
 const LABEL_MIN_PX = 18
-
-/** The last change of `value` (null → number is no change), counted so a badge keyed on `n` replays per change. */
-function useLastChange(value: number | null): { delta: number | null; n: number } {
-  const [track, setTrack] = useState({ value, delta: null as number | null, n: 0 })
-  if (track.value !== value) {
-    setTrack({
-      value,
-      delta: value !== null && track.value !== null ? value - track.value : null,
-      n: track.n + 1,
-    })
-  }
-  return track
-}
 
 /** Width of an element in px, kept current with a ResizeObserver. */
 function useWidth() {
@@ -138,7 +125,8 @@ function StatRow({ m }: { m: StatMeta }) {
   const current = statValue(cur, m.key)
   const existing = statValue(state.existing, m.key)
   const agents = statValue(state.suggested, m.key)
-  const change = useLastChange(current)
+  // the latest change's move of this stat: 0 when that change left it alone, so badge and colour clear
+  const change = lastStatChange(state, m.key)
   const target = cur?.targets.find((t) => t.key === m.key)
   const unit = target?.unit ?? m.unit
   const factors = target?.factor_keys ?? m.factors
@@ -151,17 +139,17 @@ function StatRow({ m }: { m: StatMeta }) {
           <span className="text-[14px] text-slate">{m.label}</span>
         </FactorHover>
         <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-          {change.delta !== null && deltaShown(m, change.delta) && (
+          {change !== null && deltaShown(m, change) && (
             <span
-              key={change.n}
+              key={state.scoreTick}
               className={`stat-diff rounded-[5px] px-1.5 text-[12px] leading-[18px] font-bold tabular-nums ${
-                deltaGood(m, change.delta) ? 'bg-emerald-900 text-emerald-200' : 'bg-rose-900 text-rose-200'
+                deltaGood(m, change) ? 'bg-emerald-900 text-emerald-200' : 'bg-rose-900 text-rose-200'
               }`}
             >
-              {fmtStatDelta(m, change.delta)}
+              {fmtStatDelta(m, change)}
             </span>
           )}
-          <span className="display text-[24px]">
+          <span className={`display text-[24px] transition-colors duration-500 ${statTone(m, change)}`}>
             <AnimatedNumber value={current} format={(v) => fmtStat(m, v)} />
           </span>
           {unit && <span className="text-[13px] text-slate">{unit}</span>}

@@ -1,9 +1,8 @@
 // Pencil hints: a fixed overlay of hand-drawn arrows, loose circles and short notes that point at DOM anchors set by
-// other components (data-hint-anchor, data-stat, data-history-id). Display only: every number comes from state.
+// other components (data-hint-anchor, data-history-id). Display only: every number comes from state.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { REDUCED_MOTION } from '../construction'
-import { fmtDelta, fmtUsd } from '../format'
-import { suggestionsApplied, usePlan, type HistoryItem, type StatKey } from '../state/PlanContext'
+import { suggestionsApplied, usePlan, type HistoryItem } from '../state/PlanContext'
 
 const INTRO_KEY = 'transitor.hints.intro'
 /** How long a "what your change affected" hint stays before fading. */
@@ -11,12 +10,6 @@ const CHANGE_MS = 3500
 /** Fade-out duration; matches the .tz-hint-inst transition. */
 const FADE_MS = 420
 const TAU = Math.PI * 2
-/** Most stat elements marked for one change: every stat in the side panel plus the footer scoreboard. */
-const MAX_STAT_MARKS = 24
-/** Most elements marked per stat key (the same stat can show in the panel, the targets and the footer). */
-const MAX_PER_STAT = 3
-/** Query that measures every visible `[data-stat]` element, grouped by key into `s:<key>`. */
-const ALL_STATS = 'stats'
 
 type Pt = { x: number; y: number }
 interface Box {
@@ -90,49 +83,17 @@ function visibleBox(el: Element, vw: number, vh: number): Box | null {
   return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }
 }
 
-/** The stat's big value plus any unit right after it (`.display` and its following siblings), or the stat box. */
-function valueBox(el: Element, b: Box): Box {
-  const v = el.querySelector('.display')
-  if (!v) return b
-  let { left, top, right, bottom } = v.getBoundingClientRect()
-  for (let s = v.nextElementSibling; s; s = s.nextElementSibling) {
-    const r = s.getBoundingClientRect()
-    left = Math.min(left, r.left)
-    top = Math.min(top, r.top)
-    right = Math.max(right, r.right)
-    bottom = Math.max(bottom, r.bottom)
-  }
-  return { x: Math.round(left), y: Math.round(top), w: Math.round(right - left), h: Math.round(bottom - top) }
-}
-
 function measure(queries: string[]): Frame {
   const vw = window.innerWidth
   const vh = window.innerHeight
   const boxes: Record<string, Box[]> = {}
   for (const q of queries) {
-    if (q === ALL_STATS) {
-      // every visible stat element, grouped by key (`s:<key>`), with its value box at the same index (`v:<key>`)
-      for (const el of Array.from(document.querySelectorAll('[data-stat]'))) {
-        const key = el.getAttribute('data-stat')
-        if ((boxes[`s:${key}`]?.length ?? 0) >= MAX_PER_STAT) continue
-        const b = visibleBox(el, vw, vh)
-        if (!b) continue
-        ;(boxes[`s:${key}`] ??= []).push(b)
-        ;(boxes[`v:${key}`] ??= []).push(valueBox(el, b))
-      }
-      continue
-    }
-    const max = q.startsWith('s:') ? MAX_PER_STAT : 1
     const out: Box[] = []
-    const sel = q.startsWith('h:')
-      ? `[data-history-id="${q.slice(2)}"]`
-      : q.startsWith('s:')
-        ? `[data-stat="${q.slice(2)}"]`
-        : `[data-hint-anchor="${q}"]`
+    const sel = q.startsWith('h:') ? `[data-history-id="${q.slice(2)}"]` : `[data-hint-anchor="${q}"]`
     for (const el of Array.from(document.querySelectorAll(sel))) {
       const b = visibleBox(el, vw, vh)
       if (b) out.push(b)
-      if (out.length >= max) break
+      if (out.length) break
     }
     if (out.length) boxes[q] = out
   }
@@ -148,7 +109,7 @@ function queriesFor(h: Hint): string[] {
     case 'apply':
       return ['apply', 'map']
     case 'change':
-      return [`h:${h.item.id}`, ALL_STATS]
+      return [`h:${h.item.id}`]
   }
 }
 
@@ -298,22 +259,6 @@ function underlinePath(b: Box, r: () => number): string {
   return `${smooth(pts)}L${f(end.x - flickX)},${f(end.y + flickY)}`
 }
 
-/** Small hand-drawn "=" centred on `c`: two short, slightly uneven wavy strokes ("no change"). */
-function equalsPath(c: Pt, r: () => number): string {
-  const gap = between(r, 2.2, 3.2)
-  let d = ''
-  for (const s of [-1, 1]) {
-    const w = between(r, 5, 7)
-    const x0 = c.x - w + between(r, -1, 1)
-    const x1 = c.x + w + between(r, -1, 1)
-    const y = c.y + s * gap
-    const y1 = y + between(r, -0.9, 0.9)
-    const mx = (x0 + x1) / 2
-    d += `M${f(x0)},${f(y + between(r, -0.6, 0.6))}Q${f(mx)},${f(y + between(r, -1.6, 1.6))} ${f(x1)},${f(y1)}`
-  }
-  return d
-}
-
 // ---------- notes ----------
 
 const NOTE_PX = { big: 16, small: 14 } as const
@@ -329,27 +274,6 @@ const noteBox = (p: Pt, text: string, px: number): Box => {
   return { x: p.x - hw, y: p.y - hh, w: hw * 2, h: hh * 2 }
 }
 
-/** Formatted signed change of a stat; units follow the stat (USD, percentage points, tonnes, target unit). */
-function deltaText(k: StatKey, v: number, targetUnit: (k: StatKey) => string | null): string {
-  switch (k) {
-    case 'funding_required_usd':
-      return `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmtUsd(Math.abs(v))}`
-    case 'walk_access_pct':
-      return `${fmtDelta(v, 1)} pts`
-    case 'homes':
-    case 'affordable_homes':
-      return fmtDelta(v)
-    case 'transport_co2_tonnes_per_year':
-    case 'embodied_co2_saved_tonnes':
-      return `${fmtDelta(v)} t`
-    default: {
-      const unit = targetUnit(k)
-      const text = fmtDelta(v, Math.abs(v) < 10 ? 1 : 0)
-      if (!unit) return text
-      return unit === '%' ? `${text} pts` : `${text} ${unit}`
-    }
-  }
-}
 
 // ---------- drawing ----------
 
@@ -404,24 +328,6 @@ function drawMark(out: Drawn, key: string, b: Box, r: () => number, delay: numbe
   )
 }
 
-/** Lighter "no change" mark: a small faint "=" scribble beside the stat's value `v` (right of it when the stat box `b`
- * has room, else left); no arrow, no note. */
-function drawSame(out: Drawn, key: string, b: Box, v: Box, r: () => number, delay: number) {
-  const right = b.x + b.w - (v.x + v.w) > 30
-  const dx = between(r, 11, 14)
-  const c = { x: right ? v.x + v.w + dx : v.x - dx, y: v.y + v.h * between(r, 0.5, 0.6) }
-  out.svg.push(
-    <path
-      key={key}
-      className="tz-hint-stroke tz-hint-faint"
-      d={equalsPath(c, r)}
-      transform={`rotate(${(tilt(r) * 1.6).toFixed(2)} ${f(c.x)} ${f(c.y)})`}
-      pathLength={1}
-      strokeWidth={between(r, 0.9, 1.15)}
-      style={delayStyle(delay)}
-    />,
-  )
-}
 
 function drawNote(out: Drawn, key: string, at: Pt, text: string, px: number, r: () => number, delay: number) {
   out.html.push(<Note key={key} at={at} text={text} px={px} rot={tilt(r)} delay={delay} />)
@@ -450,7 +356,7 @@ function introNoteAt(fr: Frame, text: string): Pt | null {
   return null
 }
 
-function draw(inst: Inst, fr: Frame, targetUnit: (k: StatKey) => string | null): Drawn {
+function draw(inst: Inst, fr: Frame): Drawn {
   const out: Drawn = { svg: [], html: [] }
   const R = (part: string) => rng(inst.seed ^ hashStr(part))
   const h = inst.hint
@@ -514,39 +420,6 @@ function draw(inst: Inst, fr: Frame, targetUnit: (k: StatKey) => string | null):
         const at = placeNote({ x: left ? row.x - 8 - hw : row.x + row.w + 8 + hw, y: row.y + 2 }, text, px, fr)
         drawNote(out, 'idx', at, text, px, R('idx'), 220)
       }
-      // every visible stat (DOM order): changed ones first (circle + delta), then the unchanged ones (faint "=")
-      const changed: [StatKey, number, Box, number][] = []
-      const same: [StatKey, Box, number][] = []
-      for (const q of Object.keys(fr.boxes)) {
-        if (!q.startsWith('s:')) continue
-        const k = q.slice(2) as StatKey
-        const v = item.delta[k]
-        fr.boxes[q].forEach((b, i) => (v === undefined ? same.push([k, b, i]) : changed.push([k, v, b, i])))
-      }
-      // stagger compressed when many stats are marked, so everything is drawn well before the hint fades
-      const nChanged = Math.min(changed.length, MAX_STAT_MARKS)
-      const nSame = Math.min(same.length, MAX_STAT_MARKS - nChanged)
-      const step = Math.min(110, 660 / Math.max(nChanged, 1))
-      const sameStep = Math.min(45, 360 / Math.max(nSame, 1))
-      const sameFrom = 420 + nChanged * step + 200
-      changed.slice(0, nChanged).forEach(([k, v, b, i], n) => {
-        const delay = 420 + n * step
-        drawMark(out, `s-${k}-${i}`, b, R(`s-${k}-${i}`), delay, 4)
-        const text = deltaText(k, v, targetUnit)
-        const px = NOTE_PX.small
-        const { hw, hh } = noteHalf(text, px)
-        const at = placeNote({ x: b.x + b.w - hw + 6, y: b.y - hh * 0.6 }, text, px, fr)
-        drawNote(out, `d-${k}-${i}`, at, text, px, R(`d-${k}-${i}`), delay + 180)
-      })
-      same.slice(0, nSame).forEach(([k, b, i], j) => {
-        drawSame(out, `u-${k}-${i}`, b, fr.boxes[`v:${k}`]?.[i] ?? b, R(`u-${k}-${i}`), sameFrom + j * sameStep)
-      })
-      const first = changed[0]?.[2]
-      if (row && first) {
-        const from = edgeToward(row, centre(first), 9)
-        const to = edgeToward(first, centre(row), 8)
-        drawArrow(out, 'arrow', from, to, R('arrow'), 300)
-      }
       break
     }
   }
@@ -564,7 +437,6 @@ const CSS = `
   animation: tz-hint-draw 520ms cubic-bezier(.45, .05, .3, 1) var(--tz-d, 0ms) forwards;
 }
 .tz-hint-quick { animation-duration: 170ms; animation-timing-function: ease-out; }
-.tz-hint-faint { stroke-opacity: .4; animation-duration: 320ms; animation-timing-function: ease-out; }
 .tz-hint-note { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform; }
 .tz-hint-note-in {
   display: inline-block; padding: 4px 12px; line-height: 1.15; color: var(--color-ink); opacity: .72;
@@ -687,11 +559,8 @@ export default function Hints() {
     return () => cancelAnimationFrame(raf)
   }, [querySig])
 
-  const targets = existing?.targets
-  const targetUnit = useMemo(() => (k: StatKey) => targets?.find((t) => t.key === k)?.unit ?? null, [targets])
-
   if (!insts.length || !frame) return null
-  const drawn = insts.map((i) => ({ i, d: draw(i, frame, targetUnit) }))
+  const drawn = insts.map((i) => ({ i, d: draw(i, frame) }))
   return (
     <div className={`tz-hint-root${REDUCED_MOTION ? ' tz-hint-rm' : ''}`} aria-hidden>
       <style>{CSS}</style>
