@@ -452,13 +452,14 @@ export default function PromptScreen() {
             <Brand className="text-[19px]" />
           </div>
           {/* sized so the longer line spans the search bar's 560px */}
-          <h1 className="line-reveal display text-[44.5px]">
+          <h1 className="blur-words display text-[44.5px]">
             <span>
-              <span style={d(0)}>Planning sustainable</span>
+              <span style={d(0)}>Planning</span> <span style={d(1)}>sustainable</span>
             </span>
             <span>
-              <span style={d(1)}>
-                cities around transit
+              <span style={d(2)}>cities</span> <span style={d(3)}>around</span>{' '}
+              <span style={d(4)}>
+                transit
                 {/* Archivo's full stop is square; a round dot in its place, the real "." kept for screen readers */}
                 <span className="sr-only">.</span>
                 <span aria-hidden className="ml-[0.07em] inline-block h-[0.19em] w-[0.19em] rounded-full bg-current" />
