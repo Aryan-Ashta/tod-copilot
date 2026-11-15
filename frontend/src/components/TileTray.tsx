@@ -1,8 +1,8 @@
-import { memo } from 'react'
+import { memo, useEffect, useRef } from 'react'
+import { REDUCED_MOTION } from '../construction'
 import { IsoBox, IsoGhost, IsoTile, ISO, isoViewBox } from '../iso'
+import { usePlan } from '../state/PlanContext'
 import type { TileKind } from '../types'
-
-export const TILE_MIME = 'application/x-tod-tile'
 
 export const TILES: { kind: TileKind; label: string; target: 'parcel' | 'building' }[] = [
   { kind: 'homes', label: 'Homes', target: 'parcel' },
@@ -54,31 +54,90 @@ export const TileGlyph = memo(function TileGlyph({ kind, ghost = false, classNam
   )
 })
 
-/** Drag a tile onto a parcel (Homes, Park, Stop) or a building (conversions). */
-export default function TileTray({ disabled }: { disabled: boolean }) {
+/** Click a tile to arm it, then click a highlighted parcel (Homes, Park, Stop) or building (conversions) on the map. */
+export default function TileTray() {
+  const { state, dispatch } = usePlan()
+  const armed = state.tool
+  const disabled = !state.basePlan
+  const glyphs = useRef(new Map<TileKind, HTMLSpanElement>())
+
+  // Esc anywhere disarms.
+  useEffect(() => {
+    if (!armed) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dispatch({ type: 'tool', tool: null })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [armed, dispatch])
+
+  // The armed tile's glyph does a small springy hop.
+  useEffect(() => {
+    if (!armed || REDUCED_MOTION) return
+    glyphs.current.get(armed)?.animate(
+      [
+        { transform: 'translateY(0) scale(1)' },
+        { transform: 'translateY(-7px) scale(1.06, 0.96)', offset: 0.4 },
+        { transform: 'translateY(1px) scale(1.04, 0.95)', offset: 0.75 },
+        { transform: 'translateY(0) scale(1)' },
+      ],
+      { duration: 420, easing: 'cubic-bezier(0.34, 1.4, 0.5, 1)' },
+    )
+  }, [armed])
+
   return (
     <div
-      className="flex overflow-hidden rounded-[12px] border-[1.5px] border-ink bg-paper shadow-[1.5px_1.5px_0_var(--color-ink),0_8px_24px_rgb(28_34_48/.12)]"
+      data-hint-anchor="tray"
+      className="flex rounded-[12px] border-[1.5px] border-ink bg-paper shadow-[1.5px_1.5px_0_var(--color-ink),0_8px_24px_rgb(28_34_48/.12)]"
       role="toolbar"
-      aria-label="Tiles: drag onto the map"
+      aria-label="Tiles: click one, then click a highlighted lot or building"
     >
-      {TILES.map((t) => (
-        <div
-          key={t.kind}
-          data-tile={t.kind}
-          draggable={!disabled}
-          tabIndex={-1}
-          onDragStart={(e) => {
-            e.dataTransfer.setData(TILE_MIME, t.kind)
-            e.dataTransfer.effectAllowed = 'copy'
-          }}
-          className={`group flex cursor-grab items-center gap-1.5 border-l border-rule py-1 pr-3.5 pl-2 text-[15px] font-semibold select-none first:border-l-0 hover:bg-ink/[0.04] active:cursor-grabbing ${disabled ? 'opacity-40' : ''}`}
-          title={`Drag onto a ${t.target}`}
-        >
-          <TileGlyph kind={t.kind} className="h-9 w-9 transition-[translate] duration-150 group-hover:-translate-y-0.5" />
-          {t.label}
-        </div>
-      ))}
+      {TILES.map((t) => {
+        const on = armed === t.kind
+        const dim = !!armed && !on
+        return (
+          <button
+            key={t.kind}
+            type="button"
+            data-tile={t.kind}
+            aria-pressed={on}
+            disabled={disabled}
+            onClick={() => dispatch({ type: 'tool', tool: on ? null : t.kind })}
+            title={
+              disabled
+                ? 'Tiles unlock once the plan has loaded'
+                : on
+                  ? 'Click again or press Esc to cancel'
+                  : `Click, then click a highlighted ${t.target === 'building' ? 'building' : 'lot'}`
+            }
+            className={`group relative flex items-center gap-1.5 border-l border-rule py-1 pr-3.5 pl-2 text-[15px] font-semibold select-none first:rounded-l-[11px] first:border-l-0 last:rounded-r-[11px] transition-[translate,opacity,background-color,box-shadow] duration-200 ease-[cubic-bezier(0.34,1.4,0.5,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue motion-reduce:transition-none ${
+              disabled
+                ? 'cursor-not-allowed opacity-40'
+                : on
+                  ? 'z-10 -translate-y-1.5 rounded-[10px] bg-white shadow-[0_0_0_2px_var(--color-ink),2px_3px_0_var(--color-ink)]'
+                  : `cursor-pointer hover:bg-ink/[0.04] ${dim ? 'opacity-55 hover:opacity-90' : ''}`
+            }`}
+          >
+            <span
+              ref={(el) => {
+                if (el) glyphs.current.set(t.kind, el)
+                else glyphs.current.delete(t.kind)
+              }}
+              className="block origin-bottom"
+            >
+              <TileGlyph
+                kind={t.kind}
+                className={`block h-9 w-9 transition-[translate] duration-150 ${on || disabled ? '' : 'group-hover:-translate-y-0.5'}`}
+              />
+            </span>
+            {t.label}
+            <span
+              aria-hidden
+              className={`absolute inset-x-2.5 bottom-0.5 h-[2.5px] rounded-full bg-ink transition-transform duration-200 motion-reduce:transition-none ${on ? 'scale-x-100' : 'scale-x-0'}`}
+            />
+          </button>
+        )
+      })}
     </div>
   )
 }

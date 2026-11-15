@@ -353,7 +353,7 @@ class Plan(BaseModel):
 
 
 class Edit(BaseModel):          # from meeting mode or the slider
-    kind: Literal["place_tile", "remove_tile", "slider"]
+    kind: Literal["place_tile", "remove_tile", "slider", "apply_suggestions"]   # apply_suggestions: agents' plan
     tile: Optional[Literal["homes", "park", "stop", "convert_residential", "convert_hotel"]] = None
     target_id: Optional[str] = None   # parcel or building id
     value: Optional[float] = None
@@ -388,6 +388,11 @@ class Rejection(BaseModel):
     factor_key: Optional[str]
 
 
+class ScoreSnapshot(BaseModel):
+    scoreboard: Scoreboard
+    targets: list[TargetScore]
+
+
 class RescoreResponse(BaseModel):
     # Keys sites, stacks, deals, conversions, targets, transit, infrastructure_added replace those Plan
     # fields; returning a patch instead of the full Plan keeps the round trip under 1 s.
@@ -395,6 +400,9 @@ class RescoreResponse(BaseModel):
     scoreboard: Scoreboard
     deltas: dict[str, float]          # vs the base plan
     rejected: Optional[Rejection]
+    steps: list[ScoreSnapshot]        # steps[i]: score after edits[0..i]; a rejected/invalid edit repeats the previous
+    existing: ScoreSnapshot           # existing conditions, no edits
+    suggested: ScoreSnapshot          # the agents' plan as built, no edits
 
 
 class SimulatedCount(BaseModel):

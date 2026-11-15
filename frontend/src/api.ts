@@ -64,12 +64,10 @@ export const metros = () => request<MetroOutlines>('/api/metros')
 
 export const stockPrompts = () => request<StockPrompt[]>('/api/stock_prompts')
 
-export const parsePrompt = (prompt: string) => post<PlanOptions>('/api/parse_prompt', { prompt })
-
 export const getPlan = (planId: string) => request<Plan>(`/api/plan/${enc(planId)}`)
 
-export const rescore = (planId: string, edits: Edit[]) =>
-  post<RescoreResponse>(`/api/plan/${enc(planId)}/rescore`, { edits })
+export const rescore = (planId: string, edits: Edit[], fromExisting = true) =>
+  post<RescoreResponse>(`/api/plan/${enc(planId)}/rescore`, { edits, from_existing: fromExisting })
 
 export const simulateCount = (planId: string, stop_id: string) =>
   post<SimulatedCount>(`/api/plan/${enc(planId)}/simulate_count`, { stop_id })

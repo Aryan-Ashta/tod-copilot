@@ -1,4 +1,4 @@
-# TOD Copilot: build docs for coding agents (software-only)
+# Transitor: build docs for coding agents (software-only)
 
 These files tell a coding agent (Claude Code, Cursor, Codex and others) what to build, how the pieces fit, and what it must never do. Drop them into the root of the repo.
 

@@ -2,6 +2,8 @@
 
 Stateless: the full edit list is applied to the base plan on every call, so undo = edits[:-1] and reset = [].
 Only the last edit is validated; an invalid last edit is rejected and the scoreboard for edits[:-1] returned.
+With from_existing the edits start from existing conditions (no agent sites, existing transit only) and an
+apply_suggestions edit brings in the agents' plan.
 The helpers here (site stacks, plan scoring) are also what the agents use, so rescore(plan, []) reproduces
 the plan's own numbers exactly.
 """
@@ -9,12 +11,15 @@ import math
 from datetime import date, datetime, timezone
 from typing import Optional
 
+import numpy as np
+
 from backend.data.geo import M2_PER_ACRE, SQFT_PER_M2, lonlat_dist_m
 from backend.models import deal as deal_model
 from backend.models import finance, goals
 from backend.models.targets import build_targets, embodied_co2_saved, walk_gaps
 from backend.schemas import (CapitalStack, Citation, ConversionCandidate, DealStrategy, Edit, InfraFeature, Parcel,
-                             Plan, Provenance, Rejection, RescoreResponse, Scoreboard, Site, Stop, TargetScore)
+                             Plan, Provenance, Rejection, RescoreResponse, Route, Scoreboard, ScoreSnapshot, Site, Stop,
+                             TargetScore, TransitPlan)
 
 SQFT_PER_ACRE = M2_PER_ACRE * SQFT_PER_M2
 _PROV = Provenance(source="meeting_mode", confidence="low", retrieved_at=datetime(2026, 11, 13, tzinfo=timezone.utc),
@@ -114,18 +119,59 @@ def score_plan(sites: list[Site], stacks: list[CapitalStack], conversions: dict[
 
 
 # ---------------------------------------------------------------- rescore
+_EXISTING_ROUTE_KINDS = ("rail_existing", "bus_existing")
+_TILE_STOP_PREFIX = "tile-stop-"
+
+
+def existing_transit(t: TransitPlan) -> TransitPlan:
+    """Existing conditions from the agents' TransitPlan.
+
+    Routes: rail_existing/bus_existing. An upgraded existing bus route ("upg-<route_id>", models/transit drops its
+    bus_existing entry) comes back as "bus-<route_id>" on the same geometry; its pre-upgrade headway is not in the
+    plan, so headway_min is None. Stops: the plan's stops are the GTFS feed stops plus the new feeder stops; a stop
+    is new when every route it serves is a new route. Feed stops keep the plan's ridership range, which the
+    transit agent split with the feeder stops. Coverage is the baseline; no new operating funding.
+    """
+    routes = [r for r in t.routes if r.kind in _EXISTING_ROUTE_KINDS]
+    have = {r.id for r in routes}
+    for r in t.routes:
+        rid = f"bus-{r.id.removeprefix('upg-')}"
+        if r.id.startswith("upg-") and rid not in have:
+            routes.append(Route(id=rid, kind="bus_existing", geometry=r.geometry, headway_min=None, phase=0,
+                                annual_operating_cost_usd=0.0))
+            have.add(rid)
+    new_ids = {r.id for r in t.routes if r.kind not in _EXISTING_ROUTE_KINDS}
+    stops = [s for s in t.stops if not s.route_ids or not set(s.route_ids) <= new_ids]
+    kept = {s.id for s in stops}
+    return t.model_copy(update={"routes": routes, "stops": stops,
+                                "measurements": [m for m in t.measurements if m.target_id in kept],
+                                "coverage_pct": t.coverage_baseline_pct, "annual_operating_cost_usd": 0.0})
+
+
 class _State:
-    def __init__(self, base: Plan, f: dict):
+    def __init__(self, base: Plan, f: dict, from_existing: bool = False):
         self.base, self.f = base, f
-        self.sites = list(base.sites)
-        self.stacks = list(base.stacks)
-        self.deals = list(base.deals)
+        if from_existing:
+            self.sites: list[Site] = []
+            self.stacks: list[CapitalStack] = []
+            self.deals: list[DealStrategy] = []
+            self.transit = existing_transit(base.transit)
+        else:
+            self.sites = list(base.sites)
+            self.stacks = list(base.stacks)
+            self.deals = list(base.deals)
+            self.transit = base.transit
         self.conversions = dict((c.building_id, c) for c in base.conversions)
-        self.stops = list(base.transit.stops)
+        # Precomputed.walk_m comes from the infrastructure agent, which measures walks to the existing feed's
+        # frequent stops before the transit agent runs: it is the existing condition and also what the agents'
+        # plan is scored with, so neither from_existing nor apply_suggestions changes it.
         self.walk_m = dict(base.precomputed.walk_m)  # inner dicts replaced, never mutated
         self.infra_added: list[InfraFeature] = []
         self.changed_conversions: set[str] = set()
-        self.transit_changed = False
+        self.transit_changed = from_existing
+        self.suggestions_applied = not from_existing   # apply_suggestions is a no-op unless from_existing
+        self.taken_parcels: set[str] = set()     # targets of applied place_tile edits
+        self.taken_buildings: set[str] = set()
 
 
 _LOOKUPS: dict[int, tuple[Plan, dict]] = {}
@@ -141,6 +187,10 @@ def _lookups(base: Plan) -> dict:
              "rentable": {b.id: b.rentable_area_sqft.value for b in base.buildings},
              "roof": {b.id: b.roof_area_sqft.value for b in base.buildings},
              "acres": {p.id: p.area_acres.value for p in base.parcels}}
+    pre = base.precomputed
+    walk_ids = [t for t in pre.walk_m if t in pre.centroid]
+    cache["walk_ids"] = walk_ids
+    cache["walk_lonlat"] = np.asarray([pre.centroid[t] for t in walk_ids], dtype=float).reshape(-1, 2)
     if len(_LOOKUPS) > 16:
         _LOOKUPS.clear()
     _LOOKUPS[id(base)] = (base, cache)
@@ -151,16 +201,39 @@ def _dist(a: tuple[float, float], b: tuple[float, float]) -> float:
     return lonlat_dist_m(a, b)
 
 
+def _dists_m(ll: np.ndarray, at: tuple[float, float]) -> np.ndarray:
+    """lonlat_dist_m from every row of ll to `at`, vectorized (same formula)."""
+    lat = np.radians((ll[:, 1] + at[1]) / 2)
+    return np.hypot((ll[:, 0] - at[0]) * 111_320 * np.cos(lat), (ll[:, 1] - at[1]) * 110_540)
+
+
 def _improve(st: _State, kind: str, at: tuple[float, float]) -> None:
-    pre = st.base.precomputed
+    """A new park/stop at `at` shortens the walk of every target whose straight-line walk to it is shorter."""
+    pre, L = st.base.precomputed, _lookups(st.base)
     detour = st.f["walk_detour_factor"]
-    for tid, w in list(st.walk_m.items()):
-        c = pre.centroid.get(tid)
-        if c is None:
-            continue
-        d = _dist(c, at) * detour
-        if w.get(kind) is None or d < w[kind]:
-            st.walk_m[tid] = {**w, kind: round(d, 1)}
+    ids = L["walk_ids"]
+    base_m = L.setdefault("walk_base_m", {}).get(kind)
+    if base_m is None:
+        base_m = np.asarray([pre.walk_m[t].get(kind) for t in ids], dtype=float)   # None -> nan
+        base_m = np.where(np.isnan(base_m), np.inf, base_m)
+        L["walk_base_m"][kind] = base_m
+    d = _dists_m(L["walk_lonlat"], at) * detour
+    # Edits only shorten walks, so a target can only improve where d beats its precomputed walk.
+    for i in np.flatnonzero(d < base_m):
+        tid = ids[i]
+        w = st.walk_m[tid]
+        di = float(d[i])
+        if w.get(kind) is None or di < w[kind]:
+            st.walk_m[tid] = {**w, kind: round(di, 1)}
+    if len(st.walk_m) > len(pre.walk_m):   # targets the slider added
+        for tid in st.walk_m.keys() - pre.walk_m.keys():
+            c = pre.centroid.get(tid)
+            w = st.walk_m[tid]
+            if c is None:
+                continue
+            di = _dist(c, at) * detour
+            if w.get(kind) is None or di < w[kind]:
+                st.walk_m[tid] = {**w, kind: round(di, 1)}
 
 
 def _remove_sites_on(st: _State, pid: str) -> None:
@@ -182,6 +255,9 @@ def _apply(st: _State, e: Edit) -> None:
     f, base, L = st.f, st.base, _lookups(st.base)
     pre = base.precomputed
     lid = base.locale.id
+    if e.kind == "apply_suggestions":
+        _apply_suggestions(st)
+        return
     if e.kind == "slider":
         v = max(0.0, min(1.0, e.value or 0.0))
         new_sites = []
@@ -236,9 +312,10 @@ def _apply(st: _State, e: Edit) -> None:
                 raise Invalid("no location for this parcel")
             covered = sum(c["demand"] for c in pre.demand_cells
                           if _dist(tuple(c["lonlat"]), at) <= f["stop_catchment_m"])
-            st.stops.append(Stop(id=f"tile-stop-{tid}", lonlat=at, route_ids=[],
-                                 riders_per_day_low=round(covered * f["ridership_rate_low"], 1),
-                                 riders_per_day_high=round(covered * f["ridership_rate_high"], 1), prov=_PROV))
+            stop = Stop(id=f"{_TILE_STOP_PREFIX}{tid}", lonlat=at, route_ids=[],
+                        riders_per_day_low=round(covered * f["ridership_rate_low"], 1),
+                        riders_per_day_high=round(covered * f["ridership_rate_high"], 1), prov=_PROV)
+            st.transit = st.transit.model_copy(update={"stops": [*st.transit.stops, stop]})
             st.transit_changed = True
             _improve(st, "frequent_stop", at)
         return
@@ -303,11 +380,38 @@ def _normalize(edits: list[Edit]) -> list[Edit]:
     return out
 
 
-def _run(base: Plan, edits: list[Edit], f: dict) -> _State:
-    st = _State(base, f)
+def _apply_suggestions(st: _State) -> None:
+    """Bring in the agents' sites/stacks/deals except on targets an earlier tile took, and their transit network
+    (keeping tile stops). Precomputed.walk_m already is the agents' walk distances (see _State)."""
+    if st.suggestions_applied:
+        return
+    st.suggestions_applied = True
+    base = st.base
+    keep = {s.id for s in base.sites
+            if not st.taken_parcels.intersection(s.parcel_ids) and s.building_id not in st.taken_buildings}
+    st.sites = st.sites + [s for s in base.sites if s.id in keep]
+    st.stacks = st.stacks + [x for x in base.stacks if x.site_id in keep]
+    st.deals = st.deals + [d for d in base.deals if d.site_id in keep]
+    tile_stops = [s for s in st.transit.stops if s.id.startswith(_TILE_STOP_PREFIX)]
+    st.transit = base.transit.model_copy(update={"stops": [*base.transit.stops, *tile_stops]})
+    st.transit_changed = True
+
+
+def _step(st: _State, e: Edit) -> None:
+    """Apply one edit (raises Invalid, leaving st unchanged) and record the target it took."""
+    _apply(st, e)
+    if e.kind == "place_tile" and e.target_id:
+        if e.tile in ("convert_residential", "convert_hotel"):
+            st.taken_buildings.add(e.target_id)
+        else:
+            st.taken_parcels.add(e.target_id)
+
+
+def _run(base: Plan, edits: list[Edit], f: dict, from_existing: bool = False) -> _State:
+    st = _State(base, f, from_existing)
     for e in _normalize(edits):
         try:
-            _apply(st, e)
+            _step(st, e)
         except Invalid:
             continue
     return st
@@ -319,34 +423,50 @@ def _score(st: _State) -> tuple[list[TargetScore], Scoreboard]:
                       st.base.precomputed.in_flood, st.base.precomputed.solar_kwh_per_kw_year, st.f)
 
 
-def rescore(base: Plan, edits: list[Edit], f: dict) -> RescoreResponse:
-    rejected = None
-    if edits and edits[-1].kind != "remove_tile":
-        st = _run(base, edits[:-1], f)
-        try:
-            _apply(st, edits[-1])
-        except Invalid as ex:
-            rejected = Rejection(edit_index=len(edits) - 1, reason=ex.reason, citation=ex.citation,
-                                 factor_key=ex.factor_key)
-            st = _run(base, edits[:-1], f)
-    else:
-        st = _run(base, edits, f)
+def _snapshot(st: _State) -> ScoreSnapshot:
     targets, board = _score(st)
-    _, base_board = _score(_State(base, f))
+    return ScoreSnapshot(scoreboard=board, targets=targets)
+
+
+def rescore(base: Plan, edits: list[Edit], f: dict, from_existing: bool = False) -> RescoreResponse:
+    st = _State(base, f, from_existing)
+    start = _snapshot(st)
+    suggested = start if not from_existing else _snapshot(_State(base, f))
+    existing = start if from_existing else _snapshot(_State(base, f, True))
+    rejected = None
+    steps: list[ScoreSnapshot] = []
+    # Edits apply incrementally (a non-remove edit appends to the normalized list); a remove_tile replays the
+    # normalized prefix, since it drops an earlier edit.
+    for i, e in enumerate(edits):
+        if e.kind == "remove_tile":
+            st = _run(base, edits[:i + 1], f, from_existing)
+        else:
+            try:
+                _step(st, e)
+            except Invalid as ex:
+                steps.append(steps[-1] if steps else start)
+                if i == len(edits) - 1:
+                    rejected = Rejection(edit_index=i, reason=ex.reason, citation=ex.citation,
+                                         factor_key=ex.factor_key)
+                continue
+        steps.append(_snapshot(st))
+    now = steps[-1] if steps else start
+    board, base_board = now.scoreboard, suggested.scoreboard
     deltas = {k: round(getattr(board, k) - getattr(base_board, k), 4) for k in Scoreboard.model_fields
               if isinstance(getattr(board, k), (int, float))}
-    # Patch keys replace whole Plan fields; conversions and transit only appear when an edit changed them.
-    patch = {"sites": st.sites, "stacks": st.stacks, "deals": st.deals, "targets": targets,
+    # Patch keys replace whole Plan fields; conversions and transit only appear when an edit changed them
+    # (transit always with from_existing).
+    patch = {"sites": st.sites, "stacks": st.stacks, "deals": st.deals, "targets": now.targets,
              "infrastructure_added": st.infra_added}
     if st.changed_conversions:
         patch["conversions"] = [st.conversions[c.building_id] for c in base.conversions]
     if st.transit_changed:
-        patch["transit"] = base.transit.model_copy(update={"stops": st.stops})
+        patch["transit"] = st.transit
     if base.goals_report is not None:
-        patch["goals_report"] = goals.report(st.sites, st.stacks, base.options.goals, base.transit,
+        patch["goals_report"] = goals.report(st.sites, st.stacks, base.options.goals, st.transit,
                                              base.goals_report.existing_affordable)
     return RescoreResponse(plan_patch={k: _dump(v) for k, v in patch.items()}, scoreboard=board, deltas=deltas,
-                           rejected=rejected)
+                           rejected=rejected, steps=steps, existing=existing, suggested=suggested)
 
 
 def _dump(v):

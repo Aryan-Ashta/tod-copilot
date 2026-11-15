@@ -1,6 +1,6 @@
 ---
 name: assessor-use-codes
-description: How to find and read a county assessor's land-use / property-class / state-class code table (HTML or PDF) and map each code to TOD Copilot's land-use vocabulary.
+description: How to find and read a county assessor's land-use / property-class / state-class code table (HTML or PDF) and map each code to Transitor's land-use vocabulary.
 ---
 
 # Assessor use codes

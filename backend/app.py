@@ -28,7 +28,7 @@ from backend.schemas import (AgentEvent, Edit, Factor, Locale, Plan, PlanOptions
 
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 
-app = FastAPI(title="TOD Copilot")
+app = FastAPI(title="Transitor")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -50,6 +50,7 @@ class PromptRequest(BaseModel):
 
 class RescoreRequest(BaseModel):
     edits: list[Edit]
+    from_existing: bool = False   # start from existing conditions instead of the agents' plan
 
 
 class CountRequest(BaseModel):
@@ -249,7 +250,7 @@ def get_plan(plan_id: str) -> Plan:
 @app.post("/api/plan/{plan_id}/rescore")
 def plan_rescore(plan_id: str, req: RescoreRequest) -> RescoreResponse:
     p = _plan(plan_id)
-    return rescore(p, req.edits, resolve(p.locale.id))
+    return rescore(p, req.edits, resolve(p.locale.id), from_existing=req.from_existing)
 
 
 @app.post("/api/plan/{plan_id}/simulate_count")

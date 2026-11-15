@@ -45,8 +45,6 @@ const PIN: Record<string, { color: string; name: string }> = {
   la_wilshire_koreatown: { color: '#2F5BD3', name: 'Wilshire Koreatown' },
 }
 const pinColor = (id: string) => PIN[id]?.color ?? '#2F5BD3'
-// Esri's canvas land colour. The base tiles print country and state names (e.g. "UNITED STATES") through z7.
-const BASE_LAND = '#EFEFEF'
 
 function localeOutlines(locales: Locale[], selected: string | null): GeoJSON.FeatureCollection {
   return {
@@ -79,7 +77,8 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
   const mapRef = useRef<MlMap | null>(null)
   const drawRef = useRef<TerraDraw | null>(null)
   const [ready, setReady] = useState(false)
-  const [mode, setMode] = useState<DrawMode | null>('freehand')
+  // Starts in pan: the map drags until a draw tool is picked.
+  const [mode, setMode] = useState<DrawMode | null>(null)
   // Latest callbacks for the long-lived map/draw listeners.
   const onBoundaryRef = useRef(onBoundary)
   const onLocaleRef = useRef(onLocale)
@@ -108,13 +107,6 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     map.on('load', () => {
       // State lines (US Census cartographic boundaries; scripts/build_us_reference.py), under everything else.
       map.addSource('states', { type: 'geojson', data: '/geo/us-states.geojson', attribution: 'States: US Census Bureau' })
-      // Paints over the base's country and state names with its own land colour; gone once z8 tiles (no names) load.
-      map.addLayer({
-        id: 'states-mask',
-        type: 'fill',
-        source: 'states',
-        paint: { 'fill-color': BASE_LAND, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, 1, 8.6, 0] },
-      })
       map.addLayer({
         id: 'states-line',
         type: 'line',
@@ -175,8 +167,7 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
           new TerraDrawRectangleMode({ drawInteraction: 'click-drag', styles: DRAW_STYLE }),
         ],
       })
-      draw.start()
-      draw.setMode('freehand-linestring') // freehand is on from the start (the mode state starts as 'freehand')
+      draw.start() // terra-draw starts in 'static', so the map pans until a draw tool is picked
       draw.on('finish', (id) => {
         const snapshot = draw.getSnapshot()
         const others = snapshot.filter((f) => f.id !== id).map((f) => f.id as string)
@@ -285,48 +276,62 @@ export default function AreaPicker({ locales, selectedLocale, boundary, onBounda
     drawRef.current?.setMode(next === null ? 'static' : next === 'freehand' ? 'freehand-linestring' : next)
     setMode(next)
   }
-  // Clear goes back to the default: nothing drawn, freehand on.
+  // Clear goes back to the default: nothing drawn, map panning.
   const clear = () => {
     drawRef.current?.clear()
-    drawRef.current?.setMode('freehand-linestring')
-    setMode('freehand')
+    drawRef.current?.setMode('static')
+    setMode(null)
     onBoundary(null)
   }
 
-  const btn = 'ctl px-3 py-1 text-[13px]'
+  const btn =
+    'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium whitespace-nowrap text-slate transition-colors duration-150 hover:bg-ink/5 hover:text-ink disabled:opacity-40 aria-pressed:bg-ink aria-pressed:text-paper aria-pressed:hover:bg-ink aria-pressed:hover:text-paper'
   const hint =
     mode === 'freehand'
-      ? 'Press and drag around the area; release to close it. Turn freehand off to pan'
+      ? 'Press and drag around the area; release to close it'
       : mode === 'polygon'
         ? 'Click to add corners; click the first corner to finish'
         : mode === 'rectangle'
           ? 'Press and drag across the map; release to finish'
-          : 'Pick a pin, or draw your own area'
+          : 'Drag to move the map · pick a draw tool to outline an area'
 
   // Fills its parent; the draw tools and the current hint float in the top-right corner.
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
       <div className="absolute z-10 flex flex-col items-end gap-2" style={{ top: 12, right: padding.right + 12 }}>
-        <div className="flex gap-2 rounded-2xl border border-rule bg-paper/85 p-2 shadow-[0_8px_24px_rgb(28_34_48/.12)] backdrop-blur-md">
+        <div className="flex items-center gap-0.5 rounded-full bg-paper/85 p-1 shadow-[0_4px_14px_rgb(28_34_48/.10)] backdrop-blur-md" role="group" aria-label="Draw tools">
           {(
             [
-              ['freehand', 'Draw freehand'],
-              ['rectangle', 'Draw rectangle'],
-              ['polygon', 'Draw polygon'],
+              ['freehand', 'Freehand', 'Draw freehand', <path key="i" d="M2.5 11c1.5-4 3-6 4.5-4.5s0 4 2 4 2.5-5 4.5-6" />],
+              ['rectangle', 'Rectangle', 'Draw rectangle', <rect key="i" x="2.5" y="4" width="11" height="8" rx="1" />],
+              ['polygon', 'Polygon', 'Draw polygon', <path key="i" d="M3 5l5-2.5 5.5 4-2.5 6.5H4.5z" />],
             ] as const
-          ).map(([m, label]) => (
-            <button key={m} type="button" disabled={!ready} onClick={() => startMode(m)} className={btn} aria-pressed={mode === m}>
+          ).map(([m, label, full, glyph]) => (
+            <button
+              key={m}
+              type="button"
+              disabled={!ready}
+              onClick={() => startMode(m)}
+              className={btn}
+              aria-pressed={mode === m}
+              aria-label={full}
+              title={full}
+            >
+              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                {glyph}
+              </svg>
               {label}
             </button>
           ))}
+          <span className="mx-0.5 h-4 w-px bg-rule" aria-hidden />
           <button type="button" disabled={!ready} onClick={clear} className={btn}>
             Clear
           </button>
         </div>
         <span
           key={mode ?? 'none'}
-          className="hint-in rounded-full bg-ink/85 px-3 py-1 text-[12.5px] font-medium text-paper backdrop-blur-md"
+          className="hint-in rounded-full bg-ink/80 px-2.5 py-1 text-[12px] font-medium text-paper backdrop-blur-md"
           aria-live="polite"
         >
           {hint}
