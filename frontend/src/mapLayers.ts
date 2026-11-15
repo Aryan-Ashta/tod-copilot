@@ -585,10 +585,7 @@ export function flattenBuildings(buildings: Building[], conversions: ConversionC
 /** Flat, matte material so the lighting reads as the iso figures' three face tones, not as gloss. */
 export const MATTE = { ambient: 0.62, diffuse: 0.5, shininess: 0, specularColor: [0, 0, 0] as [number, number, number] }
 const BLOCK: Color = [217, 221, 214]
-const mix = (a: Color, b: Color, t: number): Color => {
-  const at = (i: number) => Math.round(a[i] + (b[i] - a[i]) * t)
-  return [at(0), at(1), at(2)]
-}
+const NO_CONVERSIONS: ReadonlyMap<string, UseType> = new Map()
 // Selected building: ink, the one block darker than everything else on the paper ground (white vanished into it).
 const SELECTED_BLOCK: Color = [58, 66, 86]
 // The selection shell sits this much proud of the building so its faces never z-fight with the building's own.
@@ -708,11 +705,18 @@ function buildingEdges(data: BuildingDatum[], storyHeightFt: number | null): Edg
 }
 
 /**
- * Existing buildings: light grey blocks; conversion candidates in their best-use colour, washed toward the block grey
- * as the overall score falls. Ink edges. Extrusion height = stories × story_height_ft (factor); without the factor,
- * buildings stay flat. `hidden` buildings are being (or have been) demolished: demolitionLayer draws them.
+ * Existing buildings: light grey blocks; a building the plan converts (`converted`: building id → its new use) in that
+ * use's colour, so every Convert tile visibly changes its building. Ink edges. Extrusion height = stories ×
+ * story_height_ft (factor); without the factor, buildings stay flat. `hidden` buildings are being (or have been)
+ * demolished: demolitionLayer draws them.
  */
-export function buildingsLayer(data: BuildingDatum[], storyHeightFt: number | null, visible: boolean, hidden: ReadonlySet<string>): Layer[] {
+export function buildingsLayer(
+  data: BuildingDatum[],
+  storyHeightFt: number | null,
+  visible: boolean,
+  hidden: ReadonlySet<string>,
+  converted: ReadonlyMap<string, UseType> = NO_CONVERSIONS,
+): Layer[] {
   return [
     new PolygonLayer<BuildingDatum, DataFilterExtensionProps<BuildingDatum>>({
       id: 'buildings',
@@ -728,13 +732,13 @@ export function buildingsLayer(data: BuildingDatum[], storyHeightFt: number | nu
       getPolygon: (d) => d.polygon,
       getElevation: (d) => storeyElevation(d.building, storyHeightFt),
       getFillColor: (d) => {
-        if (!d.conversion) return BLOCK
-        return mix(BLOCK, USE_COLORS[d.conversion.best_use], Math.max(0.15, d.conversion.overall))
+        const use = converted.get(d.building.id)
+        return use ? USE_COLORS[use] : BLOCK
       },
       extensions: [HIDE],
       getFilterValue: (d) => (hidden.has(d.building.id) ? 0 : 1),
       filterRange: [0.5, 1],
-      updateTriggers: { getElevation: storyHeightFt, getFilterValue: hidden },
+      updateTriggers: { getElevation: storyHeightFt, getFilterValue: hidden, getFillColor: converted },
       // conversions arriving from the agent, a Convert tile or an undo all show as a fade, not a jump
       transitions: { getFillColor: RECOLOUR },
     }),

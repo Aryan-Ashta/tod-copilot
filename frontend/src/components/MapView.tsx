@@ -58,7 +58,7 @@ import {
 import { agentFocus } from '../agentFocus'
 import { toolTarget, validTargets } from '../tools'
 import { AGENTS } from '../types'
-import type { Building, ConversionCandidate, DealKind, Geometry, InfraFeature, LonLat, Parcel, Route, Site, Station, Stop } from '../types'
+import type { Building, ConversionCandidate, DealKind, Geometry, InfraFeature, LonLat, Parcel, Route, Site, Station, Stop, UseType } from '../types'
 import { buildingLabel, fmtNum, geometryCentroid, humanize, parcelLabel } from '../format'
 
 export interface MapHandle {
@@ -883,9 +883,22 @@ export default function MapView({
     const offset: [number, number] = [(left - right) / 2, (top - bottom) / 2]
     map.flyTo({ center: flyTo, offset, zoom: Math.max(map.getZoom(), 16), duration: 1200 })
   }, [flyTo, loaded, top, right, bottom, left])
+  // buildings the plan converts (in-plan conversion sites), by new use: only these take a use colour
+  const convertedKey = sites
+    .filter((s) => s.kind === 'conversion' && s.building_id && (s.status === 'pursue' || s.status === 'watch'))
+    .map((s) => `${s.building_id}=${conversions.find((c) => c.building_id === s.building_id)?.best_use ?? ''}`)
+    .join('|')
+  const converted = useMemo(() => {
+    const m = new Map<string, UseType>()
+    for (const kv of convertedKey ? convertedKey.split('|') : []) {
+      const [id, use] = kv.split('=') as [string, UseType | '']
+      if (use && use !== 'keep_current') m.set(id, use)
+    }
+    return m
+  }, [convertedKey])
   const lBuildings = useMemo(
-    () => buildingsLayer(buildingData, storyHeightFt, L.buildings || large, hidden),
-    [buildingData, storyHeightFt, L.buildings, large, hidden],
+    () => buildingsLayer(buildingData, storyHeightFt, L.buildings || large, hidden, converted),
+    [buildingData, storyHeightFt, L.buildings, large, hidden, converted],
   )
   const lDemo = useMemo(
     () => demolitionLayer(buildingData, storyHeightFt, demolitions, stage.clock),
