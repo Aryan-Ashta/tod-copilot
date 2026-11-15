@@ -184,7 +184,7 @@ function StatRow({ m }: { m: StatMeta }) {
   )
 }
 
-/** Meeting mode's stats: each stat's value, its change, and a bar built from the plan history's contributions,
+/** Edit mode's stats: each stat's value, its change, and a bar built from the plan history's contributions,
  *  with existing conditions and the agents' suggestion marked on the same scale. */
 export default function StatsPanel() {
   const { state } = usePlan()

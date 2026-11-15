@@ -792,7 +792,7 @@ export function selectedBuildingLayer(data: BuildingDatum[], storyHeightFt: numb
   ]
 }
 
-// ---------------------------------------------------------------- click-twice tiles (meeting mode)
+// ---------------------------------------------------------------- click-twice tiles (edit mode)
 // An armed tile highlights the targets it can land on (tools.ts) in the tile's colour; MapView pulses the layer's
 // opacity and dims the rest. Both layers decode as parcels / buildings, so a click picks them like the originals.
 

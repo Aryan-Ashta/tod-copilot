@@ -51,11 +51,11 @@ function PlanView({ replay }: { replay: boolean }) {
         ))}
         {replay && <span className="text-slate">recorded run</span>}
         <Link
-          to={`/meeting/${state.planId}`}
+          to={`/edit/${state.planId}`}
           aria-disabled={!state.basePlan}
           className={`ctl px-3 py-1 text-[13px] no-underline ${state.basePlan ? '' : 'pointer-events-none border-rule text-slate shadow-none'}`}
         >
-          Meeting mode
+          Edit mode
         </Link>
       </Disclaimer>
       <SplitPane

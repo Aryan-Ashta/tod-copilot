@@ -67,7 +67,7 @@ export const deltaGood = (m: StatMeta, d: number) => (m.lower ? d < 0 : d > 0)
 
 const SCORE_META = STAT_META.slice(0, 6) as (StatMeta & { key: ScoreKey })[]
 
-/** Meeting mode's bottom bar: the headline stats in a row, each with its change since the last edit and its
+/** Edit mode's bottom bar: the headline stats in a row, each with its change since the last edit and its
  *  difference to the agents' suggestion. */
 export default function Scoreboard() {
   const { state } = usePlan()

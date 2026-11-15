@@ -638,7 +638,7 @@ export default function MapView({
     }
   }, [large])
 
-  // Picking handle for meeting-mode drops.
+  // Picking handle for edit-mode drops.
   useEffect(() => {
     if (!handleRef) return
     handleRef.current = {
@@ -1006,10 +1006,9 @@ export default function MapView({
             storyHeightFt,
             lines: lineIndex,
             frame,
-            factor: (k) => factorNumber(k, locale?.id),
           })
         : null,
-    [picked, selectedAgent, suggestions, plan, buildingData, storyHeightFt, lineIndex, frame, factorNumber, locale?.id],
+    [picked, selectedAgent, suggestions, plan, buildingData, storyHeightFt, lineIndex, frame],
   )
   /** The emphasis in force: null before the first pick, for the coordinator and once cleared (its overlays fade out). */
   const focusView = clearedPick !== pick ? agentView : null

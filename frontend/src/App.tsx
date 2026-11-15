@@ -1,9 +1,15 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { AppProvider } from './state/AppContext'
 import PromptScreen from './screens/PromptScreen'
 import PlanScreen from './screens/PlanScreen'
-import MeetingScreen from './screens/MeetingScreen'
+import EditScreen from './screens/EditScreen'
 import IsoTestScreen from './screens/IsoTestScreen'
+
+/** Old meeting-mode links: /meeting/:planId → /edit/:planId. */
+function MeetingRedirect() {
+  const { planId = '' } = useParams()
+  return <Navigate to={`/edit/${planId}`} replace />
+}
 
 export default function App() {
   return (
@@ -12,7 +18,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<PromptScreen />} />
           <Route path="/plan/:planId" element={<PlanScreen />} />
-          <Route path="/meeting/:planId" element={<MeetingScreen />} />
+          <Route path="/edit/:planId" element={<EditScreen />} />
+          <Route path="/meeting/:planId" element={<MeetingRedirect />} />
           <Route path="/iso-test" element={<IsoTestScreen />} />
         </Routes>
       </AppProvider>

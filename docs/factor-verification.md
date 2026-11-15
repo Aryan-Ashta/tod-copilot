@@ -1,6 +1,6 @@
 # Factor verification (2026-11-14)
 
-Scope: the 45 factors the demo surfaces (`FactorHover` keys in the Targets bars, meeting-mode Scoreboard, Funding card,
+Scope: the 45 factors the demo surfaces (`FactorHover` keys in the Targets bars, edit-mode Scoreboard, Funding card,
 Building reuse blockers and score inputs, plus the `factor_keys` / `assumptions` the backend attaches to targets,
 capital stacks, gap-to-pencil and score inputs in the three demo plans). 28 cite an external source and were checked
 against it; 17 are labelled team design choices with no external source.

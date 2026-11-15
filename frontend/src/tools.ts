@@ -1,4 +1,4 @@
-// Click-twice tiles in meeting mode: which parcels or buildings an armed tile can land on. Mirrors the checks the
+// Click-twice tiles in edit mode: which parcels or buildings an armed tile can land on. Mirrors the checks the
 // backend makes when it applies a place_tile edit (backend/models/rescore.py `_apply`), so the map highlights only
 // targets the rescore will accept, and leaves out targets the tile would not change: a park on a park, a stop where
 // a stop already stands, homes where the plan already builds them, a conversion to the use the building already has.

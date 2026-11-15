@@ -8,7 +8,7 @@
 
 - **City and transit planners:** draft a station-area plan in minutes, not months.
 - **Developers and owners:** find which buildings convert and which sites pencil.
-- **Residents at public meetings:** a projector-friendly "meeting mode" where they place uses on the map and see the results.
+- **Residents at public meetings:** a projector-friendly "edit mode" where they place uses on the map and see the results.
 
 ## Locales
 
@@ -33,7 +33,7 @@ Three, each with a distinct purpose. See `docs/11-test-locales.md` for the full 
 
 ## Interactive planning (software only)
 
-- **Meeting mode:** a large-type, touch-friendly view for a projector or tablet. Click a tile (homes, park, stop, convert to housing, convert to hotel), then a highlighted parcel or building to place it; the plan re-scores in under a second. A plan history and statistics panel show what each change did; the agents' suggestions can be applied as one change.
+- **Edit mode:** a large-type, touch-friendly view for a projector or tablet. Click a tile (homes, park, stop, convert to housing, convert to hotel), then a highlighted parcel or building to place it; the plan re-scores in under a second. A plan history and statistics panel show what each change did; the agents' suggestions can be applied as one change.
 - **Trade-off slider:** homes ↔ green space.
 - **Uncertainty queue:** the plan lists the measurements that would most reduce its uncertainty (for example, a manual passenger count at the least-certain stop). Each one shows how much the range would narrow.
 
@@ -46,7 +46,7 @@ Three, each with a distinct purpose. See `docs/11-test-locales.md` for the full 
 - [ ] Every data value shows a source and confidence badge.
 - [ ] Each funded site or conversion shows a capital stack with its exact affordable homes and funding required, computed in code.
 - [ ] Targets show transport CO₂, embodied carbon saved, solar and walk access, each with its factor source on hover.
-- [ ] Meeting-mode tile placements and the slider re-score in under 1 s.
+- [ ] Edit-mode tile placements and the slider re-score in under 1 s.
 - [ ] The Brevard plan shows no CoStar data, medium or low confidence badges, missing-data notes, and 0% of new homes in flood zones.
 - [ ] Each locale's validation checklist in `docs/11-test-locales.md` passes or has a written reason it's skipped.
 - [ ] Everything works with `DEMO_OFFLINE=1`.

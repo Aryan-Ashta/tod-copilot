@@ -122,7 +122,7 @@ export interface PlanState {
   plan: Partial<Plan>
   /** Map/stats view: existing conditions + accepted edits (existingView(plan) until the first rescore lands). */
   current: Partial<Plan>
-  /** Proposed features from rescore (parks placed in meeting mode). */
+  /** Proposed features from rescore (parks placed in edit mode). */
   infraAdded: InfraFeature[]
   agentStatus: Record<AgentName, AgentStatus>
   steps: Record<AgentName, string[]>
@@ -154,7 +154,7 @@ export interface PlanState {
   scoreSteps: Record<number, ScoreSnapshot>
   /** Id of the newest accepted edit of the latest rescore; null after undo/remove/reset. */
   lastChangeId: number | null
-  /** Armed tile in meeting mode. */
+  /** Armed tile in edit mode. */
   tool: TileKind | null
   /** Recomputed from edits + scoreSteps on every rescore. */
   history: HistoryItem[]
@@ -203,7 +203,7 @@ const nextEditId = (s: PlanState) => Math.max(0, ...s.edits.map((e) => e.id), ..
 
 const storageKey = (planId: string) => `transitor.edits.${planId}`
 
-/** Edits saved for this plan (plan screen ↔ meeting mode share them); [] on missing or bad data. */
+/** Edits saved for this plan (plan screen ↔ edit mode share them); [] on missing or bad data. */
 function loadEdits(planId: string): EditEntry[] {
   try {
     const raw: unknown = JSON.parse(sessionStorage.getItem(storageKey(planId)) ?? '[]')
@@ -475,7 +475,7 @@ if (import.meta.hot) import.meta.hot.data.planCtx = Ctx
 
 /**
  * mode "stream": open the SSE stream (live or replay), then GET the full plan when the coordinator finishes.
- * mode "static": GET the plan directly (meeting mode); fall back to the live stream if it is not ready yet.
+ * mode "static": GET the plan directly (edit mode); fall back to the live stream if it is not ready yet.
  */
 export function PlanProvider({
   planId,

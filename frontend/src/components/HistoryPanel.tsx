@@ -164,7 +164,7 @@ interface Leaving {
 
 const EXIT_MS = 260
 
-/** Meeting mode's plan history: each accepted edit with its icon, place and changes; hover to see it in the stats,
+/** Edit mode's plan history: each accepted edit with its icon, place and changes; hover to see it in the stats,
  *  ✕ to remove it. */
 export default function HistoryPanel() {
   const { state, dispatch } = usePlan()

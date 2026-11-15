@@ -2,15 +2,14 @@
 // from the agents' suggestions (`state.plan`, applied or not), the map layers it speaks to (the rest fade), the box
 // its contributions span (MapView eases the camera there) and a caption: what it found and what it unlocks in
 // meeting mode. Pure: counts come straight from plan data, nothing here is a planning figure.
-import { GeoJsonLayer, IconLayer, PolygonLayer, ScatterplotLayer, SolidPolygonLayer, TextLayer } from '@deck.gl/layers'
+import { GeoJsonLayer, PolygonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers'
 import { PathStyleExtension } from '@deck.gl/extensions'
 import type { Color, Layer } from '@deck.gl/core'
-import { pointInRing, type BBox } from './geo'
+import type { BBox } from './geo'
 import {
   edgesLayer,
   feature,
   FLAT,
-  FT_TO_M,
   grownRing,
   INFRA_COLORS,
   INK,
@@ -31,7 +30,7 @@ import {
   type TransitLine,
 } from './mapLayers'
 import { REDUCED_MOTION } from './construction'
-import { fmtNum, geometryCentroid, haversineM, humanize } from './format'
+import { fmtNum, geometryCentroid, humanize } from './format'
 import { validTargets } from './tools'
 import { transitFleet, type VehicleLine } from './vehicles'
 import { AGENT_LABELS, type AgentName, type DealKind, type Geometry, type InfraKind, type LonLat, type Plan, type Route, type Site, type Stop } from './types'
@@ -48,8 +47,6 @@ export interface FocusInput {
   lines: ReadonlyMap<string, TransitLine>
   /** The locale's bbox: contributions outside it (county-wide utility areas) do not pull the camera away. */
   frame: BBox | null
-  /** A factor's number for the plan's locale (factors.yaml), null when absent or not loaded. */
-  factor?: (key: string) => number | null
 }
 
 export interface FocusCaption {
@@ -458,316 +455,18 @@ function funding({ plan, frame }: FocusInput): AgentFocus {
   }
 }
 
-// ---------------------------------------------------------------- sustainability: solar roofs, walk sheds, leaves
-// Drawing only: where the plan's roofs, walks and carbon savings are. Tile sizes and timings are layout, not figures;
-// every number shown is a target from the plan (backend/models/targets.py).
+// ---------------------------------------------------------------- sustainability: flood zones, in-plan sites in them
+// Every number shown is a target from the plan (backend/models/targets.py).
 
-const M_PER_DEG = 111_320 // unit conversion, not a planning factor
-const SOLAR_DARK: Color = [27, 48, 104]
-const SOLAR_LIGHT: Color = [54, 90, 166]
-const SOLAR_GLINT: Color = [216, 234, 255]
-const NEW_BUILD_GHOST: Color = [169, 191, 231]
-/** A roof gets at most this many panels (a big roof gets bigger tiles, not more), the map at most MAX_PANELS. */
-const PANELS_PER_ROOF = 40
-const MAX_PANELS = 900
-const PANEL_L_M = 3.4 // along the roof's long side
-const PANEL_W_M = 2.2 // up the tilt
-const PANEL_GAP_M = 0.6
-const ROW_GAP_M = 1.2
-const ROOF_INSET_M = 1.2
-const PANEL_LIFT_M = 0.6
-const PANEL_TILT = 0.3 // rise per metre up the panel
-const SHIMMER_MS = 3600
-const SHIMMER_BAND = 0.16
-const SHED_MS = 5200
-const LEAF_MS = 5600
-const LEAF_RISE_M = 36
-const LEAF_PX = 18
-const MAX_SHED_SITES = 6
-const MAX_LEAF_SITES = 8
-const LEAVES_PER_SITE = 3
-/** Frames per second the per-panel colours are recomputed at (the sweep is slow; 60 would only cost). */
-const SHIMMER_FPS = 24
-
-interface RoofPanel {
-  poly: [number, number, number][]
-  /** 0: the lower strip of the panel, 1: the upper (the two tones read as tilt). */
-  tone: 0 | 1
-  /** Position along the shimmer sweep, 0..1 across all panels. */
-  s: number
-}
-
-const mixColor = (a: Color, b: Color, t: number): Color => [
-  Math.round(a[0] + (b[0] - a[0]) * t),
-  Math.round(a[1] + (b[1] - a[1]) * t),
-  Math.round(a[2] + (b[2] - a[2]) * t),
-]
-
-/** Rows of panels on one roof ring (lon/lat) at `z` m, aligned to its longest side and inset from its edges. */
-function roofPanels(out: RoofPanel[], ring: number[][], z: number, cap: number) {
-  if (ring.length < 4 || cap <= 0) return
-  const [lon0, lat0] = ring[0]
-  const kx = M_PER_DEG * Math.cos((lat0 * Math.PI) / 180)
-  const pts = ring.map(([x, y]) => [(x - lon0) * kx, (y - lat0) * M_PER_DEG] as [number, number])
-  let [ex, ey, longest, area] = [1, 0, 0, 0]
-  for (let i = 0; i + 1 < pts.length; i++) {
-    const [dx, dy] = [pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]]
-    const l = Math.hypot(dx, dy)
-    if (l > longest) [ex, ey, longest] = [dx / l, dy / l, l]
-    area += pts[i][0] * pts[i + 1][1] - pts[i + 1][0] * pts[i][1]
-  }
-  area = Math.abs(area) / 2
-  const [nx, ny] = [-ey, ex]
-  const k = Math.max(1, Math.sqrt(area / (PANELS_PER_ROOF * (PANEL_L_M + PANEL_GAP_M) * (PANEL_W_M + ROW_GAP_M))))
-  const [L, W, gu, gv] = [PANEL_L_M * k, PANEL_W_M * k, PANEL_GAP_M * k, ROW_GAP_M * k]
-  let [u0, u1, v0, v1] = [Infinity, -Infinity, Infinity, -Infinity]
-  for (const [x, y] of pts) {
-    const [u, v] = [x * ex + y * ey, x * nx + y * ny]
-    ;[u0, u1, v0, v1] = [Math.min(u0, u), Math.max(u1, u), Math.min(v0, v), Math.max(v1, v)]
-  }
-  const m = ROOF_INSET_M
-  const nu = Math.floor((u1 - u0 - 2 * m + gu) / (L + gu))
-  const nv = Math.floor((v1 - v0 - 2 * m + gv) / (W + gv))
-  if (nu < 1 || nv < 1) return
-  // the grid centred on the roof's box; tiles whose inset rectangle leaves the outline are skipped
-  const su = u0 + (u1 - u0 - (nu * (L + gu) - gu)) / 2
-  const sv = v0 + (v1 - v0 - (nv * (W + gv) - gv)) / 2
-  const local = (u: number, v: number): [number, number] => [u * ex + v * nx, u * ey + v * ny]
-  const lonlat = (u: number, v: number, h: number): [number, number, number] => {
-    const [x, y] = local(u, v)
-    return [lon0 + x / kx, lat0 + y / M_PER_DEG, h]
-  }
-  let n = 0
-  for (let iv = 0; iv < nv; iv++) {
-    for (let iu = 0; iu < nu; iu++) {
-      if (n >= cap) return
-      const [u, v] = [su + iu * (L + gu), sv + iv * (W + gv)]
-      const corners: [number, number][] = [[u - m, v - m], [u + L + m, v - m], [u + L + m, v + W + m], [u - m, v + W + m]]
-      if (!corners.every(([a, b]) => pointInRing(local(a, b), pts))) continue
-      for (const tone of [0, 1] as const) {
-        const [a, b] = [v + (tone * W) / 2, v + ((tone + 1) * W) / 2]
-        const [za, zb] = [z + PANEL_LIFT_M + (a - v) * PANEL_TILT, z + PANEL_LIFT_M + (b - v) * PANEL_TILT]
-        out.push({ poly: [lonlat(u, a, za), lonlat(u + L, a, za), lonlat(u + L, b, zb), lonlat(u, b, zb)], tone, s: 0 })
-      }
-      n++
-    }
-  }
-}
-
-/** Outer rings of a Polygon/MultiPolygon. */
-function outerRings(g: Geometry): number[][][] {
-  if (g.type === 'Polygon') return [(g.coordinates as number[][][])[0]]
-  if (g.type === 'MultiPolygon') return (g.coordinates as number[][][][]).map((p) => p[0])
-  return []
-}
-
-const LEAF_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' +
-  '<path fill-rule="evenodd" fill="#fff" d="M8 56C8 26 28 8 58 6C58 36 40 56 8 56Z M13 52.5L44 21.5L45.5 23L14.5 54Z"/></svg>'
-const LEAF_ICON = { id: 'leaf', url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(LEAF_SVG)}`, width: 64, height: 64, mask: true }
-
-interface Shed {
-  at: LonLat
-  kind: 'frequent_stop' | 'park'
-  /** Every site this stop or park is nearest to walks to its kind within the walk target. */
-  met: boolean
-}
-
-interface Leaf {
-  at: LonLat
-  z: number
-  phase: number
-}
-
-function sustainability({ plan, current, buildings, storyHeightFt, frame, factor }: FocusInput): AgentFocus {
+function sustainability({ plan, frame }: FocusInput): AgentFocus {
   const inFlood = plan.precomputed?.in_flood ?? {}
-  const walkM = plan.precomputed?.walk_m ?? {}
-  const infra = plan.infrastructure ?? []
-  const zones = infra.filter((f) => f.kind === 'flood_zone')
+  const zones = (plan.infrastructure ?? []).filter((f) => f.kind === 'flood_zone')
   const sites = (plan.sites ?? []).filter((s) => s.status !== 'pass')
   const flooded = sites.filter((s) => s.parcel_ids.some((p) => inFlood[p]))
   const target = (key: string) => plan.targets?.find((t) => t.key === key)
   const walk = target('walk_access')
   const co2 = target('transport_co2')
   const solar = target('rooftop_solar')
-  // in plan = pursue or watch, as the targets count them (rescore.py in_plan, site_target)
-  const inPlan = sites.filter((s) => s.status === 'pursue' || s.status === 'watch').sort((a, b) => b.homes - a.homes)
-  const speed = factor?.('walk_speed_m_per_s') ?? null
-  const minutes = factor?.('walk_minutes_target') ?? null
-  const thr = speed !== null && minutes !== null ? speed * 60 * minutes : null
-  const walks = (s: Site, kind: string) => {
-    const d = walkM[s.kind === 'conversion' && s.building_id ? s.building_id : s.parcel_ids[0]]?.[kind]
-    return thr !== null && d !== null && d !== undefined && d <= thr
-  }
-
-  // ---- rooftop solar: the roofs the rooftop_solar target counts (converted buildings, new builds' roofs)
-  const byBuilding = new Map<string, BuildingDatum[]>()
-  for (const d of buildings) byBuilding.set(d.building.id, [...(byBuilding.get(d.building.id) ?? []), d])
-  const shown = new Set((current.sites ?? []).filter((s) => s.status !== 'pass').map((s) => s.id))
-  const roofs: { ring: number[][]; z: number }[] = []
-  const roofZ = new Map<string, number>()
-  const ghosts: { ring: number[][]; h: number }[] = []
-  for (const s of inPlan) {
-    if (s.kind === 'conversion') {
-      for (const d of (s.building_id && byBuilding.get(s.building_id)) || []) {
-        const z = storeyElevation(d.building, storyHeightFt)
-        roofs.push({ ring: d.polygon[0], z })
-        roofZ.set(s.id, Math.max(roofZ.get(s.id) ?? 0, z))
-      }
-    } else {
-      const h = s.height_ft * FT_TO_M
-      for (const ring of outerRings(s.geometry)) {
-        roofs.push({ ring, z: h })
-        // a suggested building not on the map yet stands as a see-through block under its panels
-        if (!shown.has(s.id)) ghosts.push({ ring, h })
-      }
-      roofZ.set(s.id, h)
-    }
-  }
-  const panels: RoofPanel[] = []
-  for (const r of roofs) roofPanels(panels, r.ring, r.z, Math.min(PANELS_PER_ROOF, MAX_PANELS - panels.length / 2))
-  if (panels.length) {
-    const kx = Math.cos((panels[0].poly[0][1] * Math.PI) / 180)
-    const raw = panels.map((p) => p.poly[0][0] * kx + p.poly[0][1])
-    const lo = Math.min(...raw)
-    const span = Math.max(...raw) - lo || 1
-    panels.forEach((p, i) => (p.s = (raw[i] - lo) / span))
-  }
-  const panelLayer = (sweep: number | null, tick: number) =>
-    new SolidPolygonLayer<RoofPanel>({
-      id: 'agent_solar_panels',
-      data: panels,
-      filled: true,
-      extruded: false,
-      getPolygon: (p) => p.poly,
-      getFillColor: (p) => {
-        const base = p.tone ? SOLAR_LIGHT : SOLAR_DARK
-        if (sweep === null) return base
-        const d = Math.abs(p.s - sweep) / SHIMMER_BAND
-        return d >= 1 ? base : mixColor(base, SOLAR_GLINT, 0.8 * (1 - d) ** 2)
-      },
-      updateTriggers: { getFillColor: tick },
-    })
-  const ghostLayer = new PolygonLayer<{ ring: number[][]; h: number }>({
-    id: 'agent_solar_ghosts',
-    data: ghosts,
-    extruded: true,
-    filled: true,
-    material: MATTE,
-    getPolygon: (g) => g.ring,
-    getElevation: (g) => g.h,
-    getFillColor: withAlpha(NEW_BUILD_GHOST, 90),
-  })
-
-  // ---- walk sheds: the frequent stop and the park nearest each in-plan site, a walk-target ring around each
-  const freqMax = factor?.('readiness_frequent_headway_max_min') ?? null
-  const stops = infra
-    .filter((f) => {
-      if (f.kind !== 'bus_stop') return false
-      const hw = f.attrs.peak_headway_min
-      return f.attrs.rail === true || (freqMax !== null && typeof hw === 'number' && hw <= freqMax)
-    })
-    .map((f) => geometryCentroid(f.geometry))
-    .filter((p): p is LonLat => p !== null)
-  const parks = infra
-    .filter((f) => f.kind === 'park')
-    .map((f) => geometryCentroid(f.geometry))
-    .filter((p): p is LonLat => p !== null)
-  const sheds = new Map<string, Shed>()
-  if (thr !== null) {
-    for (const s of inPlan.slice(0, MAX_SHED_SITES)) {
-      const c = geometryCentroid(s.geometry)
-      if (!c) continue
-      for (const [kind, pool] of [['frequent_stop', stops], ['park', parks]] as const) {
-        let best: LonLat | null = null
-        let bestD = Infinity
-        for (const p of pool) {
-          const d = haversineM(c, p)
-          if (d < bestD) [best, bestD] = [p, d]
-        }
-        if (!best) continue
-        const key = `${kind}:${best[0]},${best[1]}`
-        sheds.set(key, { at: best, kind, met: (sheds.get(key)?.met ?? true) && walks(s, kind) })
-      }
-    }
-  }
-  const shedData = [...sheds.values()]
-  const shedColor = (d: Shed) => (d.met ? GREEN : AMBER)
-  const shedDisks = new ScatterplotLayer<Shed>({
-    id: 'agent_walk_sheds',
-    parameters: FLAT,
-    data: shedData,
-    getPosition: (d) => d.at,
-    radiusUnits: 'meters',
-    getRadius: thr ?? 0,
-    filled: true,
-    stroked: true,
-    lineWidthUnits: 'pixels',
-    getLineWidth: 1.5,
-    getLineColor: (d) => withAlpha(shedColor(d), 120),
-    getFillColor: (d) => withAlpha(shedColor(d), 12),
-  })
-  const shedCentres = new ScatterplotLayer<Shed>({
-    id: 'agent_walk_shed_centres',
-    parameters: FLAT,
-    data: shedData,
-    getPosition: (d) => d.at,
-    radiusUnits: 'pixels',
-    getRadius: 5,
-    stroked: true,
-    lineWidthUnits: 'pixels',
-    getLineWidth: 2,
-    getLineColor: [255, 255, 255, 230],
-    getFillColor: (d) => (d.kind === 'park' ? (INFRA_COLORS.park ?? GREEN) : TEAL),
-  })
-  const ripples = ['agent_walk_ripple_a', 'agent_walk_ripple_b'].map(
-    (id) =>
-      new ScatterplotLayer<Shed>({
-        id,
-        parameters: FLAT,
-        data: shedData,
-        getPosition: (d) => d.at,
-        radiusUnits: 'meters',
-        getRadius: thr ?? 0,
-        filled: false,
-        stroked: true,
-        lineWidthUnits: 'pixels',
-        getLineWidth: 2.5,
-        getLineColor: (d) => withAlpha(shedColor(d), 220),
-      }),
-  )
-
-  // ---- leaves rising over the sites that save carbon: homes near frequent transit (transport CO2) or a conversion
-  const conv = new Map((plan.conversions ?? []).map((c) => [c.building_id, c.best_use]))
-  const leafSites = inPlan
-    .filter((s) => walks(s, 'frequent_stop') || (s.kind === 'conversion' && !!s.building_id && (conv.get(s.building_id) ?? 'keep_current') !== 'keep_current'))
-    .slice(0, MAX_LEAF_SITES)
-  const leaves: Leaf[] = []
-  leafSites.forEach((s, i) => {
-    const at = geometryCentroid(s.geometry)
-    if (!at) return
-    for (let j = 0; j < LEAVES_PER_SITE; j++) leaves.push({ at, z: (roofZ.get(s.id) ?? 0) + 3, phase: (i * 0.37 + j / LEAVES_PER_SITE) % 1 })
-  })
-  const leafLayer = (ms: number | null) => {
-    const t = (l: Leaf) => (ms === null ? 0.5 : (ms / LEAF_MS + l.phase) % 1)
-    return new IconLayer<Leaf>({
-      id: 'agent_leaves',
-      data: leaves,
-      getIcon: () => LEAF_ICON,
-      getPosition: (l) => {
-        const k = t(l)
-        const sway = (Math.sin((k * 1.5 + l.phase) * 2 * Math.PI) * 4) / (M_PER_DEG * Math.cos((l.at[1] * Math.PI) / 180))
-        return [l.at[0] + sway, l.at[1], l.z + k * LEAF_RISE_M]
-      },
-      // a leaf grows in and shrinks away rather than fading, so it never half-writes depth over the buildings behind
-      getSize: (l) => LEAF_PX * Math.sin(Math.PI * t(l)),
-      sizeUnits: 'pixels',
-      getColor: [46, 125, 91, 235],
-      billboard: true,
-      updateTriggers: { getPosition: ms, getSize: ms },
-    })
-  }
-
   const parts = [
     `${plural(zones.length, 'flood zone')} · ${plural(flooded.length, 'suggested site')} in a flood zone`,
     co2 && `transport ${fmtNum(co2.value, 1)} ${co2.unit}`,
@@ -775,31 +474,15 @@ function sustainability({ plan, current, buildings, storyHeightFt, frame, factor
     walk && `walk access ${fmtNum(walk.value, 1)} ${walk.unit}`,
   ].filter(Boolean)
   return {
-    layers: [siteFootprints('agent_flood_sites', flooded, () => RED, false, 130), shedDisks, shedCentres],
-    above: [ghostLayer, ...(REDUCED_MOTION ? [panelLayer(null, 0), leafLayer(null)] : [])],
-    bbox: boxOf(
-      inPlan.length || flooded.length ? [...inPlan, ...flooded].map((s) => s.geometry) : zones.map((f) => f.geometry),
-      frame,
-    ),
-    emphasize: ['flood', 'walk_bike', 'amenities'],
+    layers: [siteFootprints('agent_flood_sites', flooded, () => RED, false, 130)],
+    above: [],
+    bbox: boxOf(flooded.length ? flooded.map((s) => s.geometry) : zones.map((f) => f.geometry), frame),
+    emphasize: ['flood'],
     caption: {
       title: AGENT_LABELS.sustainability_health,
       summary: parts.join(' · '),
-      unlocks: 'Homes tiles stay off flood-zone lots · Park tiles add walkable green space in Meeting mode',
+      unlocks: 'Homes tiles stay off flood-zone lots · Park tiles add walkable green space in Edit mode',
     },
-    animate: REDUCED_MOTION
-      ? undefined
-      : (ms) => {
-          const tick = Math.floor((ms * SHIMMER_FPS) / 1000)
-          const sweep = ((ms % SHIMMER_MS) / SHIMMER_MS) * (1 + 2 * SHIMMER_BAND) - SHIMMER_BAND
-          const out: Layer[] = ripples.map((l, i) => {
-            const k = (ms / SHED_MS + i / ripples.length) % 1
-            return l.clone({ radiusScale: 0.08 + 0.92 * k, opacity: 0.9 * (1 - k) })
-          })
-          if (panels.length) out.push(panelLayer(sweep, tick))
-          if (leaves.length) out.push(leafLayer((tick * 1000) / SHIMMER_FPS))
-          return out
-        },
   }
 }
 
