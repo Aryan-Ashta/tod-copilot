@@ -473,7 +473,13 @@ function PlacePing({ ping, onDone }: { ping: Ping; onDone: (id: number) => void 
   )
 }
 
-function tooltipFor(info: PickingInfo): string | null {
+/** What a tooltip needs beyond the picked object: buildings the plan converts (to their new use) and parcel land uses. */
+interface TipContext {
+  converted: ReadonlyMap<string, UseType>
+  parcelUse: ReadonlyMap<string, string | null>
+}
+
+function tooltipFor(info: PickingInfo, ctx: TipContext): string | null {
   const p = decodePick(info)
   if (!p) return null
   switch (p.layer) {
@@ -481,15 +487,20 @@ function tooltipFor(info: PickingInfo): string | null {
       return `${p.parcel.address.value ?? `parcel ${p.parcel.id}`}\n${humanize(p.parcel.land_use.value ?? 'land use missing')}`
     case 'buildings': {
       const name = p.building.name.value ?? `building ${p.building.id}`
-      if (!p.conversion) return `${name}\n${humanize(p.building.property_type.value ?? 'type missing')}`
-      return `${name}\nbest use: ${humanize(p.conversion.best_use)} · overall ${fmtNum(p.conversion.overall, 2)}`
+      const was = humanize(p.building.property_type.value ?? 'type missing')
+      const now = ctx.converted.get(p.building.id)
+      if (now) return `${name}\n${humanize(now)} · was ${was}`
+      if (!p.conversion) return `${name}\n${was}`
+      return `${name}\n${was} · best use: ${humanize(p.conversion.best_use)} · overall ${fmtNum(p.conversion.overall, 2)}`
     }
     case 'sites': {
       const d = p.site
       return `Site ${d.letter} · ${humanize(d.site.kind)} · ${fmtNum(d.site.homes)} homes${d.strategy ? ` · ${humanize(d.strategy)}` : ''}`
     }
-    case 'new_buildings':
-      return `New building · ${fmtNum(p.site.homes)} homes · ${fmtNum(p.site.height_ft)} ft${p.site.status === 'watch' ? '\non watch: does not pencil yet' : ''}`
+    case 'new_buildings': {
+      const was = p.site.parcel_ids.map((id) => ctx.parcelUse.get(id)).find((u) => u)
+      return `New building · ${fmtNum(p.site.homes)} homes · ${fmtNum(p.site.height_ft)} ft${was ? ` · was ${humanize(was)}` : ''}${p.site.status === 'watch' ? '\non watch: does not pencil yet' : ''}`
+    }
     case 'stops':
       return `${p.stop.name ?? `Stop ${p.stop.id}`}\n${fmtNum(p.stop.riders_per_day_low)}–${fmtNum(p.stop.riders_per_day_high)} riders/day (est.)`
     case 'proposed_routes': {
@@ -567,6 +578,8 @@ export default function MapView({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MlMap | null>(null)
   const overlayRef = useRef<MapboxOverlay | null>(null)
+  // read by the overlay's tooltip, which is created once with the map
+  const tipRef = useRef<TipContext>({ converted: new Map(), parcelUse: new Map() })
   const [loaded, setLoaded] = useState(false)
   const [hoverKeys, setHoverKeys] = useState('')
   // MapLibre's click handler is bound once at map creation; it calls through this to see the current render.
@@ -604,7 +617,7 @@ export default function MapView({
       // so the pointer shows exactly over what a click would place the tile on
       getCursor: ({ isDragging, isHovering }) => (isDragging ? 'grabbing' : isHovering ? 'pointer' : 'grab'),
       getTooltip: (info) => {
-        const text = tooltipFor(info)
+        const text = tooltipFor(info, tipRef.current)
         return text
           ? {
               text,
@@ -680,6 +693,7 @@ export default function MapView({
   const deals = plan.deals
   const L = state.layers
   const sel = state.selected
+  const hasSelection = !!(sel.buildingId || sel.parcelId || sel.stopId)
   const storyHeightFt = factorNumber('story_height_ft')
 
   const strategyBySite = useMemo(() => new Map<string, DealKind>((deals ?? []).map((d) => [d.site_id, d.strategy])), [deals])
@@ -896,6 +910,10 @@ export default function MapView({
     }
     return m
   }, [convertedKey])
+  const parcelUse = useMemo(() => new Map(parcels.map((p) => [p.id, p.land_use.value])), [parcels])
+  useEffect(() => {
+    tipRef.current = { converted, parcelUse }
+  }, [converted, parcelUse])
   const lBuildings = useMemo(
     () => buildingsLayer(buildingData, storyHeightFt, L.buildings || large, hidden, converted),
     [buildingData, storyHeightFt, L.buildings, large, hidden, converted],
@@ -1002,13 +1020,13 @@ export default function MapView({
 
   // ---------------------------------------------------------------- agent emphasis (plan screen)
   // Each pick in the agent list (state.agentPick counts them; the value at mount is ignored) emphasises the selected
-  // agent's contributions, eases the camera to them and shows a caption; its ✕ clears the emphasis.
+  // agent's contributions and eases the camera to them; the emphasis stays until the next pick.
   const pick = state.agentPick
   const [mountPick] = useState(pick)
-  const [clearedPick, setClearedPick] = useState<number | null>(null)
   const picked = focusAgents && pick !== mountPick
   const selectedAgent = state.selectedAgent
   const frame = locale?.bbox ?? null
+  // The emphasis in force: null before the first pick and for the coordinator (its overlays fade out).
   const agentView = useMemo(
     () =>
       picked
@@ -1023,15 +1041,14 @@ export default function MapView({
         : null,
     [picked, selectedAgent, suggestions, plan, buildingData, storyHeightFt, lineIndex, frame],
   )
-  /** The emphasis in force: null before the first pick, for the coordinator and once cleared (its overlays fade out). */
-  const focusView = clearedPick !== pick ? agentView : null
 
   const cameraPick = useRef(mountPick)
   useEffect(() => {
     const map = mapRef.current
     if (!map || !loaded || !picked || cameraPick.current === pick) return
     cameraPick.current = pick
-    if (!agentView) return
+    // a building, parcel or stop in focus keeps the camera: picking an agent does not pull the view away from it
+    if (!agentView || hasSelection) return
     const b = agentView.bbox
     const pts: [number, number][] | null = b
       ? [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]
@@ -1043,17 +1060,11 @@ export default function MapView({
     const bearing = ISO_CAMERA.bearing + (i % 2 === 0 ? -1 : 1) * FOCUS_BEARING_NUDGE_DEG
     const m = FOCUS_MARGIN_PX
     easeIso(map, pts, { top: top + m, right: right + m, bottom: bottom + m, left: left + m }, bearing, FOCUS_MAX_ZOOM)
-  }, [pick, picked, loaded, agentView, selectedAgent, locale, top, right, bottom, left])
-
-  const clearFocus = () => {
-    setClearedPick(pick)
-    const map = mapRef.current
-    if (map && locale) easeIso(map, outlinePoints(locale.boundary, locale.bbox), { top, right, bottom, left }, ISO_CAMERA.bearing)
-  }
+  }, [pick, picked, loaded, agentView, selectedAgent, locale, top, right, bottom, left, hasSelection])
 
   // ---------------------------------------------------------------- compose + animate
   // null: no emphasis in force; '' : emphasis that keeps no map layer (its overlays carry it)
-  const emphKey = focusView ? focusView.emphasize.join(',') : null
+  const emphKey = agentView ? agentView.emphasize.join(',') : null
   const fadeTargets = useMemo((): Fades => {
     const emph = new Set(emphKey ? emphKey.split(',') : [])
     const t = { ...REST }
@@ -1113,7 +1124,7 @@ export default function MapView({
     kick()
   }, [pick, picked, fadeAt, kick])
 
-  const live = !REDUCED_MOTION && (toolOn !== null || focusView?.animate !== undefined)
+  const live = !REDUCED_MOTION && (toolOn !== null || agentView?.animate !== undefined)
   useEffect(() => {
     anim.current.live = live
     if (live) kick()
@@ -1143,7 +1154,7 @@ export default function MapView({
 
   // Transit draws over the other ground layers (parcels, sidewalks) so lines stay legible; buildings still hide it.
   useEffect(() => {
-    const emph = new Set<FadeGroup>(focusView?.emphasize ?? [])
+    const emph = new Set<FadeGroup>(agentView?.emphasize ?? [])
     composeRef.current = (now) => {
       const v = fadeAt(now)
       const out: Layer[] = []
@@ -1174,7 +1185,7 @@ export default function MapView({
       add(lFlood, 'flood')
       add(lBoundary)
       add(lParcels, 'parcels')
-      add(lSelParcel, 'parcels')
+      add(lSelParcel)
       add(lLawns, 'new_buildings')
       lTransit.forEach((l) => add(l, 'transit_existing'))
       add(lFeedStops, 'transit_existing')
@@ -1188,7 +1199,7 @@ export default function MapView({
       }
       lBuildings.forEach((l) => add(l, 'buildings'))
       lDemo.forEach((l) => add(l, 'buildings'))
-      lSelBuilding.forEach((l) => add(l, 'buildings'))
+      lSelBuilding.forEach((l) => add(l))
       lToolBuildings?.forEach((l) => addTool(l))
       lSites.forEach((l) => add(l, 'sites'))
       lNew.forEach((l) => add(l, 'new_buildings'))
@@ -1202,10 +1213,8 @@ export default function MapView({
   }, [
     lWalk, lUtil, lAmen, lFlood, lBoundary, lParcels, lSelParcel, lLawns, lTransit, lFeedStops, lProp, lStops, lStations,
     lBuildings, lDemo, lSelBuilding, lSites, lNew, lDecor, lBuild, fountains, lToolParcels, lToolBuildings, agentView,
-    focusView, fadeAt, push, large,
+    fadeAt, push, large,
   ])
-
-  const caption = focusView?.caption ?? null
 
   // maplibre's own CSS sets `.maplibregl-map { position: relative }`, so the map gets a sized inner box.
   return (
@@ -1214,34 +1223,6 @@ export default function MapView({
       {pings.map((p) => (
         <PlacePing key={p.id} ping={p} onDone={pingDone} />
       ))}
-      {caption && (
-        <div
-          key={pick}
-          role="status"
-          // bottom-left, just above the panels along the map's bottom edge: clear of everything floating at the top
-          style={{ bottom: bottom + 32 }}
-          className="pop-in absolute left-3 z-20 w-max max-w-[min(30rem,calc(100%-1.5rem))] rounded-[12px] border-[1.5px] border-ink bg-paper py-2.5 pr-2.5 pl-3.5 shadow-[1.5px_1.5px_0_var(--color-ink),0_8px_24px_rgb(28_34_48/.12)]"
-        >
-          <div className="flex items-start gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="text-[15px] leading-tight font-bold">{caption.title}</div>
-              <div className="mt-0.5 text-[13px] leading-snug text-slate">{caption.summary}</div>
-              <div className="mt-1 text-[13px] leading-snug">
-                <span className="font-semibold">Unlocks:</span> {caption.unlocks}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={clearFocus}
-              aria-label="Clear agent emphasis"
-              title="Clear emphasis"
-              className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[13px] text-slate transition-colors duration-150 hover:bg-ink/[0.07] hover:text-ink"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

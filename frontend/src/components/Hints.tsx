@@ -1,12 +1,10 @@
-// Pencil hints: a fixed overlay of hand-drawn arrows, loose circles and short notes that point at DOM anchors set by
-// other components (data-hint-anchor, data-history-id). Display only: every number comes from state.
+// Pencil hints: a fixed overlay of hand-drawn arrows and short notes that walk a first-time user through placing a
+// tile (data-hint-anchor targets set by other components). Shown until the first change.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { REDUCED_MOTION } from '../construction'
-import { suggestionsApplied, usePlan, type HistoryItem } from '../state/PlanContext'
+import { suggestionsApplied, usePlan } from '../state/PlanContext'
 
 const INTRO_KEY = 'transitor.hints.intro'
-/** How long a "what your change affected" hint stays before fading. */
-const CHANGE_MS = 3500
 /** Fade-out duration; matches the .tz-hint-inst transition. */
 const FADE_MS = 420
 const TAU = Math.PI * 2
@@ -25,7 +23,7 @@ interface Frame {
   boxes: Record<string, Box[]>
 }
 
-type Hint = { kind: 'tray' } | { kind: 'map' } | { kind: 'apply' } | { kind: 'change'; item: HistoryItem }
+type Hint = { kind: 'tray' } | { kind: 'map' } | { kind: 'apply' }
 interface Want {
   key: string
   hint: Hint
@@ -108,8 +106,6 @@ function queriesFor(h: Hint): string[] {
       return ['tray', 'map']
     case 'apply':
       return ['apply', 'map']
-    case 'change':
-      return [`h:${h.item.id}`]
   }
 }
 
@@ -215,50 +211,6 @@ function arrowPaths(from: Pt, to: Pt, r: () => number): { shaft: string; head: s
   return { shaft: smooth(pts), head }
 }
 
-/** Loose pencil loop around a box: overshoots a little and spirals so the ends do not meet. */
-function loopPath(b: Box, r: () => number, pad: number, rot: number): string {
-  const c = centre(b)
-  const rx = b.w / 2 + pad
-  // a tilted ellipse must still clear the box's corners
-  const ry = b.h / 2 + pad * between(r, 0.9, 1.25) + Math.abs(Math.sin((rot * Math.PI) / 180)) * rx * 0.55
-  const dir = sign(r)
-  const start = between(r, -2.7, -1.9)
-  const sweep = TAU + between(r, 0.3, 0.6)
-  const grow = between(r, 0.06, 0.12)
-  const amp = between(r, 0.02, 0.045)
-  const ph = r() * TAU
-  const n = 28
-  const pts: Pt[] = []
-  for (let i = 0; i <= n; i++) {
-    const t = i / n
-    const a = start + dir * sweep * t
-    const g = (1 - grow / 2 + grow * t) * (1 + amp * Math.sin(2 * a + ph))
-    pts.push({ x: c.x + Math.cos(a) * rx * g, y: c.y + Math.sin(a) * ry * g })
-  }
-  return smooth(pts)
-}
-
-/** Wavy pencil underline with a short return flick. */
-function underlinePath(b: Box, r: () => number): string {
-  const y0 = b.y + b.h + between(r, 2, 4)
-  const x0 = b.x + b.w * between(r, 0.02, 0.08)
-  const x1 = b.x + b.w * between(r, 0.9, 0.98)
-  const amp = between(r, 0.7, 1.5)
-  const freq = between(r, 1, 2)
-  const slope = between(r, -2, 2)
-  const ph = r() * TAU
-  const flickX = between(r, 10, 18)
-  const flickY = between(r, 3, 5)
-  const n = 8
-  const pts: Pt[] = []
-  for (let i = 0; i <= n; i++) {
-    const t = i / n
-    pts.push({ x: x0 + (x1 - x0) * t, y: y0 + amp * Math.sin(t * freq * TAU + ph) + slope * t })
-  }
-  const end = pts[n]
-  return `${smooth(pts)}L${f(end.x - flickX)},${f(end.y + flickY)}`
-}
-
 // ---------- notes ----------
 
 const NOTE_PX = { big: 16, small: 14 } as const
@@ -273,7 +225,6 @@ const noteBox = (p: Pt, text: string, px: number): Box => {
   const { hw, hh } = noteHalf(text, px)
   return { x: p.x - hw, y: p.y - hh, w: hw * 2, h: hh * 2 }
 }
-
 
 // ---------- drawing ----------
 
@@ -309,25 +260,6 @@ function drawArrow(out: Drawn, key: string, from: Pt, to: Pt, r: () => number, d
     </g>,
   )
 }
-
-function drawMark(out: Drawn, key: string, b: Box, r: () => number, delay: number, pad: number, forceLoop = false) {
-  const rot = tilt(r)
-  const w = between(r, 1.35, 1.75)
-  const c = centre(b)
-  const flat = !forceLoop && b.w / b.h > 6
-  out.svg.push(
-    <path
-      key={key}
-      className="tz-hint-stroke"
-      d={flat ? underlinePath(b, r) : loopPath(b, r, pad, rot)}
-      transform={`rotate(${(flat ? rot * 0.4 : rot).toFixed(2)} ${f(c.x)} ${f(c.y)})`}
-      pathLength={1}
-      strokeWidth={w}
-      style={delayStyle(delay)}
-    />,
-  )
-}
-
 
 function drawNote(out: Drawn, key: string, at: Pt, text: string, px: number, r: () => number, delay: number) {
   out.html.push(<Note key={key} at={at} text={text} px={px} rot={tilt(r)} delay={delay} />)
@@ -408,20 +340,6 @@ function draw(inst: Inst, fr: Frame): Drawn {
       drawArrow(out, 'arrow', from, edgeToward(btn, from, 6), R('arrow'), 380)
       break
     }
-    case 'change': {
-      const { item } = h
-      const row = fr.boxes[`h:${item.id}`]?.[0]
-      if (row) {
-        drawMark(out, 'row', row, R('row'), 0, 5, true)
-        const text = Object.keys(item.delta).length ? `#${item.index}` : `#${item.index} · no effect`
-        const px = NOTE_PX.small
-        const { hw } = noteHalf(text, px)
-        const left = row.x + row.w / 2 > fr.vw / 2
-        const at = placeNote({ x: left ? row.x - 8 - hw : row.x + row.w + 8 + hw, y: row.y + 2 }, text, px, fr)
-        drawNote(out, 'idx', at, text, px, R('idx'), 220)
-      }
-      break
-    }
   }
   return out
 }
@@ -460,7 +378,7 @@ const CSS = `
 
 export default function Hints() {
   const { state } = usePlan()
-  const { lastChangeId, history, existing, tool, basePlan } = state
+  const { history, tool, basePlan } = state
   const applied = suggestionsApplied(state)
 
   const userEdited = history.some((h) => h.kind === 'tile' || h.kind === 'slider')
@@ -477,25 +395,6 @@ export default function Hints() {
     }
   }, [introDone])
 
-  // "what your change affected": every new accepted change (after the intro, including the change that ends it).
-  // Adjusted while rendering when lastChangeId moves; `scored` is still false on the first rescore, which restores
-  // saved edits rather than a change the user just made.
-  const [change, setChange] = useState<HistoryItem | null>(null)
-  const [seenId, setSeenId] = useState(lastChangeId)
-  const [scored, setScored] = useState(existing !== null)
-  if (lastChangeId !== seenId) {
-    setSeenId(lastChangeId)
-    const item = lastChangeId === null ? undefined : history.find((h) => h.id === lastChangeId)
-    setChange(item && (introDone || userEdited) && scored ? item : null)
-  }
-  if (existing !== null && !scored) setScored(true)
-
-  useEffect(() => {
-    if (!change) return
-    const t = setTimeout(() => setChange(null), CHANGE_MS)
-    return () => clearTimeout(t)
-  }, [change])
-
   const loaded = basePlan !== null
   const want = useMemo(() => {
     const w: Want[] = []
@@ -503,9 +402,8 @@ export default function Hints() {
       w.push(tool ? { key: 'map', hint: { kind: 'map' } } : { key: 'tray', hint: { kind: 'tray' } })
       if (!applied) w.push({ key: 'apply', hint: { kind: 'apply' } })
     }
-    if (change) w.push({ key: `change-${change.id}`, hint: { kind: 'change', item: change } })
     return w
-  }, [introDone, loaded, tool, applied, change])
+  }, [introDone, loaded, tool, applied])
 
   // shown hints: new keys enter with their own seed, dropped keys fade out, then go (synced while rendering)
   const [insts, setInsts] = useState<Inst[]>([])
