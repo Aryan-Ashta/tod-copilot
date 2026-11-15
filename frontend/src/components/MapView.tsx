@@ -96,6 +96,12 @@ const streets = (id: string, color: string, edgePx: number): LayerSpecification 
 })
 /** The compact attribution (the ⓘ at the bottom of every map) carries the disclaimer with the data credits. */
 export const ATTRIBUTION = { compact: true, customAttribution: 'Concept · estimates, not legal or financial advice' }
+/** The compact attribution opens itself on first render; shut it so the ⓘ starts closed (a click still opens it). MapLibre keeps it compact afterwards, at any width. */
+export function collapseAttribution(map: MlMap) {
+  const el = map.getContainer().querySelector('.maplibregl-ctrl-attrib')
+  el?.removeAttribute('open')
+  el?.classList.remove('maplibregl-compact-show')
+}
 export const BASE_STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -603,6 +609,7 @@ export default function MapView({
     })
     // Offline: tile fetches fail; a listener keeps them silent while fixture layers still draw.
     map.on('error', () => {})
+    collapseAttribution(map)
     map.setVerticalFieldOfView(ISO_FOV_DEG)
     map.addControl(new NavigationControl({ visualizePitch: true }), 'bottom-left')
     const overlay = new MapboxOverlay({
