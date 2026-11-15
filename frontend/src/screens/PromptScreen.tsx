@@ -451,7 +451,8 @@ export default function PromptScreen() {
           <div className="enter mb-3" style={d(0)}>
             <Brand className="text-[19px]" />
           </div>
-          <h1 className="line-reveal display text-[40px]">
+          {/* sized so the longer line spans the search bar's 560px */}
+          <h1 className="line-reveal display text-[44.5px]">
             <span>
               <span style={d(0)}>Planning sustainable</span>
             </span>
