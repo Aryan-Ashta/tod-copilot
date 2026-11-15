@@ -41,19 +41,22 @@ function FactorValue({ value, unit }: { value: unknown; unit: string }) {
 }
 
 const MARGIN = 8
-const WIDTH = 384
+const WIDTH = 320
+/** Tallest the popover gets; longer factor lists scroll inside it. */
+const MAX_HEIGHT = 280
 
 /** Fixed-position style that keeps the popover inside the viewport: below the trigger, or above when it would
- *  run off the bottom; clamped horizontally; scrolls inside when taller than the viewport. */
+ *  run off the bottom; clamped horizontally; capped at MAX_HEIGHT and scrolling inside past that. */
 function placement(trigger: DOMRect, height: number | null): CSSProperties {
   const vw = window.innerWidth
   const vh = window.innerHeight
   const width = Math.min(WIDTH, vw - 2 * MARGIN)
   const left = Math.min(Math.max(trigger.left, MARGIN), vw - width - MARGIN)
-  const h = Math.min(height ?? 0, vh - 2 * MARGIN)
+  const maxHeight = Math.min(MAX_HEIGHT, vh - 2 * MARGIN)
+  const h = Math.min(height ?? 0, maxHeight)
   const below = trigger.bottom + 4
   const top = below + h <= vh - MARGIN ? below : Math.max(MARGIN, trigger.top - 4 - h)
-  return { position: 'fixed', left, top, width, maxHeight: vh - 2 * MARGIN, overflowY: 'auto',
+  return { position: 'fixed', left, top, width, maxHeight, overflowY: 'auto', overscrollBehavior: 'contain',
            visibility: height === null ? 'hidden' : 'visible' }
 }
 

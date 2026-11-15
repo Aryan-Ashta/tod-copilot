@@ -15,6 +15,9 @@ LLM_ENABLED = bool(ANTHROPIC_API_KEY) and not OFFLINE and os.getenv("TOD_LLM", "
 MODEL = os.getenv("TOD_MODEL", "anthropic:claude-haiku-5-5")   # docs/model-eval.md (2026-11-14)
 NREL_API_KEY = os.getenv("NREL_API_KEY", "DEMO_KEY")
 REPLAY_DELAY_S = float(os.getenv("REPLAY_DELAY_S", "0.25"))
+# Hosted demo (backend/serve.py turns this on): live runs are refused, recorded replays stay open.
+HOSTED = os.getenv("TRANSITOR_HOSTED") == "1"
+REPO_URL = "https://github.com/Aryan-Ashta/tod-copilot"
 
 # Agent research (docs/12): runs only while recording, never at plan time.
 RESEARCH_MODEL = os.getenv("RESEARCH_MODEL") or MODEL                    # building/market researcher subagents

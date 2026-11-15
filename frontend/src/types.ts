@@ -387,6 +387,12 @@ export interface StockPrompt {
   options: PlanOptions
 }
 
+// GET /api/config. `hosted`: the deployed demo, where POST /api/plan refuses live runs.
+export interface AppConfig {
+  hosted: boolean
+  repo_url: string
+}
+
 export interface GeocodeResult {
   label: string
   lonlat: LonLat

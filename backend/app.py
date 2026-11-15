@@ -68,12 +68,19 @@ def locales() -> list[Locale]:
     return load_locales()
 
 
+@app.get("/api/config")
+def config() -> dict:
+    return {"hosted": settings.HOSTED, "repo_url": settings.REPO_URL}
+
+
 def _area(locale_id: Optional[str], boundary: Optional[dict]) -> AreaResolution:
     return resolve_area(locale_id, boundary, resolve(LOCALE_IDS[0])["area_max_km2"])
 
 
 @app.post("/api/plan")
 async def start_plan(req: PlanRequest) -> dict:
+    if settings.HOSTED:
+        raise HTTPException(403, "Live runs are disabled on the hosted demo; open a recorded demo instead")
     try:
         area = _area(req.locale_id, req.boundary)
     except AreaError as e:

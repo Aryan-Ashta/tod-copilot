@@ -1,4 +1,5 @@
 import type {
+  AppConfig,
   AreaCheck,
   AgentEvent,
   BuildingDetail,
@@ -47,6 +48,8 @@ const post = <T>(path: string, body: unknown) => request<T>(path, { method: 'POS
 const enc = encodeURIComponent
 
 export const getLocales = () => request<Locale[]>('/api/locales')
+
+export const getConfig = () => request<AppConfig>('/api/config')
 
 export interface CreatePlanRequest {
   locale_id: string | null

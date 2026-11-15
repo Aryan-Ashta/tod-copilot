@@ -3,15 +3,21 @@
 `uvicorn backend.serve:app` serves every `/api` route from backend.app and the Vite build (FRONTEND_DIST, default
 frontend/dist) for everything else. Client-side routes (/plan/…, /meeting/…) get index.html so a reload works.
 Local development keeps `uvicorn backend.app:app` with the Vite dev server.
+
+This entry point is the hosted demo: TRANSITOR_HOSTED defaults to 1 here (before backend.settings is imported), so
+POST /api/plan refuses live runs and only recorded replays play. Set TRANSITOR_HOSTED=0 to allow live runs.
 """
 import os
-from pathlib import Path
 
-from starlette.exceptions import HTTPException
-from starlette.staticfiles import StaticFiles
+os.environ.setdefault("TRANSITOR_HOSTED", "1")
 
-from backend.app import app
-from backend.settings import ROOT
+from pathlib import Path  # noqa: E402
+
+from starlette.exceptions import HTTPException  # noqa: E402
+from starlette.staticfiles import StaticFiles  # noqa: E402
+
+from backend.app import app  # noqa: E402
+from backend.settings import ROOT  # noqa: E402
 
 DIST = Path(os.getenv("FRONTEND_DIST") or ROOT / "frontend" / "dist")
 

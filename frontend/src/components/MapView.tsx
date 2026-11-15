@@ -615,7 +615,10 @@ export default function MapView({
                 borderRadius: '10px',
                 fontFamily: 'inherit',
                 fontSize: large ? '16px' : '12px',
-                whiteSpace: 'pre',
+                whiteSpace: 'pre-wrap',
+                maxWidth: large ? '420px' : '320px',
+                maxHeight: '200px',
+                overflow: 'hidden',
               },
             }
           : null

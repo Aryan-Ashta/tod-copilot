@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { areaCheck, createPlan, geocode, getLocales, stockPrompts } from '../api'
+import { areaCheck, createPlan, geocode, getConfig, getLocales, stockPrompts } from '../api'
 import Disclaimer from '../components/Disclaimer'
+import HostedRunModal from '../components/HostedRunModal'
 import AreaPicker, { type PolygonGeometry } from '../components/AreaPicker'
 import Segmented from '../components/Segmented'
 import Slider from '../components/Slider'
@@ -9,6 +10,7 @@ import { useApp } from '../state/AppContext'
 import type { BBox } from '../geo'
 import {
   DEFAULT_PLAN_OPTIONS,
+  type AppConfig,
   type AreaCheck,
   type GeocodeResult,
   type Locale,
@@ -57,6 +59,10 @@ export default function PromptScreen() {
   const [optionsOpen, setOptionsOpen] = useState(false)
   const optionsRef = useRef<HTMLDivElement>(null)
   const optionsButtonRef = useRef<HTMLButtonElement>(null)
+  const planButtonRef = useRef<HTMLButtonElement>(null)
+  // Hosted demo: live runs are refused server-side, so Generate opens HostedRunModal instead.
+  const [config, setConfig] = useState<AppConfig | null>(null)
+  const [hostedOpen, setHostedOpen] = useState(false)
   // The options popover closes on Escape or a press anywhere outside it and its button.
   useEffect(() => {
     if (!optionsOpen) return
@@ -83,6 +89,9 @@ export default function PromptScreen() {
       .catch((e: Error) => setError(e.message))
     stockPrompts()
       .then(setStock)
+      .catch((e: Error) => setError(e.message))
+    getConfig()
+      .then(setConfig)
       .catch((e: Error) => setError(e.message))
   }, [])
 
@@ -137,6 +146,7 @@ export default function PromptScreen() {
   const defaultOptions = options.focus === 'all' && Object.values(options.goals).every((v) => v === null)
   const replayAllowed = wholeLocale !== null && defaultOptions
   const replayOn = replay && replayAllowed
+  const hostedBlocked = config?.hosted === true && !replayOn
   const areaOk = wholeLocale !== null || (check !== null && check.kind !== null && !check.error)
   const canSubmit = areaOk && !submitting && selectedPrompts.length > 0
 
@@ -194,6 +204,10 @@ export default function PromptScreen() {
     const tags = `tags=${selectedPrompts.map((p) => encodeURIComponent(p.id)).join(',')}`
     if (replayOn && areaLocaleId) {
       navigate(`/plan/demo-${areaLocaleId}?replay=1&${tags}`)
+      return
+    }
+    if (hostedBlocked) {
+      setHostedOpen(true)
       return
     }
     setSubmitting(true)
@@ -405,10 +419,11 @@ export default function PromptScreen() {
 
   const planButton = (
     <button
+      ref={planButtonRef}
       onClick={submit}
       disabled={!canSubmit}
       title={stock.length > 0 && selectedPrompts.length === 0 ? 'Pick at least one prompt' : undefined}
-      className="go h-11 shrink-0 rounded-full bg-ink px-6 text-[14px] font-semibold whitespace-nowrap text-paper transition-[background-color,color] duration-200 disabled:cursor-default disabled:bg-ink/10 disabled:text-ink/35"
+      className={`go h-11 shrink-0 rounded-full px-6 text-[14px] font-semibold whitespace-nowrap text-paper transition-[background-color,color] duration-200 disabled:cursor-default disabled:bg-ink/10 disabled:text-ink/35 ${hostedBlocked ? 'bg-slate' : 'bg-ink'}`}
     >
       {submitting ? 'Starting…' : 'Generate'}
     </button>
@@ -483,6 +498,9 @@ export default function PromptScreen() {
           </div>
         </div>
       </div>
+      {hostedOpen && config && (
+        <HostedRunModal repoUrl={config.repo_url} onClose={() => setHostedOpen(false)} returnFocus={planButtonRef} />
+      )}
     </div>
   )
 }
