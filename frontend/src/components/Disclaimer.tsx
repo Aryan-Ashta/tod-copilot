@@ -7,7 +7,7 @@ export default function Disclaimer({ children, large = false }: { children?: Rea
     <header
       className={`flex shrink-0 items-baseline gap-5 border-b border-rule bg-paper px-6 ${large ? 'py-3 text-lg' : 'py-2.5 text-sm'}`}
     >
-      <Link to="/" className={`wide font-bold text-ink no-underline hover:underline ${large ? 'text-2xl' : 'text-[19px]'}`}>
+      <Link to="/" className={`wide font-bold text-ink no-underline ${large ? 'text-2xl' : 'text-[19px]'}`}>
         TOD Copilot
       </Link>
       <span className="text-slate">Concept · estimates, not legal or financial advice</span>
