@@ -5,16 +5,18 @@
 // down storey by storey in rounded, drifting dust puffs; and a new park greens over and pops its trees with
 // squash-and-stretch, each tree leaning, sizing and swaying its own way. Trees are solid: a bark trunk under two or three
 // stacked, lit crown tiers (rounded broadleaf or conical pine) over a soft ground shade; a big park also builds a
-// fountain in its middle (stone basin, water, a column with a bowl, and spray arcs whose droplets play while the park
-// is laid out). A build, conversion or park closes with a short burst of confetti and twinkling stars that fades out
-// within its last BURST_MS. parkDecorLayers draws the same trees and fountain, fully grown and still, for any plot.
+// fountain at its centre (stone basin, water, a column with a bowl, and spray arcs whose droplets keep playing for as
+// long as the park stands: fountainDropsLayer draws just them, so MapView can redraw that one layer on a light clock).
+// A build, conversion or park closes with a short burst of confetti and twinkling stars that fades out within its last
+// BURST_MS. parkDecorLayers draws the same trees (and, unless told not to, the fountain), fully grown and still, for
+// any plot.
 //
 // Every random choice (crane jib start angle and slew direction, tree size and lean, puff placement, the yaw of the
 // celebratory bits) is drawn from a seed hashed from the build's footprint, so nothing jumps between frames. Pure
 // geometry from a build's start time and the clock; MapView owns the clock (requestAnimationFrame while anything is
 // under way, up to the end of buildDuration, which includes the burst). With reduced motion every build is at its end
-// state: no cranes, puffs or bursts, parks drawn with their trees standing. Decoration only: every number here is
-// visual, none is a planning factor or comes into the plan.
+// state: no cranes, puffs or bursts, parks drawn with their trees standing and the spray still. Decoration only: every
+// number here is visual, none is a planning factor or comes into the plan.
 import { PathLayer, ScatterplotLayer, SolidPolygonLayer } from '@deck.gl/layers'
 import type { Color, Layer } from '@deck.gl/core'
 import { pointInRing } from './geo'
@@ -537,6 +539,19 @@ function bbox(pts: [number, number][]): [number, number, number, number] {
   return [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]
 }
 
+/** Area centroid of a local ring (its vertex centroid when the ring has no area). */
+function ringCentroid(pts: [number, number][]): [number, number] {
+  let [a, cx, cy] = [0, 0, 0]
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const cross = pts[j][0] * pts[i][1] - pts[i][0] * pts[j][1]
+    a += cross
+    cx += (pts[j][0] + pts[i][0]) * cross
+    cy += (pts[j][1] + pts[i][1]) * cross
+  }
+  if (Math.abs(a) < 1e-9) return [pts.reduce((s, q) => s + q[0], 0) / pts.length, pts.reduce((s, q) => s + q[1], 0) / pts.length]
+  return [cx / (3 * a), cy / (3 * a)]
+}
+
 interface Fountain {
   x: number
   y: number
@@ -554,18 +569,22 @@ interface ParkPlan {
   fountain: Fountain | null
 }
 
-/** A big plot's fountain: at its centre when the basin fits there, else at the fitting spot nearest the centre. */
+/**
+ * A big plot's fountain: at its centroid when the basin (and a walk round it) fits there, else at the fitting spot
+ * nearest the centroid.
+ */
 function fountainSpot(pts: [number, number][], area: number, scale: number): Fountain | null {
   if (pts.length < 3 || area < FOUNTAIN_MIN_M2) return null
   const r = Math.min(6 * scale, Math.max(4.5, Math.sqrt(area) * 0.09))
   const fits = (x: number, y: number) => pointInRing([x, y], pts) && edgeDistance(x, y, pts) >= r + 2
-  if (fits(0, 0)) return { x: 0, y: 0, r }
+  const [cx, cy] = ringCentroid(pts)
+  if (fits(cx, cy)) return { x: cx, y: cy, r }
   const [x0, x1, y0, y1] = bbox(pts)
   let best: Fountain | null = null
   for (let i = 0; i < 9; i++) {
     for (let j = 0; j < 9; j++) {
       const [x, y] = [x0 + ((i + 0.5) / 9) * (x1 - x0), y0 + ((j + 0.5) / 9) * (y1 - y0)]
-      if (fits(x, y) && (!best || Math.hypot(x, y) < Math.hypot(best.x, best.y))) best = { x, y, r }
+      if (fits(x, y) && (!best || Math.hypot(x - cx, y - cy) < Math.hypot(best.x - cx, best.y - cy))) best = { x, y, r }
     }
   }
   return best
@@ -599,9 +618,9 @@ function treeSpots(pts: [number, number][], seed: number, scale: number, fountai
 
 /**
  * Lays a plot out in the frame of its longest edge, so a rotated or long, thin plot fills evenly, then turns the tree
- * spots and fountain back into the plot's own frame.
+ * spots and fountain back into the plot's own frame. Without `fountains`, trees take the whole plot.
  */
-function parkPlan(pts: [number, number][], toLonLat: ToLonLat, seed: number): ParkPlan {
+function parkPlan(pts: [number, number][], toLonLat: ToLonLat, seed: number, fountains: boolean): ParkPlan {
   const area = ringArea(pts)
   const scale = Math.min(MAX_TREE_SCALE, Math.max(1, Math.sqrt(area) / MATURE_SIDE_M))
   let angle = 0
@@ -614,7 +633,7 @@ function parkPlan(pts: [number, number][], toLonLat: ToLonLat, seed: number): Pa
   const [c, s] = [Math.cos(angle), Math.sin(angle)]
   const along = pts.map(([x, y]) => [x * c + y * s, y * c - x * s] as [number, number])
   const back = ([x, y]: [number, number]): [number, number] => [x * c - y * s, x * s + y * c]
-  const f = fountainSpot(along, area, scale)
+  const f = fountains ? fountainSpot(along, area, scale) : null
   const at = f && back([f.x, f.y])
   const fountain = f && at && { x: at[0], y: at[1], r: f.r }
   return { toLonLat, seed, scale, trees: treeSpots(along, seed, scale, f).map(back), fountain }
@@ -630,12 +649,11 @@ interface Flat {
   polygon: LonLatZ[]
   color: Color
 }
-/** Trees and fountains as drawn: lit solids, flat ground shapes, spray arcs and droplets. */
+/** Trees and fountains as drawn: lit solids, flat ground shapes and spray arcs (their droplets are drawn apart). */
 interface Decor {
   solids: Solid[]
   flats: Flat[]
   spray: Stroke[]
-  drops: Puff[]
 }
 
 /** A regular n-gon of radius r round (x, y) at height z, turned by `rot`. */
@@ -702,57 +720,98 @@ function drawTree(plan: ParkPlan, i: number, t: number, out: Decor) {
 
 /**
  * A plan's fountain, `t` (0..1) through being built: paving spreads, the basin rim pops up, water fills it, the column
- * and its bowl rise and the jet starts, throwing SPRAY_ARCS arcs into the basin. While `now` is given droplets ride the
- * arcs; without it they hold still along them.
+ * and its bowl rise and the jet starts (`spray` 0..1), throwing SPRAY_ARCS arcs into the basin; `arc(k, u)` is the
+ * point u (0..1) along arc k. Null without a fountain or before it starts.
  */
-function drawFountain(plan: ParkPlan, t: number, now: number | null, out: Decor) {
+function fountainStages(plan: ParkPlan, t: number) {
   const f = plan.fountain
-  if (!f || t <= 0) return
-  const { toLonLat, seed } = plan
-  const { x, y, r: R } = f
-  const rot = TAU * rand(seed, SALT_FOUNTAIN)
-  const pave = easeOutCubic(clamp01(t / 0.3))
-  const basin = easeOutBack(clamp01((t - 0.1) / 0.35), 1.4)
+  if (!f || t <= 0) return null
+  const { toLonLat, scale } = plan
+  const rot = TAU * rand(plan.seed, SALT_FOUNTAIN)
   const water = easeOutCubic(clamp01((t - 0.3) / 0.3))
-  const column = easeOutBack(clamp01((t - 0.35) / 0.35), 1.4)
+  const c = easeOutBack(clamp01((t - 0.35) / 0.35), 1.4) * scale // the column and bowl, sized with the park's trees
   const spray = easeOutCubic(clamp01((t - 0.65) / 0.35))
-  const disc = (r: number, z: number, n = BASIN_SIDES) => ngon(toLonLat, x, y, r, n, rot, z)
-  const solid = (polygon: Solid['polygon'], elevation: number, c: Rgb) => {
-    if (elevation > 0.02) out.solids.push({ polygon, elevation, color: withAlpha(c, 255) })
-  }
-  out.flats.push({ polygon: disc((R + 1.4) * pave, PAVE_Z_M), color: withAlpha(PAVING, 255 * pave) })
-  const inner = R - BASIN_RIM_M
-  solid([disc(R, 0), disc(inner, 0)], BASIN_H_M * basin, STONE)
-  solid(disc(inner, 0), WATER_H_M * water, WATER)
-  // a column carrying a shallow bowl (rim and water), the jet rising from it; sized with the park's trees
-  const c = column * plan.scale
   const zBowl = COLUMN_H_M * c
+  const zJet = zBowl + BOWL_H_M * c
+  const zTop = zJet + JET_M * scale * spray
+  const zWater = WATER_H_M * water
+  const inner = f.r - BASIN_RIM_M
+  const reach = inner * 0.8
+  const peak = SPRAY_PEAK_M * scale
+  return {
+    f,
+    rot,
+    pave: easeOutCubic(clamp01(t / 0.3)),
+    basin: easeOutBack(clamp01((t - 0.1) / 0.35), 1.4),
+    water,
+    c,
+    zBowl,
+    zJet,
+    inner,
+    spray,
+    // from the jet top, up by `peak` and out into the basin
+    arc: (k: number, u: number) => {
+      const az = rot + (TAU * k) / SPRAY_ARCS
+      return toLonLat(f.x + Math.cos(az) * reach * u, f.y + Math.sin(az) * reach * u, zTop + (zWater - zTop) * u + 4 * peak * u * (1 - u))
+    },
+  }
+}
+
+/** A plan's fountain, `t` (0..1) through being built (fountainStages), with its spray arcs but not their droplets. */
+function drawFountain(plan: ParkPlan, t: number, out: Decor) {
+  const st = fountainStages(plan, t)
+  if (!st) return
+  const { f, rot, c, zBowl, zJet, inner, spray, arc } = st
+  const disc = (r: number, z: number, n = BASIN_SIDES) => ngon(plan.toLonLat, f.x, f.y, r, n, rot, z)
+  const solid = (polygon: Solid['polygon'], elevation: number, color: Rgb) => {
+    if (elevation > 0.02) out.solids.push({ polygon, elevation, color: withAlpha(color, 255) })
+  }
+  out.flats.push({ polygon: disc((f.r + 1.4) * st.pave, PAVE_Z_M), color: withAlpha(PAVING, 255 * st.pave) })
+  solid([disc(f.r, 0), disc(inner, 0)], BASIN_H_M * st.basin, STONE)
+  solid(disc(inner, 0), WATER_H_M * st.water, WATER)
+  // a column carrying a shallow bowl (rim and water), the jet rising from it
   solid(disc(0.42 * plan.scale, 0, 8), zBowl, STONE)
   solid([disc(1.5 * c, zBowl, 12), disc(1.2 * c, zBowl, 12)], BOWL_H_M * c, STONE)
   solid(disc(1.2 * c, zBowl, 12), BOWL_H_M * 0.75 * c, WATER)
-  const zJet = zBowl + BOWL_H_M * c
   solid(disc(0.13 * plan.scale, zJet, 6), JET_M * plan.scale * spray, SPRAY)
   if (spray <= 0) return
-  const zTop = zJet + JET_M * plan.scale * spray
-  const zWater = WATER_H_M * water
-  const reach = inner * 0.8
-  const peak = SPRAY_PEAK_M * plan.scale
-  // an arc from the jet top, up by `peak` and out into the basin, u = 0..1 along it
-  const arc = (az: number, u: number) =>
-    toLonLat(x + Math.cos(az) * reach * u, y + Math.sin(az) * reach * u, zTop + (zWater - zTop) * u + 4 * peak * u * (1 - u))
   for (let k = 0; k < SPRAY_ARCS; k++) {
-    const az = rot + (TAU * k) / SPRAY_ARCS
-    out.spray.push({ path: Array.from({ length: 8 }, (_, s) => arc(az, (spray * s) / 7)), color: withAlpha(SPRAY, 200 * spray), width: 2 })
+    out.spray.push({ path: Array.from({ length: 8 }, (_, s) => arc(k, (spray * s) / 7)), color: withAlpha(SPRAY, 200 * spray), width: 2 })
+  }
+}
+
+/**
+ * The droplets riding a plan's fountain spray, `t` (0..1) through being built: SPRAY_DROPS per arc, each taking
+ * SPRAY_MS from jet to basin at `now`; with `now` null they hold still along the arcs.
+ */
+function drawDrops(plan: ParkPlan, t: number, now: number | null, out: Puff[]) {
+  const st = fountainStages(plan, t)
+  if (!st || st.spray <= 0) return
+  for (let k = 0; k < SPRAY_ARCS; k++) {
     for (let d = 0; d < SPRAY_DROPS; d++) {
       const phase = (d + 0.5) / SPRAY_DROPS
-      const u = now === null ? phase : (now / SPRAY_MS + phase + rand(seed, SALT_FOUNTAIN + 1 + k)) % 1
-      if (u > spray) continue
-      out.drops.push({ position: arc(az, u), radius: 2.2, color: withAlpha(SPRAY, 245 * spray) })
+      const u = now === null ? phase : (now / SPRAY_MS + phase + rand(plan.seed, SALT_FOUNTAIN + 1 + k)) % 1
+      if (u > st.spray) continue
+      out.push({ position: st.arc(k, u), radius: 2.2, color: withAlpha(SPRAY, 245 * st.spray) })
     }
   }
 }
 
-/** Draws a Decor: ground shapes, then the lit solids, then spray and droplets. Layer ids start with `id`. */
+function dropsLayer(id: string, drops: Puff[]): Layer {
+  return new ScatterplotLayer<Puff>({
+    id,
+    data: drops,
+    getPosition: (p) => p.position,
+    getRadius: (p) => p.radius,
+    radiusUnits: 'pixels',
+    getFillColor: (p) => p.color,
+    billboard: true,
+    pickable: false,
+    parameters: { depthWriteEnabled: false },
+  })
+}
+
+/** Draws a Decor: ground shapes, then the lit solids, then the spray arcs. Layer ids start with `id`. */
 function decorLayers(id: string, d: Decor): Layer[] {
   return [
     new SolidPolygonLayer<Flat>({
@@ -785,53 +844,80 @@ function decorLayers(id: string, d: Decor): Layer[] {
       pickable: false,
       parameters: { depthWriteEnabled: false },
     }),
-    new ScatterplotLayer<Puff>({
-      id: `${id}-drops`,
-      data: d.drops,
-      getPosition: (p) => p.position,
-      getRadius: (p) => p.radius,
-      radiusUnits: 'pixels',
-      getFillColor: (p) => p.color,
-      billboard: true,
-      pickable: false,
-      parameters: { depthWriteEnabled: false },
-    }),
   ]
 }
 
 /**
- * Trees and, on a big plot, a fountain for each plot, fully grown and still: the planting a new park comes to rest
- * at, laid out from each plot's `key` so it stays put. Layer ids start with `id`.
+ * Trees and, on a big plot and unless `fountains` is false, a fountain (its droplets still) for each plot, fully grown
+ * and still: the planting a new park comes to rest at, laid out from each plot's `key` so it stays put. Layer ids
+ * start with `id`.
  */
-export function parkDecorLayers(id: string, plots: { key: string; ring: [number, number][] }[]): Layer[] {
-  const d: Decor = { solids: [], flats: [], spray: [], drops: [] }
+export function parkDecorLayers(
+  id: string,
+  plots: { key: string; ring: [number, number][] }[],
+  { fountains = true }: { fountains?: boolean } = {},
+): Layer[] {
+  const d: Decor = { solids: [], flats: [], spray: [] }
+  const drops: Puff[] = []
   for (const { key, ring } of plots) {
     const { pts, toLonLat } = localFrame(ring)
-    const plan = parkPlan(pts, toLonLat, hashKey(key))
+    const plan = parkPlan(pts, toLonLat, hashKey(key), fountains)
     plan.trees.forEach((_, i) => drawTree(plan, i, 1, d))
-    drawFountain(plan, 1, null, d)
+    drawFountain(plan, 1, d)
+    drawDrops(plan, 1, null, drops)
   }
-  return decorLayers(id, d)
+  return [...decorLayers(id, d), dropsLayer(`${id}-drops`, drops)]
 }
+
+/** A park build's planting, laid out once from its footprint (a big one gets a fountain). */
+function parkPlanOf(b: Build): ParkPlan {
+  const g = geom(b)
+  return (g.park ??= parkPlan(g.pts, g.toLonLat, g.seed, true))
+}
+
+/** How far through building its fountain a park is, at `p` through its timeline. */
+const fountainT = (p: number) => clamp01((p - FOUNTAIN_START) / (FOUNTAIN_END - FOUNTAIN_START))
 
 /**
  * A new park: the green spreads out from the middle with a little spring, then its trees pop up one after another
- * and its fountain is built (and they stay); the fountain plays while the park is being laid out.
+ * and its fountain is built (and they stay). The fountain's droplets are fountainDropsLayer's.
  */
-function park(b: Build, p: number, now: number, grass: { polygon: LonLatZ[]; color: Color }[], decor: Decor) {
-  const g = geom(b)
-  const { pts, toLonLat, seed } = g
+function park(b: Build, p: number, grass: { polygon: LonLatZ[]; color: Color }[], decor: Decor) {
+  const { pts, toLonLat, seed } = geom(b)
   if (p < 1) {
     const t = clamp01(p / GREEN_END)
     const s = easeOutBack(t, RISE_SPRING)
     grass.push({ polygon: pts.map(([x, y]) => toLonLat(x * s, y * s, 0.3)), color: withAlpha(GRASS, 200 * Math.min(1, t * 1.5)) })
   }
-  const plan = (g.park ??= parkPlan(pts, toLonLat, seed))
+  const plan = parkPlanOf(b)
   const stagger = Math.min(TREE_STAGGER, TREE_SPREAD / Math.max(1, plan.trees.length))
   plan.trees.forEach((_, i) => {
     drawTree(plan, i, clamp01((p - TREE_START - i * stagger - 0.05 * rand(seed, SALT_TREE + i * 8)) / TREE_POP), decor)
   })
-  drawFountain(plan, clamp01((p - FOUNTAIN_START) / (FOUNTAIN_END - FOUNTAIN_START)), p < 1 ? now : null, decor)
+  drawFountain(plan, fountainT(p), decor)
+}
+
+/** Where a park build's fountain stands ([lon, lat]); null for any other build or a park too small for one. */
+export function fountainAt(b: Build): [number, number] | null {
+  if (b.kind !== 'park') return null
+  const { fountain: f, toLonLat } = parkPlanOf(b)
+  if (!f) return null
+  const [lon, lat] = toLonLat(f.x, f.y, 0)
+  return [lon, lat]
+}
+
+/**
+ * The droplets of every new park's fountain at `now`, riding its spray arcs for as long as the park stands (still
+ * with reduced motion). Its own layer, so MapView can redraw just this one on a light clock once the parks are done.
+ */
+export function fountainDropsLayer(builds: Iterable<Build>, now: number): Layer {
+  const drops: Puff[] = []
+  for (const b of builds) {
+    if (b.kind !== 'park') continue
+    const p = progress(b, now)
+    if (p > 0) drawDrops(parkPlanOf(b), fountainT(p), REDUCED_MOTION ? null : now, drops)
+  }
+  return dropsLayer('construction-park-drops', drops)
 }
 
 interface Dot extends Puff {
@@ -893,20 +979,20 @@ function celebrate(b: Build, p: number, z: number, dots: Dot[], strokes: Stroke[
 }
 
 /**
- * Cranes, scaffolding, dust, park planting and closing bursts for every build under way (parks keep their trees once
- * done); empty layers when nothing is.
+ * Cranes, scaffolding, dust, park planting and closing bursts for every build under way (parks keep their trees and
+ * fountain once done); empty layers when nothing is. Fountain droplets are fountainDropsLayer's.
  */
 export function constructionLayer(builds: Iterable<Build>, now: number): Layer[] {
   const strokes: Stroke[] = []
   const cranes: Crane[] = []
   const puffs: Puff[] = []
-  const decor: Decor = { solids: [], flats: [], spray: [], drops: [] }
+  const decor: Decor = { solids: [], flats: [], spray: [] }
   const dots: Dot[] = []
   const grass: { polygon: LonLatZ[]; color: Color }[] = []
   for (const b of builds) {
     const p = progress(b, now)
     if (b.kind === 'park') {
-      if (p > 0) park(b, p, now, grass, decor)
+      if (p > 0) park(b, p, grass, decor)
       celebrate(b, p, TRUNK_M + CROWN_H_M, dots, strokes)
       continue
     }
