@@ -14,16 +14,18 @@ Vite + React + TypeScript, MapLibre GL JS with deck.gl layers, Tailwind. Light p
 
 ## Map layers (bottom → top), each toggleable
 
+The Layers panel (`components/LayerPanel.tsx`, top-left of the map on the plan screen and in edit mode) is a collapsible map panel with an "N on" count in its header: Base, Infrastructure and Plan groups, one row per layer with a round colour dot, its name (grey when off) and an on/off switch. While a layer is on, its colour key (`LAYER_KEY` in `src/mapLayers.ts`) shows under its name: sidewalk / bike lane / missing sidewalk, the amenity kinds, frequent bus / BRT, the conversion uses, pencils today / on watch.
+
 | Group | Layer | Style |
 | --- | --- | --- |
-| Base | Pale paper base map (`BASE_STYLE` in `components/MapView.tsx`): a static, label-free vector style on OpenFreeMap's keyless OpenMapTiles tiles (attribution: OpenFreeMap © OpenMapTiles, © OpenStreetMap contributors). CARTO raster tiles now need a key, so they are not used. The map canvas is antialiased | |
+| Base | Street map: pale paper base map (`BASE_STYLE` in `components/MapView.tsx`): a static, label-free vector style on OpenFreeMap's keyless OpenMapTiles tiles (attribution: OpenFreeMap © OpenMapTiles, © OpenStreetMap contributors). CARTO raster tiles now need a key, so they are not used. The map canvas is antialiased | |
 | Base | Aerial imagery | off by default |
-| Infrastructure | Rail and bus routes (existing) | each line in its GTFS feed colour over a white casing (grey, black or pale feed colours fall back to ink for rail, mid blue for bus); rail bold in its true colour; bus thin, its colour lifted to mid lightness so dark navy does not read as a parcel or building outline; drawn above parcels and sidewalks, under buildings. Stops sized in metres (thin out when zoomed out) |
-| Infrastructure | Sidewalks / bike lanes | off by default; thin lines; missing sidewalk frontages in amber |
+| Infrastructure | Rail and bus (existing routes) | each line in its GTFS feed colour over a white casing (grey, black or pale feed colours fall back to ink for rail, mid blue for bus); rail bold in its true colour; bus thin, its colour lifted to mid lightness so dark navy does not read as a parcel or building outline; drawn above parcels and sidewalks, under buildings. Stops sized in metres (thin out when zoomed out) |
+| Infrastructure | Sidewalks and bike lanes | off by default; thin lines; missing sidewalk frontages in red |
 | Infrastructure | Utilities (where public) | off by default; thin dashed lines; "not public here" note when missing |
-| Infrastructure | EV chargers, schools, clinics, parks, grocery | small icons |
+| Infrastructure | Amenities: EV chargers, schools, clinics, parks, grocery | small icons |
 | Infrastructure | FEMA flood zones | blue hatch |
-| Plan | Proposed routes and stops | frequent bus teal, BRT thick green under it, on-demand blue dashed polygon; stops on new or upgraded routes ringed teal |
+| Plan | Proposed transit: routes and stops | frequent bus teal, BRT thick green under it, on-demand blue dashed polygon; stops on new or upgraded routes ringed teal |
 | Plan | Underused parcels | amber fill |
 | Plan | Conversion candidates | existing buildings extruded in grey; a building the current plan converts (an agent suggestion once applied, or a Convert tile) takes its new use's colour at full strength (residential blue, hotel mustard, mixed use green), so every conversion visibly changes its building; candidates the plan leaves alone stay grey (the Building reuse focus shows them all). A change of use fades to the new colour while the building gets a scaffold wrap that climbs the facade and comes down (2.8 s) |
 | Plan | Pursued sites | outline by deal strategy; label A/B/C |

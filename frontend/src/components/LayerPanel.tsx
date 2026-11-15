@@ -1,32 +1,60 @@
 import { usePlan } from '../state/PlanContext'
-import { LAYER_DEFS, LAYER_SWATCH } from '../mapLayers'
+import { LAYER_DEFS, LAYER_KEY, LAYER_SWATCH } from '../mapLayers'
 import MapPanel from './MapPanel'
 
+const GROUPS = ['Base', 'Infrastructure', 'Plan'] as const
+
+/** Map layer toggles: one switch row per layer, grouped; a layer's colour key shows under it while it is on. */
 export default function LayerPanel() {
   const { state, dispatch } = usePlan()
   const infra = state.plan.infrastructure
   const noUtilities = infra !== undefined && !infra.some((f) => f.kind === 'water_main' || f.kind === 'sewer_main' || f.kind === 'power_substation')
+  const onCount = LAYER_DEFS.filter((d) => state.layers[d.key]).length
   return (
-    <MapPanel title="Layers" className="absolute top-3 left-3 z-10 w-72">
-      <div className="max-h-[60vh] overflow-y-auto">
-        {(['Base', 'Infrastructure', 'Plan'] as const).map((g) => (
-          <fieldset key={g} className="mb-2">
-            <legend className="mb-0.5 text-xs text-slate">{g}</legend>
-            {LAYER_DEFS.filter((d) => d.group === g).map((d) => (
-              <label key={d.key} className="flex cursor-pointer items-center gap-2 py-0.5">
-                <input type="checkbox" checked={state.layers[d.key]} onChange={() => dispatch({ type: 'toggle_layer', key: d.key })} />
-                {LAYER_SWATCH[d.key] && <span className="h-2 w-4 rounded-xs border border-ink/20" style={{ background: LAYER_SWATCH[d.key] }} />}
-                <span>{d.label}</span>
-                {d.key === 'utilities' && noUtilities && <span className="text-amber-300">not public here</span>}
-              </label>
-            ))}
-          </fieldset>
+    <MapPanel title="Layers" right={<span className="text-[12px]">{onCount} on</span>} className="absolute top-3 left-3 z-10 w-72">
+      <div className="-mx-1.5 max-h-[60vh] overflow-y-auto">
+        {GROUPS.map((g) => (
+          <div key={g} role="group" aria-labelledby={`layers-${g}`} className="pt-1.5 first:pt-0.5">
+            <div id={`layers-${g}`} className="mb-0.5 px-1.5 text-[10.5px] font-semibold tracking-[0.08em] text-slate uppercase">
+              {g}
+            </div>
+            {LAYER_DEFS.filter((d) => d.group === g).map((d) => {
+              const on = state.layers[d.key]
+              const key = on ? LAYER_KEY[d.key] : undefined
+              return (
+                <button
+                  key={d.key}
+                  type="button"
+                  role="switch"
+                  aria-checked={on}
+                  onClick={() => dispatch({ type: 'toggle_layer', key: d.key })}
+                  className="flex w-full items-start gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors duration-150 hover:bg-ink/[0.04]"
+                >
+                  <span aria-hidden className="mt-[3px] h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-ink/15 ring-inset" style={{ background: LAYER_SWATCH[d.key] }} />
+                  <span className="min-w-0 flex-1">
+                    <span className={`transition-colors duration-150 ${on ? 'text-ink' : 'text-slate'}`}>{d.label}</span>
+                    {d.key === 'utilities' && noUtilities && <span className="ml-1.5 text-[11.5px] text-slate">· not public here</span>}
+                    {key && (
+                      <span className="mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11.5px] text-slate">
+                        {key.map((k) => (
+                          <span key={k.label} className="flex items-center gap-1">
+                            <span aria-hidden className="h-1.5 w-1.5 rounded-full ring-1 ring-ink/10" style={{ background: k.color }} />
+                            {k.label}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </span>
+                  <span aria-hidden className={`relative h-[18px] w-[30px] shrink-0 rounded-full transition-colors duration-200 ${on ? 'bg-ink' : 'bg-ink/15'}`}>
+                    <span
+                      className={`absolute top-[2px] left-[2px] h-[14px] w-[14px] rounded-full bg-paper shadow-sm transition-transform duration-200 ${on ? 'translate-x-[12px]' : ''}`}
+                    />
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         ))}
-        <p className="text-xs text-slate">
-          Conversion colours: residential blue, hotel mustard, mixed use green, keep grey; paler = lower overall score.
-          New buildings: solid = pencils today, translucent = on watch. Red sidewalk lines = frontage mapped without
-          sidewalk. Mustard lots = underused parcels.
-        </p>
       </div>
     </MapPanel>
   )

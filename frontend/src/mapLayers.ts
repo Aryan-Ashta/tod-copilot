@@ -39,14 +39,14 @@ export type LayerKey =
   | 'new_buildings'
 
 export const LAYER_DEFS: { key: LayerKey; label: string; group: 'Base' | 'Infrastructure' | 'Plan'; on: boolean }[] = [
-  { key: 'base_dark', label: 'Base map (light grey)', group: 'Base', on: true },
+  { key: 'base_dark', label: 'Street map', group: 'Base', on: true },
   { key: 'aerial', label: 'Aerial imagery', group: 'Base', on: false },
-  { key: 'transit_existing', label: 'Rail and bus routes (existing)', group: 'Infrastructure', on: true },
-  { key: 'walk_bike', label: 'Sidewalks / bike lanes', group: 'Infrastructure', on: false },
-  { key: 'utilities', label: 'Utilities (where public)', group: 'Infrastructure', on: false },
-  { key: 'amenities', label: 'EV chargers, schools, clinics, parks, grocery', group: 'Infrastructure', on: true },
+  { key: 'transit_existing', label: 'Rail and bus', group: 'Infrastructure', on: true },
+  { key: 'walk_bike', label: 'Sidewalks and bike lanes', group: 'Infrastructure', on: false },
+  { key: 'utilities', label: 'Utilities', group: 'Infrastructure', on: false },
+  { key: 'amenities', label: 'Amenities', group: 'Infrastructure', on: true },
   { key: 'flood', label: 'FEMA flood zones', group: 'Infrastructure', on: true },
-  { key: 'proposed_transit', label: 'Proposed routes and stops', group: 'Plan', on: true },
+  { key: 'proposed_transit', label: 'Proposed transit', group: 'Plan', on: true },
   { key: 'parcels', label: 'Underused parcels', group: 'Plan', on: true },
   { key: 'buildings', label: 'Conversion candidates', group: 'Plan', on: true },
   { key: 'sites', label: 'Pursued sites', group: 'Plan', on: true },
@@ -54,7 +54,9 @@ export const LAYER_DEFS: { key: LayerKey; label: string; group: 'Base' | 'Infras
 ]
 
 /** Legend swatch per layer (CSS background), kept next to the colours the layers use. */
-export const LAYER_SWATCH: Partial<Record<LayerKey, string>> = {
+export const LAYER_SWATCH: Record<LayerKey, string> = {
+  base_dark: '#E4E7E1',
+  aerial: 'linear-gradient(135deg,#6F7D5B,#A7A58A,#5B6B7A)',
   transit_existing: 'linear-gradient(90deg,#1C2230 50%,#13808A 50%)',
   walk_bike: 'linear-gradient(90deg,#9AA09A 50%,#2E7D5B 50%)',
   utilities: 'repeating-linear-gradient(90deg,#2F5BD3 0 3px,transparent 3px 5px)',
@@ -65,6 +67,36 @@ export const LAYER_SWATCH: Partial<Record<LayerKey, string>> = {
   buildings: 'linear-gradient(90deg,#2F5BD3,#E3B448,#2E7D5B,#C4C9C1)',
   sites: '#1C2230',
   new_buildings: '#A9BFE7',
+}
+
+/** What a layer's colours mean, shown under it in the Layers panel while it is on. */
+export const LAYER_KEY: Partial<Record<LayerKey, { color: string; label: string }[]>> = {
+  walk_bike: [
+    { color: '#9AA09A', label: 'Sidewalk' },
+    { color: '#2E7D5B', label: 'Bike lane' },
+    { color: '#B93A2E', label: 'Missing sidewalk' },
+  ],
+  amenities: [
+    { color: '#13808A', label: 'EV charger' },
+    { color: '#E3B448', label: 'School' },
+    { color: '#B93A2E', label: 'Clinic' },
+    { color: '#2E7D5B', label: 'Park' },
+    { color: '#C0703A', label: 'Grocery' },
+  ],
+  proposed_transit: [
+    { color: '#13808A', label: 'Frequent bus' },
+    { color: '#2E7D5B', label: 'BRT' },
+  ],
+  buildings: [
+    { color: '#2F5BD3', label: 'Residential' },
+    { color: '#E3B448', label: 'Hotel' },
+    { color: '#2E7D5B', label: 'Mixed use' },
+    { color: '#C4C9C1', label: 'Unchanged' },
+  ],
+  new_buildings: [
+    { color: '#A9BFE7', label: 'Pencils today' },
+    { color: 'rgba(169,191,231,0.4)', label: 'On watch' },
+  ],
 }
 
 export const UNDERUSED_LAND_USES: Record<string, true> = { surface_parking: true, vacant: true, retail_1story: true }
