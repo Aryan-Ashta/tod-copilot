@@ -13,7 +13,7 @@ This replaces the hardware table and sensor node from earlier drafts. The goal i
 - **Statistics:** animated values with a contribution bar per stat split by history entry (keyed by entry number) and markers for existing conditions, your plan and the agents' plan.
 - **Green-space slider:** a compact one-row homes ↔ green-space slider floats on the map above the tile tray (the same compact slider the plan screen's targets strip uses). It is a plan-wide setting, not a step: its edit always stays last in the edit list, so it applies to every new build (the agents' and tiles placed later) and its history entry shows its whole effect; Undo removes the most recent change.
 - **Map:** lots taken by a proposed park or a new build drop their underused tint, and a demolished building loses its selection outline.
-- **Pencil hints:** a hand-drawn intro (pick a tile → click a highlighted spot) until the first change; after each change, a pencil circle on the new history row ("no effect" when it moved nothing).
+- **Pencil hints:** a hand-drawn intro (pick a tile → click a highlighted spot) until the first change, then nothing more.
 - **Stat colours:** after each change, every stat it moved turns green (better) or red (worse), in the side panel and the footer, with its change badge; it keeps that colour until the next change, which turns stats it leaves alone back to ink.
 - Edits persist per plan in `sessionStorage` (`transitor.edits.<planId>`), so the plan screen and edit mode share them.
 - Each placement sends the edit list to `/api/plan/{id}/rescore` with `from_existing: true`; no LLM is involved, so it stays under 1 s even offline.
