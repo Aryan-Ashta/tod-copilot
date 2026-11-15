@@ -2,7 +2,7 @@
 
 Tasks are sized for one agent session each. Do them in order within a lane; each ends runnable. Reference them in prompts like "Do task R2."
 
-Owners: **A** = Aryan (data layer, models, finance), **M** = Matthew (agents, corpus, infrastructure), **S** = Sam (frontend, meeting mode).
+Owners: **A** = Aryan (data layer, models, finance), **M** = Matthew (agents, corpus, infrastructure), **S** = Sam (frontend, edit mode).
 
 ## Timeline and checkpoints
 
@@ -12,7 +12,7 @@ Owners: **A** = Aryan (data layer, models, finance), **M** = Matthew (agents, co
 | Sat 2 am | Fixtures recorded for all three locales; agent skeleton streams fake events to the UI |
 | Sat 10 am | Infrastructure layer and building reuse scores visible on the Houston map |
 | **Sat 2 pm** | **Checkpoint:** Houston end to end (all 8 agents, even if some are thin). If not, cut per the list below |
-| Sat 6 pm | LA legal paths side by side; meeting mode re-scores under 1 s |
+| Sat 6 pm | LA legal paths side by side; edit mode re-scores under 1 s |
 | Sat 10 pm | Brevard fallback run passes its golden tests |
 | **Sun 2 am** | **Feature freeze:** fixes, caching, precompute, factor verification, rehearsal only |
 | Sun 8 am | Devpost submitted with public repo and video |
@@ -67,7 +67,7 @@ Owners: **A** = Aryan (data layer, models, finance), **M** = Matthew (agents, co
 - [ ] **F3:** Building reuse card: ranked table, fit-score chart, blockers, source badges; existing buildings colored by best use.
 - [ ] **F4:** Zoning card with side-by-side legal paths and citation drawer; Funding card with new-build vs convert comparison.
 - [ ] **F5:** Targets panel + slider; deltas animation.
-- [ ] **F6:** Meeting mode with tile tray, validity checks, scoreboard, undo/reset/history (`docs/07-interactive-planning.md`).
+- [ ] **F6:** Edit mode with tile tray, validity checks, scoreboard, undo/reset/history (`docs/07-interactive-planning.md`).
 - [ ] **F7:** Uncertainty queue panel with labeled simulated count.
 
 ### Locale tests and demo (all)

@@ -353,7 +353,7 @@ class Plan(BaseModel):
 
 
 class Edit(BaseModel):          # from meeting mode or the slider
-    kind: Literal["place_tile", "remove_tile", "slider"]
+    kind: Literal["place_tile", "remove_tile", "slider", "apply_suggestions"]   # apply_suggestions: agents' plan
     tile: Optional[Literal["homes", "park", "stop", "convert_residential", "convert_hotel"]] = None
     target_id: Optional[str] = None   # parcel or building id
     value: Optional[float] = None
@@ -388,6 +388,11 @@ class Rejection(BaseModel):
     factor_key: Optional[str]
 
 
+class ScoreSnapshot(BaseModel):
+    scoreboard: Scoreboard
+    targets: list[TargetScore]
+
+
 class RescoreResponse(BaseModel):
     # Keys sites, stacks, deals, conversions, targets, transit, infrastructure_added replace those Plan
     # fields; returning a patch instead of the full Plan keeps the round trip under 1 s.
@@ -395,6 +400,9 @@ class RescoreResponse(BaseModel):
     scoreboard: Scoreboard
     deltas: dict[str, float]          # vs the base plan
     rejected: Optional[Rejection]
+    steps: list[ScoreSnapshot]        # steps[i]: score after edits[0..i]; a rejected/invalid edit repeats the previous
+    existing: ScoreSnapshot           # existing conditions, no edits
+    suggested: ScoreSnapshot          # the agents' plan as built, no edits
 
 
 class SimulatedCount(BaseModel):
@@ -404,6 +412,17 @@ class SimulatedCount(BaseModel):
     before: tuple[float, float]
     after: tuple[float, float]
     label: str = "Simulated count (demo)"
+
+
+class LetterDraft(BaseModel):   # Addition: outreach letter filled from plan data (models/letters.py), never an LLM
+    kind: Literal["owner_outreach", "pre_application", "funding_request"]
+    target_id: str              # site id (owner_outreach, funding_request) or parcel id (pre_application)
+    to: str                     # owner name / "Planning Department, <jurisdiction>" / "Housing finance agency"
+    subject: str
+    body: str                   # empty when refused
+    citations: list[Citation]   # pre_application: the recommended path's corpus citations; else empty
+    figures: dict[str, float]   # every number used in the body, keyed (money rounded to whole dollars)
+    refusal: Optional[str]      # why no letter applies here; None when drafted
 
 
 class Factor(BaseModel):

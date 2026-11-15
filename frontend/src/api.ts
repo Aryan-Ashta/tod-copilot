@@ -1,4 +1,5 @@
 import type {
+  AppConfig,
   AreaCheck,
   AgentEvent,
   BuildingDetail,
@@ -6,6 +7,8 @@ import type {
   Edit,
   Factor,
   GeocodeResult,
+  LetterDraft,
+  LetterKind,
   Locale,
   PlanOptions,
   StockPrompt,
@@ -46,6 +49,8 @@ const enc = encodeURIComponent
 
 export const getLocales = () => request<Locale[]>('/api/locales')
 
+export const getConfig = () => request<AppConfig>('/api/config')
+
 export interface CreatePlanRequest {
   locale_id: string | null
   boundary: unknown | null
@@ -64,12 +69,10 @@ export const metros = () => request<MetroOutlines>('/api/metros')
 
 export const stockPrompts = () => request<StockPrompt[]>('/api/stock_prompts')
 
-export const parsePrompt = (prompt: string) => post<PlanOptions>('/api/parse_prompt', { prompt })
-
 export const getPlan = (planId: string) => request<Plan>(`/api/plan/${enc(planId)}`)
 
-export const rescore = (planId: string, edits: Edit[]) =>
-  post<RescoreResponse>(`/api/plan/${enc(planId)}/rescore`, { edits })
+export const rescore = (planId: string, edits: Edit[], fromExisting = true) =>
+  post<RescoreResponse>(`/api/plan/${enc(planId)}/rescore`, { edits, from_existing: fromExisting })
 
 export const simulateCount = (planId: string, stop_id: string) =>
   post<SimulatedCount>(`/api/plan/${enc(planId)}/simulate_count`, { stop_id })
@@ -80,6 +83,9 @@ export const getBuilding = (buildingId: string, planId: string) =>
 export const getCorpusDoc = (docId: string) => request<CorpusDoc>(`/api/corpus/${enc(docId)}`)
 
 export const getFactors = () => request<Factor[]>('/api/factors')
+
+export const getLetter = (planId: string, kind: LetterKind, targetId: string) =>
+  request<LetterDraft>(`/api/plan/${enc(planId)}/letter?kind=${enc(kind)}&target_id=${enc(targetId)}`)
 
 export interface StreamHandlers {
   onEvent: (e: AgentEvent) => void

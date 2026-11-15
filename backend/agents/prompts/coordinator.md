@@ -1,4 +1,4 @@
-# TOD Copilot coordinator
+# Transitor coordinator
 
 You plan transit and transit-oriented development for one place. Eight subagents do the work through tools.
 

@@ -21,14 +21,15 @@ from backend.data.factors import load_factors, resolve
 from backend.data.http_cache import OfflineCacheMiss, cached_get
 from backend.onboard import geo
 from backend.data.locales import LOCALE_IDS, load_locales
+from backend.models.letters import LetterKind, LetterTargetNotFound, draft_letter
 from backend.models.rescore import rescore
 from backend.models.transit import simulate_count
-from backend.schemas import (AgentEvent, Edit, Factor, Locale, Plan, PlanOptions, RescoreResponse, SimulatedCount,
-                             StockPrompt)
+from backend.schemas import (AgentEvent, Edit, Factor, LetterDraft, Locale, Plan, PlanOptions, RescoreResponse,
+                             SimulatedCount, StockPrompt)
 
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 
-app = FastAPI(title="TOD Copilot")
+app = FastAPI(title="Transitor")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -50,6 +51,7 @@ class PromptRequest(BaseModel):
 
 class RescoreRequest(BaseModel):
     edits: list[Edit]
+    from_existing: bool = False   # start from existing conditions instead of the agents' plan
 
 
 class CountRequest(BaseModel):
@@ -66,12 +68,19 @@ def locales() -> list[Locale]:
     return load_locales()
 
 
+@app.get("/api/config")
+def config() -> dict:
+    return {"hosted": settings.HOSTED, "repo_url": settings.REPO_URL}
+
+
 def _area(locale_id: Optional[str], boundary: Optional[dict]) -> AreaResolution:
     return resolve_area(locale_id, boundary, resolve(LOCALE_IDS[0])["area_max_km2"])
 
 
 @app.post("/api/plan")
 async def start_plan(req: PlanRequest) -> dict:
+    if settings.HOSTED:
+        raise HTTPException(403, "Live runs are disabled on the hosted demo; open a recorded demo instead")
     try:
         area = _area(req.locale_id, req.boundary)
     except AreaError as e:
@@ -249,7 +258,7 @@ def get_plan(plan_id: str) -> Plan:
 @app.post("/api/plan/{plan_id}/rescore")
 def plan_rescore(plan_id: str, req: RescoreRequest) -> RescoreResponse:
     p = _plan(plan_id)
-    return rescore(p, req.edits, resolve(p.locale.id))
+    return rescore(p, req.edits, resolve(p.locale.id), from_existing=req.from_existing)
 
 
 @app.post("/api/plan/{plan_id}/simulate_count")
@@ -259,6 +268,16 @@ def plan_simulate_count(plan_id: str, req: CountRequest) -> SimulatedCount:
     if stop is None:
         raise HTTPException(404, f"stop {req.stop_id} not in plan")
     return simulate_count(stop, resolve(p.locale.id))
+
+
+@app.get("/api/plan/{plan_id}/letter")
+def plan_letter(plan_id: str, kind: LetterKind, target_id: str) -> LetterDraft:
+    """Outreach letter filled from the stored plan (models/letters.py); `refusal` set when no letter applies."""
+    p = _plan(plan_id)
+    try:
+        return draft_letter(p, kind, target_id, resolve(p.locale.id))
+    except LetterTargetNotFound as e:
+        raise HTTPException(404, str(e))
 
 
 @app.get("/api/buildings/{building_id}")

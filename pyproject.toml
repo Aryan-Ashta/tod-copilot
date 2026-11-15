@@ -1,7 +1,7 @@
 [project]
 name = "tod-copilot"
 version = "0.1.0"
-description = "TOD Copilot: transit-oriented development planning from one prompt"
+description = "Transitor: transit-oriented development planning from one prompt"
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "fastapi",

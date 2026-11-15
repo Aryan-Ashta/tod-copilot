@@ -10,11 +10,14 @@ export default function SidePanel({
   storageKey,
   label,
   panel,
+  demo,
   children,
 }: {
   storageKey: string
   label: string
   panel: ReactNode
+  /** `data-demo` hook on the panel's scroll container (the demo sequence scrolls it). */
+  demo?: string
   children: ReactNode
 }) {
   const [open, setOpenState] = useState(() => localStorage.getItem(storageKey) !== 'closed')
@@ -32,7 +35,8 @@ export default function SidePanel({
         style={{ width: open ? WIDTH_PX : 0 }}
       >
         <div
-          className={`side-panel-body flex h-full flex-col overflow-y-auto ${open ? '' : 'opacity-0'}`}
+          data-demo={demo}
+          className={`side-panel-body relative flex h-full flex-col overflow-y-auto ${open ? '' : 'opacity-0'}`}
           style={{ width: WIDTH_PX, translate: open ? '0' : `-${WIDTH_PX / 4}px 0` }}
         >
           {panel}

@@ -4,6 +4,7 @@ import { siteLetters, STRATEGY_COLORS } from '../../mapLayers'
 import { CardShell, Empty } from './common'
 import FactorHover from '../FactorHover'
 import { SourcedValue } from '../SourceBadge'
+import LetterDraft from '../LetterDraft'
 
 const DEAL_KEYS = ['deal_vacancy_for_acquisition', 'deal_long_hold_years', 'deal_lease_pass_years']
 
@@ -65,12 +66,7 @@ export default function LandDealCard() {
                     <li key={r}>{r}</li>
                   ))}
                 </ul>
-                {d.letter_draft && (
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-xs text-sky-400">Draft outreach letter</summary>
-                    <pre className="mt-1 rounded bg-neutral-950 p-2 text-xs whitespace-pre-wrap text-neutral-300">{d.letter_draft}</pre>
-                  </details>
-                )}
+                {d.strategy !== 'pass' && <LetterDraft kind="owner_outreach" targetId={d.site_id} />}
               </li>
             )
           })}

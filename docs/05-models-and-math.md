@@ -121,8 +121,9 @@ Return every intermediate number.
 
 ## Re-score (`models/rescore.py`)
 
-`rescore(plan, edits) -> (plan, deltas)` under 300 ms:
+`rescore(plan, edits, from_existing=False) -> (plan, deltas)` under 300 ms. With `from_existing` the edits start from existing conditions (no agent sites, stacks or deals; existing route kinds only; feed stops kept; coverage = `coverage_baseline_pct`). It also returns a score snapshot after each edit plus snapshots of existing conditions and the agents' plan; `deltas` stay relative to the agents' plan. Walk distances (`precomputed.walk_m`) already describe existing conditions and are not changed by either.
 
+- `apply_suggestions` → restore the agents' sites, stacks, deals, routes and stops (skipping targets an earlier edit took); a no-op without `from_existing`.
 - `place_tile(homes, parcel)` → new-build site with cached envelope.
 - `place_tile(park, parcel)` → open space; update homes, finance, walk access, CO₂.
 - `place_tile(stop, parcel)` → add a stop; update coverage, walk, CO₂ (no full re-optimization).
