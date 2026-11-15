@@ -517,7 +517,8 @@ export interface ParcelDatum {
   underused: boolean
 }
 
-export function parcelsLayer(parcels: Parcel[], visible: boolean, selectedId?: string) {
+/** `taken`: parcels a proposed park or new build now occupies; they keep their outline but drop the fill. */
+export function parcelsLayer(parcels: Parcel[], visible: boolean, selectedId?: string, taken: ReadonlySet<string> = NO_IDS) {
   const feats = parcels.map((p) =>
     feature<ParcelDatum>(p.geometry, { parcel: p, underused: !!UNDERUSED_LAND_USES[p.land_use.value ?? ''] }),
   )
@@ -534,10 +535,12 @@ export function parcelsLayer(parcels: Parcel[], visible: boolean, selectedId?: s
     // a 1 px hairline faded right back: a half-pixel stroke shimmered as the camera moved
     getLineWidth: (f) => (f.properties.parcel.id === selectedId ? 3 : 1),
     getLineColor: (f) => (f.properties.parcel.id === selectedId ? INK : [28, 34, 48, 34]),
-    getFillColor: (f) => (f.properties.underused ? withAlpha(AMBER, 120) : [28, 34, 48, 6]),
-    updateTriggers: { getLineWidth: selectedId, getLineColor: selectedId },
+    getFillColor: (f) =>
+      taken.has(f.properties.parcel.id) ? [0, 0, 0, 0] : f.properties.underused ? withAlpha(AMBER, 120) : [28, 34, 48, 6],
+    updateTriggers: { getLineWidth: selectedId, getLineColor: selectedId, getFillColor: taken },
   })
 }
+const NO_IDS: ReadonlySet<string> = new Set()
 
 /** Outline + light fill for the selected parcel, drawn whether or not the parcels layer is on. */
 export function selectedParcelLayer(parcels: Parcel[], selectedId?: string) {

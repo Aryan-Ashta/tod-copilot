@@ -859,7 +859,20 @@ export default function MapView({
     () => stopsLayer(stops, proposedKeys, keyColors, { existing: L.transit_existing, proposed: L.proposed_transit }, focus, sel.stopId),
     [stops, proposedKeys, keyColors, L.transit_existing, L.proposed_transit, focus, sel.stopId],
   )
-  const lParcels = useMemo(() => parcelsLayer(parcels, L.parcels || large, sel.parcelId), [parcels, L.parcels, large, sel.parcelId])
+  // lots a park or a new build has taken over drop their "underused" tint, so the park or building shows plainly
+  const takenKey = useMemo(
+    () =>
+      [
+        ...infraAdded.filter((f) => f.kind === 'park').map((f) => String(f.attrs.parcel_id)),
+        ...(showNew ? sites.filter((s) => s.kind === 'new_build' && s.status !== 'pass').flatMap((s) => s.parcel_ids) : []),
+      ].join('|'),
+    [infraAdded, sites, showNew],
+  )
+  const taken = useMemo(() => new Set(takenKey ? takenKey.split('|') : []), [takenKey])
+  const lParcels = useMemo(
+    () => parcelsLayer(parcels, L.parcels || large, sel.parcelId, taken),
+    [parcels, L.parcels, large, sel.parcelId, taken],
+  )
   // the selected parcel stays outlined even when the parcels layer is off (card links can select any parcel)
   const lSelParcel = useMemo(() => selectedParcelLayer(parcels, sel.parcelId), [parcels, sel.parcelId])
   const flyTo = sel.flyTo
@@ -878,9 +891,10 @@ export default function MapView({
     () => demolitionLayer(buildingData, storyHeightFt, demolitions, stage.clock),
     [buildingData, storyHeightFt, demolitions, stage.clock],
   )
+  // a demolished building takes its selection shell with it
   const lSelBuilding = useMemo(
-    () => selectedBuildingLayer(buildingData, storyHeightFt, sel.buildingId),
-    [buildingData, storyHeightFt, sel.buildingId],
+    () => selectedBuildingLayer(buildingData, storyHeightFt, sel.buildingId && !hidden.has(sel.buildingId) ? sel.buildingId : undefined),
+    [buildingData, storyHeightFt, sel.buildingId, hidden],
   )
   const lSites = useMemo(() => sitesLayer(siteData, L.sites), [siteData, L.sites])
   const lNew = useMemo(() => {

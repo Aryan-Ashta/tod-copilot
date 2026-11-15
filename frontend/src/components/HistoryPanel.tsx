@@ -1,7 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { usePlan, type HistoryItem } from '../state/PlanContext'
+import { usePlan, type HistoryItem, type PlanState } from '../state/PlanContext'
 import { STAT_META, deltaGood, deltaShown, fmtStatDelta } from './Scoreboard'
 import { TileGlyph } from './TileTray'
+import type { Scoreboard } from '../types'
 
 /** Eight colours that read on paper, one per history entry (cycling); text on each is `historyInk`. */
 const PALETTE = ['#2f5bd3', '#e0674f', '#2e7d5b', '#e3b448', '#8b5cb8', '#13808a', '#d1568a', '#7d8a2e']
@@ -65,13 +66,34 @@ function EntryIcon({ h }: { h: HistoryItem }) {
   return <EraserIcon />
 }
 
+/** The scoreboard just before entry `h`: the previous entry's snapshot, or existing conditions for the first. */
+function scoreBefore(state: PlanState, h: HistoryItem): Scoreboard | null {
+  const i = state.history.findIndex((x) => x.id === h.id)
+  const prev = i > 0 ? state.history[i - 1] : null
+  return (prev ? state.scoreSteps[prev.id]?.scoreboard : state.existing?.scoreboard) ?? null
+}
+
+/** Why a placed tile moved no number, from the score it was placed on (walk access counts new homes only). */
+function noChangeReason(h: HistoryItem, before: Scoreboard | null): string {
+  if (h.kind !== 'tile' || !before) return 'no change in the numbers'
+  if ((h.tile === 'park' || h.tile === 'stop') && before.homes === 0)
+    return 'no change: walk access counts new homes, and the plan has none yet'
+  if (h.tile === 'park' && (before.walk_by_amenity_pct?.park ?? 0) >= 100)
+    return 'no change: every new home already has a park within walking distance'
+  if (h.tile === 'stop' && before.walk_access_pct >= 100)
+    return 'no change: every new home is already within walking distance of frequent transit'
+  if (h.tile === 'park' || h.tile === 'stop') return 'no change: no new home that lacked one is within walking distance'
+  return 'no change in the numbers'
+}
+
 /** Signed changes this entry made, in display order: "+48 homes", "−$1.2M funding". Good green, bad red. */
 function DeltaChips({ h }: { h: HistoryItem }) {
+  const { state } = usePlan()
   const chips = STAT_META.flatMap((m) => {
     const d = h.delta[m.key]
     return d !== undefined && deltaShown(m, d) ? [{ m, d }] : []
   })
-  if (!chips.length) return <div className="text-[12px] text-slate italic">no change in the numbers</div>
+  if (!chips.length) return <div className="text-[12px] leading-snug text-slate italic">{noChangeReason(h, scoreBefore(state, h))}</div>
   return (
     <div className="mt-1 flex flex-wrap gap-1">
       {chips.map(({ m, d }) => (
