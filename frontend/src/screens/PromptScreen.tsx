@@ -447,19 +447,19 @@ export default function PromptScreen() {
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div className="map-in absolute inset-0">{map}</div>
         <div className="pointer-events-none absolute top-0 left-0 z-10 h-[420px] w-[900px] max-w-full bg-[radial-gradient(ellipse_at_top_left,var(--color-paper)_35%,transparent_70%)]" />
-        <div className="absolute top-6 left-7 z-20 w-[min(560px,calc(100%-56px))]">
+        <div className="absolute top-6 left-7 z-20 w-[min(720px,calc(100%-56px))]">
           <div className="enter mb-3" style={d(0)}>
             <Brand className="text-[19px]" />
           </div>
           <h1 className="line-reveal display text-[54px]">
             <span>
-              <span style={d(0)}>Plan transit and</span>
+              <span style={d(0)}>Planning sustainable</span>
             </span>
             <span>
-              <span style={d(1)}>the homes around it</span>
+              <span style={d(1)}>cities around transit</span>
             </span>
           </h1>
-          <div className="enter mt-5" style={d(3)}>
+          <div className="enter mt-5 max-w-[560px]" style={d(3)}>
             {searchForm}
           </div>
         </div>
