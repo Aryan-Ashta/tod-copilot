@@ -456,7 +456,7 @@ export default function PromptScreen() {
               <span style={d(0)}>Planning sustainable</span>
             </span>
             <span>
-              <span style={d(1)}>cities around transit</span>
+              <span style={d(1)}>cities around transit.</span>
             </span>
           </h1>
           <div className="enter mt-5" style={d(3)}>
