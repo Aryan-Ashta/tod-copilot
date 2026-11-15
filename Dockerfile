@@ -18,6 +18,8 @@ RUN npm run build
 # ---- backend
 FROM python:3.11-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Coolify's health check (GET /health, set on the app) runs curl or wget inside the container; slim images have neither.
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=/app/.venv PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
@@ -28,6 +30,4 @@ COPY --from=web /web/dist frontend/dist
 RUN mkdir -p cache
 ENV PATH="/app/.venv/bin:$PATH" FRONTEND_DIST=/app/frontend/dist
 EXPOSE 8000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"
 CMD ["uvicorn", "backend.serve:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
