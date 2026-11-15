@@ -91,10 +91,14 @@ function noChangeReason(h: HistoryItem, before: Scoreboard | null): string {
   return 'no change in the numbers'
 }
 
-/** Signed changes this entry made, in display order: "+48 homes", "−$1.2M funding". Good green, bad red. */
+/**
+ * Signed changes this entry made, in display order: "+48 homes", "−$1.2M funding". Good green, bad red. A green-space
+ * entry leaves out transport CO₂ avoided: its carbon chip is the embodied carbon saved (the stats still show both).
+ */
 function DeltaChips({ h }: { h: HistoryItem }) {
   const { state } = usePlan()
   const chips = STAT_META.flatMap((m) => {
+    if (h.kind === 'slider' && m.key === 'transport_co2_tonnes_per_year') return []
     const d = h.delta[m.key]
     return d !== undefined && deltaShown(m, d) ? [{ m, d }] : []
   })
