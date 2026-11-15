@@ -19,7 +19,7 @@ import {
   type StockPrompt,
 } from '../types'
 
-const REPLAY_HINT = 'Replays exist only for whole recorded areas with default options; this runs live'
+const REPLAY_HINT = 'Replays exist only for whole recorded areas with default options and no typed instructions; this runs live'
 
 const FOCUS: { value: PlanOptions['focus']; label: string }[] = [
   { value: 'all', label: 'Both' },
@@ -52,6 +52,9 @@ export default function PromptScreen() {
   const [stock, setStock] = useState<StockPrompt[]>([])
   // Selected stock-prompt ids in pick order, tagged with the visible list they were made against.
   const [pick, setPick] = useState<{ visibleKey: string; ids: string[] } | null>(null)
+  // The last chip: the user's own instructions, typed in place and sent alongside the picked prompts.
+  const [custom, setCustom] = useState('')
+  const [customEditing, setCustomEditing] = useState(false)
   // Options-popover changes; each set field overrides the value merged from the selected prompts.
   const [override, setOverride] = useState<{ focus?: PlanOptions['focus']; goals: Partial<PlanGoals> }>({ goals: {} })
   const [replay, setReplay] = useState(true)
@@ -141,14 +144,16 @@ export default function PromptScreen() {
     focus: override.focus ?? mergedFocus,
     goals: { ...mergedGoals, ...override.goals },
   }
-  const prompt = selectedPrompts.map((p) => p.prompt).join(' · ')
+  const customText = custom.trim()
+  const prompt = [...selectedPrompts.map((p) => p.prompt), customText].filter(Boolean).join(' · ')
 
   const defaultOptions = options.focus === 'all' && Object.values(options.goals).every((v) => v === null)
-  const replayAllowed = wholeLocale !== null && defaultOptions
+  // a recorded run cannot follow typed instructions
+  const replayAllowed = wholeLocale !== null && defaultOptions && !customText
   const replayOn = replay && replayAllowed
   const hostedBlocked = config?.hosted === true && !replayOn
   const areaOk = wholeLocale !== null || (check !== null && check.kind !== null && !check.error)
-  const canSubmit = areaOk && !submitting && selectedPrompts.length > 0
+  const canSubmit = areaOk && !submitting && (selectedPrompts.length > 0 || customText !== '')
 
   const onBoundary = (b: PolygonGeometry | null) => {
     setBoundary(b)
@@ -358,6 +363,44 @@ export default function PromptScreen() {
           </span>
         )
       })}
+      <span className="chip-in shrink-0" style={d(visibleStock.length)}>
+        {customEditing ? (
+          <input
+            autoFocus
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
+            onBlur={() => setCustomEditing(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === 'Escape') {
+                e.preventDefault()
+                setCustomEditing(false)
+              }
+            }}
+            aria-label="Your own instructions"
+            placeholder="Type your own instructions…"
+            className="w-[240px] rounded-full bg-ink/[.06] px-3 py-1 text-[12.5px] font-medium placeholder:text-slate/70 focus:shadow-[0_0_0_3px_rgb(47_91_211/.15)] focus:outline-none"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCustomEditing(true)}
+            title={customText || 'Type your own instructions'}
+            aria-label={customText ? `Edit your instructions: ${customText}` : 'Add your own instructions'}
+            className={chipClass(customText !== '')}
+          >
+            {customText ? (
+              <svg viewBox="0 0 12 12" className="check-draw h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M2.5 6.5l2.3 2.3 4.7-5" pathLength={1} />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 12 12" className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+                <path d="M6 2v8M2 6h8" />
+              </svg>
+            )}
+            <span className="max-w-[180px] truncate">{customText || 'Add your own'}</span>
+          </button>
+        )}
+      </span>
     </div>
   )
 
@@ -422,7 +465,7 @@ export default function PromptScreen() {
       ref={planButtonRef}
       onClick={submit}
       disabled={!canSubmit}
-      title={stock.length > 0 && selectedPrompts.length === 0 ? 'Pick at least one prompt' : undefined}
+      title={stock.length > 0 && selectedPrompts.length === 0 && !customText ? 'Pick a prompt or add your own' : undefined}
       className={`go h-11 shrink-0 rounded-full px-6 text-[14px] font-semibold whitespace-nowrap text-paper transition-[background-color,color] duration-200 disabled:cursor-default disabled:bg-ink/10 disabled:text-ink/35 ${hostedBlocked ? 'bg-slate' : 'bg-ink'}`}
     >
       {submitting ? 'Starting…' : 'Generate'}
