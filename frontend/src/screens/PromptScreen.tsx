@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { areaCheck, createPlan, geocode, getConfig, getLocales, stockPrompts } from '../api'
-import Disclaimer from '../components/Disclaimer'
+import Brand from '../components/Brand'
 import HostedRunModal from '../components/HostedRunModal'
 import AreaPicker, { type PolygonGeometry } from '../components/AreaPicker'
 import Segmented from '../components/Segmented'
@@ -444,11 +444,13 @@ export default function PromptScreen() {
 
   return (
     <div className="flex h-full flex-col">
-      <Disclaimer />
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div className="map-in absolute inset-0">{map}</div>
         <div className="pointer-events-none absolute top-0 left-0 z-10 h-[420px] w-[900px] max-w-full bg-[radial-gradient(ellipse_at_top_left,var(--color-paper)_35%,transparent_70%)]" />
         <div className="absolute top-6 left-7 z-20 w-[min(560px,calc(100%-56px))]">
+          <div className="enter mb-3" style={d(0)}>
+            <Brand className="text-[19px]" />
+          </div>
           <h1 className="line-reveal display text-[54px]">
             <span>
               <span style={d(0)}>Plan transit and</span>

@@ -94,6 +94,8 @@ const streets = (id: string, color: string, edgePx: number): LayerSpecification 
     'line-width': ['interpolate', ['exponential', 2], ['zoom'], 12, ['+', edgePx / 2, ['/', STREET_W20, 256]], 20, ['+', edgePx, STREET_W20]],
   },
 })
+/** The compact attribution (the ⓘ at the bottom of every map) carries the disclaimer with the data credits. */
+export const ATTRIBUTION = { compact: true, customAttribution: 'Concept · estimates, not legal or financial advice' }
 export const BASE_STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -593,7 +595,7 @@ export default function MapView({
       center: [-95.37, 29.75],
       zoom: 14,
       ...ISO_CAMERA,
-      attributionControl: { compact: true },
+      attributionControl: ATTRIBUTION,
       // deck draws into this same WebGL context (interleaved), so multisampling smooths its strokes and building
       // edges too; the canvas renders at the device pixel ratio (MapLibre's default `pixelRatio`), which deck
       // follows in interleaved mode (its own useDevicePixels does not apply there).

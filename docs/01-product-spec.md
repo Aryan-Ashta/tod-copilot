@@ -50,7 +50,7 @@ Three, each with a distinct purpose. See `docs/11-test-locales.md` for the full 
 - [ ] The Brevard plan shows no CoStar data, medium or low confidence badges, missing-data notes, and 0% of new homes in flood zones.
 - [ ] Each locale's validation checklist in `docs/11-test-locales.md` passes or has a written reason it's skipped.
 - [ ] Everything works with `DEMO_OFFLINE=1`.
-- [ ] A visible note says figures are estimates, not legal or financial advice.
+- [ ] The info button (ⓘ) at the bottom right of every map says figures are estimates, not legal or financial advice.
 
 ## Out of scope
 

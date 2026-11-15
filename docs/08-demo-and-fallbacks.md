@@ -39,5 +39,5 @@ Re-score never needs the network, so edit mode and the slider work in every mode
 - [ ] Locale golden tests pass or are skipped with a written reason.
 - [ ] Factors visible in the demo are `verified: true`.
 - [ ] Laptop on power, notifications off, browser zoom set, backup screen recording ready.
-- [ ] Disclaimer visible: estimates, not legal or financial advice.
+- [ ] Disclaimer in the map's info button (ⓘ, bottom right): estimates, not legal or financial advice.
 - [ ] Devpost lists the tracks: Sustainability (main), CoStar, LangChain deepagents, Amazon Practical AI.

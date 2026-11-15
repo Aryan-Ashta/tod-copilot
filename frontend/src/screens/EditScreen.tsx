@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { PlanProvider, suggestionsApplied, usePlan, type RejectionNotice } from '../state/PlanContext'
 import { useApp } from '../state/AppContext'
 import ApplySuggestionsButton from '../components/ApplySuggestionsButton'
-import Disclaimer from '../components/Disclaimer'
+import PanelHeader from '../components/PanelHeader'
 import FactorHover from '../components/FactorHover'
 import Hints from '../components/Hints'
 import HistoryPanel from '../components/HistoryPanel'
@@ -15,9 +15,9 @@ import StatsPanel from '../components/StatsPanel'
 import { GreenSpaceSlider } from '../components/TargetsPanel'
 import TileTray, { TileGlyph, tileInfo } from '../components/TileTray'
 
-// Layers panel (collapsed header) at the top left; green-space slider stacked on the tile tray at the bottom. The
-// history/stats panel and the scoreboard bar sit outside the map.
-const EDIT_MAP_INSETS: MapInsets = { top: 64, right: 32, bottom: 132, left: 32 }
+// Layers panel (collapsed header) at the top left; green-space slider stacked on the tile tray at the bottom, above
+// the attribution row (it holds the disclaimer). The history/stats panel and the scoreboard bar sit outside the map.
+const EDIT_MAP_INSETS: MapInsets = { top: 64, right: 32, bottom: 156, left: 32 }
 
 /** Rejected placement: what was refused, where, why, and the rule or factor behind it. Auto-dismisses after 7 s. */
 function RejectionToast({ notice, onClose }: { notice: RejectionNotice; onClose: () => void }) {
@@ -74,30 +74,35 @@ function Edit() {
   const tool = state.tool ? tileInfo(state.tool) : null
 
   const side = (
-    <div className="flex flex-col gap-4 px-5 pt-4 pb-6 text-base">
-      {!applied && <ApplySuggestionsButton className="w-full justify-center" />}
-      <HistoryPanel />
-      {state.loadError && <p className="text-sm text-gap">Could not load plan: {state.loadError}</p>}
-      <h2 className="wide mt-2 border-t-2 border-ink pt-3 text-[22px] font-bold">Statistics</h2>
-      <StatsPanel />
-    </div>
+    <>
+      <PanelHeader
+        link={
+          <Link to={`/plan/${state.planId}`} className="ctl px-3 py-1 text-[13px] no-underline">
+            Plan view
+          </Link>
+        }
+      >
+        {state.locale && <span className="font-semibold">{state.locale.name}</span>}
+      </PanelHeader>
+      <div className="flex flex-col gap-4 px-5 pt-4 pb-6 text-base">
+        {!applied && <ApplySuggestionsButton className="w-full justify-center" />}
+        <HistoryPanel />
+        {state.loadError && <p className="text-sm text-gap">Could not load plan: {state.loadError}</p>}
+        <h2 className="wide mt-2 border-t-2 border-ink pt-3 text-[22px] font-bold">Statistics</h2>
+        <StatsPanel />
+      </div>
+    </>
   )
 
   return (
     <div className="flex h-full flex-col">
-      <Disclaimer large>
-        <span>{state.locale?.name ?? ''}</span>
-        <Link to={`/plan/${state.planId}`} className="ctl px-3 py-1 text-[14px] no-underline">
-          Plan view
-        </Link>
-      </Disclaimer>
       <SidePanel storageKey="tod.edit.panel" label="History and statistics" width={380} panel={side}>
         <div className="absolute inset-0" data-hint-anchor="map">
           <MapView large insets={EDIT_MAP_INSETS} />
           <LayerPanel />
           {state.rejection && <RejectionToast key={state.rejection.nonce} notice={state.rejection} onClose={closeRejection} />}
           {/* bottom stack: tool hint, green-space slider, tile tray */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex flex-col items-center gap-2.5 px-3">
+          <div className="pointer-events-none absolute inset-x-0 bottom-10 z-10 flex flex-col items-center gap-2.5 px-3">
             {tool && state.tool && (
               <div
                 key={state.tool}
