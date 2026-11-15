@@ -13,12 +13,15 @@ export default function SplitPane({
   left,
   right,
   leftLabel,
+  leftDemo,
 }: {
   storageKey: string
   defaultFrac: number
   left: ReactNode
   right: ReactNode
   leftLabel: string
+  /** `data-demo` hook on the left pane's scroll container (the demo sequence scrolls it). */
+  leftDemo?: string
 }) {
   const boxRef = useRef<HTMLDivElement>(null)
   const [frac, setFracState] = useState(() => {
@@ -42,6 +45,7 @@ export default function SplitPane({
     <div ref={boxRef} className={`relative flex min-h-0 flex-1 ${dragging ? 'cursor-col-resize select-none' : ''}`}>
       <aside
         aria-label={leftLabel}
+        data-demo={leftDemo}
         className="relative flex shrink-0 flex-col overflow-y-auto"
         style={{ width: `${frac * 100}%`, minWidth: MIN_LEFT_PX, maxWidth: `${MAX_FRAC * 100}%` }}
       >

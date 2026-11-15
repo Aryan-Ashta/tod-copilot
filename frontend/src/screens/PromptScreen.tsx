@@ -274,6 +274,7 @@ export default function PromptScreen() {
     </form>
   )
 
+  // Short label in the bar; anything longer (an area error, the live-onboarding note) is spelled out in full above it.
   const statusText =
     !boundary && !wholeLocale
       ? 'Pick a pin or draw an area'
@@ -282,12 +283,18 @@ export default function PromptScreen() {
         : !check
           ? 'Checking the drawn area…'
           : check.error
-            ? check.error
+            ? 'Area not usable'
             : check.kind === 'subarea'
-              ? `${check.label} · recorded data · ${check.area_km2?.toFixed(1)} km²`
-              : `${check.label} · recorded live from public county sources; a county drawn in for the first time is onboarded by agents first, which can take several minutes · ${check.area_km2?.toFixed(1)} km²`
+              ? `${check.label} · ${check.area_km2?.toFixed(1)} km²`
+              : `${check.label} · live · ${check.area_km2?.toFixed(1)} km²`
+  const statusDetail = !boundary || !check
+    ? null
+    : check.error
+      ? check.error
+      : check.kind === 'metro'
+        ? 'Recorded live from public county sources. A county drawn in for the first time is onboarded by agents first, which can take several minutes.'
+        : null
   const statusTone = check?.error ? 'error' : areaOk ? 'ok' : 'idle'
-  // A tiny dot + one truncated line; the full text stays in the tooltip.
   const areaStatus = (
     <span
       key={statusText}
@@ -298,6 +305,15 @@ export default function PromptScreen() {
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusTone === 'ok' ? 'bg-green' : statusTone === 'error' ? 'bg-gap' : 'bg-slate/50'}`} />
       <span className="truncate">{statusText}</span>
     </span>
+  )
+  const statusNote = statusDetail && (
+    <p
+      key={statusDetail}
+      role={statusTone === 'error' ? 'alert' : undefined}
+      className={`hint-in max-w-[560px] rounded-2xl bg-paper/95 px-4 py-2 text-center text-[13px] leading-snug shadow-[0_6px_18px_rgb(28_34_48/.12)] backdrop-blur-md ${statusTone === 'error' ? 'text-gap' : 'text-ink/80'}`}
+    >
+      {statusDetail}
+    </p>
   )
 
   const chipClass = (on: boolean) =>
@@ -433,6 +449,7 @@ export default function PromptScreen() {
         <div className="absolute inset-x-0 bottom-7 z-20 flex justify-center px-6">
           <div className="enter relative flex w-full max-w-[760px] flex-col items-center gap-2" style={d(4)}>
             {errorNote}
+            {!optionsOpen && statusNote}
             {optionsOpen && (
               // centred over the start bar (Tailwind's translate property); pop-in animates transform, so they compose
               <div

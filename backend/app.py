@@ -21,10 +21,11 @@ from backend.data.factors import load_factors, resolve
 from backend.data.http_cache import OfflineCacheMiss, cached_get
 from backend.onboard import geo
 from backend.data.locales import LOCALE_IDS, load_locales
+from backend.models.letters import LetterKind, LetterTargetNotFound, draft_letter
 from backend.models.rescore import rescore
 from backend.models.transit import simulate_count
-from backend.schemas import (AgentEvent, Edit, Factor, Locale, Plan, PlanOptions, RescoreResponse, SimulatedCount,
-                             StockPrompt)
+from backend.schemas import (AgentEvent, Edit, Factor, LetterDraft, Locale, Plan, PlanOptions, RescoreResponse,
+                             SimulatedCount, StockPrompt)
 
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 
@@ -260,6 +261,16 @@ def plan_simulate_count(plan_id: str, req: CountRequest) -> SimulatedCount:
     if stop is None:
         raise HTTPException(404, f"stop {req.stop_id} not in plan")
     return simulate_count(stop, resolve(p.locale.id))
+
+
+@app.get("/api/plan/{plan_id}/letter")
+def plan_letter(plan_id: str, kind: LetterKind, target_id: str) -> LetterDraft:
+    """Outreach letter filled from the stored plan (models/letters.py); `refusal` set when no letter applies."""
+    p = _plan(plan_id)
+    try:
+        return draft_letter(p, kind, target_id, resolve(p.locale.id))
+    except LetterTargetNotFound as e:
+        raise HTTPException(404, str(e))
 
 
 @app.get("/api/buildings/{building_id}")

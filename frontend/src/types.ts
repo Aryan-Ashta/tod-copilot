@@ -507,6 +507,24 @@ export interface SimulatedCount {
   label: string
 }
 
+export type LetterKind = 'owner_outreach' | 'pre_application' | 'funding_request'
+
+/** Outreach letter filled from plan data by backend/models/letters.py (never an LLM). */
+export interface LetterDraft {
+  kind: LetterKind
+  /** site id (owner_outreach, funding_request) or parcel id (pre_application) */
+  target_id: string
+  to: string
+  subject: string
+  /** empty when refused */
+  body: string
+  citations: Citation[]
+  /** every number used in the body, keyed (money rounded to whole dollars) */
+  figures: Record<string, number>
+  /** why no letter applies here; null when drafted */
+  refusal: string | null
+}
+
 export interface Factor {
   key: string
   value: unknown

@@ -6,6 +6,8 @@ import type {
   Edit,
   Factor,
   GeocodeResult,
+  LetterDraft,
+  LetterKind,
   Locale,
   PlanOptions,
   StockPrompt,
@@ -78,6 +80,9 @@ export const getBuilding = (buildingId: string, planId: string) =>
 export const getCorpusDoc = (docId: string) => request<CorpusDoc>(`/api/corpus/${enc(docId)}`)
 
 export const getFactors = () => request<Factor[]>('/api/factors')
+
+export const getLetter = (planId: string, kind: LetterKind, targetId: string) =>
+  request<LetterDraft>(`/api/plan/${enc(planId)}/letter?kind=${enc(kind)}&target_id=${enc(targetId)}`)
 
 export interface StreamHandlers {
   onEvent: (e: AgentEvent) => void
