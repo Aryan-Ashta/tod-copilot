@@ -624,6 +624,13 @@ slider_max_open_space_share:
   source_url: team choice
   verified: true
   note: team design choice, labeled
+carbon_horizon_years:
+  label: years of use counted when comparing carbon
+  value: 60
+  unit: years
+  source_url: https://www.rics.org/content/dam/ricsglobal/documents/standards/Whole_life_carbon_assessment_PS_Sept23.pdf
+  verified: false
+  note: "RICS professional standard, Whole life carbon assessment for the built environment, 2nd edition (2023), section 3.7 Reference study period: 'domestic projects: 60 years'. The green-space optimizer weighs one-time embodied carbon against this many years of transport CO2. Unverified: the wording was read in the RICS consultation text of the 2nd edition, not checked against the published PDF."
 simulated_count_position_in_range:
   label: simulated count position in range
   value: 0.4

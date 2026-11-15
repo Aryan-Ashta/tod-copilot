@@ -504,6 +504,23 @@ export interface RescoreResponse {
   suggested: ScoreSnapshot
 }
 
+/** The green-space slider setting that avoids the most carbon (POST /api/plan/{id}/optimize_green_space). */
+export interface GreenSpaceOptimum {
+  /** slider value 0-1 */
+  value: number
+  /** factor carbon_horizon_years */
+  horizon_years: number
+  /** at `value` vs no green space, over the horizon */
+  net_co2_tonnes: number
+  /** slider at 1 vs 0: construction carbon not emitted, once */
+  full_embodied_saved_tonnes: number
+  /** slider at 1 vs 0: transport CO2 no longer avoided, each year */
+  full_transport_lost_tonnes_per_year: number
+  /** the two above divided; null when no transport CO2 is lost */
+  break_even_years: number | null
+  factor_keys: string[]
+}
+
 export interface SimulatedCount {
   stop_id: string
   simulated: true

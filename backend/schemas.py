@@ -405,6 +405,16 @@ class RescoreResponse(BaseModel):
     suggested: ScoreSnapshot          # the agents' plan as built, no edits
 
 
+class GreenSpaceOptimum(BaseModel):   # Addition: the green-space slider setting that avoids the most carbon
+    value: float                                  # slider value 0-1
+    horizon_years: float                          # factor carbon_horizon_years
+    net_co2_tonnes: float                         # at `value` vs no green space, over the horizon (>= 0)
+    full_embodied_saved_tonnes: float             # slider at 1 vs 0: construction carbon not emitted, once
+    full_transport_lost_tonnes_per_year: float    # slider at 1 vs 0: transport CO2 no longer avoided, each year
+    break_even_years: Optional[float]             # the two above divided; None when no transport CO2 is lost
+    factor_keys: list[str]
+
+
 class SimulatedCount(BaseModel):
     stop_id: str
     simulated: Literal[True]

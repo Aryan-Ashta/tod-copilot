@@ -7,6 +7,7 @@ apply_suggestions edit brings in the agents' plan.
 The helpers here (site stacks, plan scoring) are also what the agents use, so rescore(plan, []) reproduces
 the plan's own numbers exactly.
 """
+import copy
 import math
 from datetime import date, datetime, timezone
 from typing import Optional
@@ -17,9 +18,9 @@ from backend.data.geo import M2_PER_ACRE, SQFT_PER_M2, lonlat_dist_m
 from backend.models import deal as deal_model
 from backend.models import finance, goals
 from backend.models.targets import build_targets, embodied_co2_saved, walk_gaps
-from backend.schemas import (CapitalStack, Citation, ConversionCandidate, DealStrategy, Edit, InfraFeature, Parcel,
-                             Plan, Provenance, Rejection, RescoreResponse, Route, Scoreboard, ScoreSnapshot, Site, Stop,
-                             TargetScore, TransitPlan)
+from backend.schemas import (CapitalStack, Citation, ConversionCandidate, DealStrategy, Edit, GreenSpaceOptimum,
+                             InfraFeature, Parcel, Plan, Provenance, Rejection, RescoreResponse, Route, Scoreboard,
+                             ScoreSnapshot, Site, Stop, TargetScore, TransitPlan)
 
 SQFT_PER_ACRE = M2_PER_ACRE * SQFT_PER_M2
 _PROV = Provenance(source="meeting_mode", confidence="low", retrieved_at=datetime(2026, 11, 13, tzinfo=timezone.utc),
@@ -476,6 +477,40 @@ def rescore(base: Plan, edits: list[Edit], f: dict, from_existing: bool = False)
                                              base.goals_report.existing_affordable)
     return RescoreResponse(plan_patch={k: _dump(v) for k, v in patch.items()}, scoreboard=board, deltas=deltas,
                            rejected=rejected, steps=steps, existing=existing, suggested=suggested)
+
+
+GREEN_SPACE_STEP = 0.05   # the slider's notch (frontend GreenSpaceSlider)
+
+
+def optimize_green_space(base: Plan, edits: list[Edit], f: dict, from_existing: bool = False) -> GreenSpaceOptimum:
+    """The slider setting that avoids the most carbon over `carbon_horizon_years`.
+
+    Each notch is scored as embodied carbon saved (once) + horizon x transport CO2 avoided (per year), with the other
+    edits kept and any slider edit in `edits` ignored. Ties go to the lower setting (fewer homes given up)."""
+    st = _run(base, [e for e in edits if e.kind != "slider"], f, from_existing)
+    years = f["carbon_horizon_years"]
+    n = round(1 / GREEN_SPACE_STEP)
+    scores = []
+    for i in range(n + 1):
+        # the slider edit rebinds sites and stacks and writes only these two dicts, so a shallow fork is enough
+        fork = copy.copy(st)
+        fork.walk_m, fork.homes_not_built = dict(st.walk_m), dict(st.homes_not_built)
+        _apply(fork, Edit(kind="slider", value=i / n))
+        board = _score(fork)[1]
+        scores.append((i / n, board.embodied_co2_saved_tonnes, board.transport_co2_tonnes_per_year))
+    _, e0, t0 = scores[0]
+
+    def net(s: tuple[float, float, float]) -> float:
+        return round((s[1] - e0) - years * (t0 - s[2]), 1)
+
+    best = max(scores, key=lambda s: (net(s), -s[0]))
+    saved, lost = round(scores[-1][1] - e0, 1), round(t0 - scores[-1][2], 2)
+    return GreenSpaceOptimum(value=best[0], horizon_years=years, net_co2_tonnes=net(best),
+                             full_embodied_saved_tonnes=saved, full_transport_lost_tonnes_per_year=lost,
+                             break_even_years=round(saved / lost, 1) if lost > 0 else None,
+                             factor_keys=["carbon_horizon_years", "embodied_co2_kg_per_sqft_new",
+                                          "avg_unit_sqft_residential", "vmt_reduction_per_household_near_transit",
+                                          "co2_g_per_vehicle_mile", "slider_max_open_space_share"])
 
 
 def _dump(v):

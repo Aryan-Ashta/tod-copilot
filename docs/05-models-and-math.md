@@ -34,6 +34,7 @@ Keys the code expects (all start `verified: false` until a human checks them):
 | `embodied_co2_kg_per_sqft_reuse` | targets | Same |
 | `co2_g_per_vehicle_mile` | targets | EPA |
 | `vmt_reduction_per_household_near_transit` | targets | Published research; record the study |
+| `carbon_horizon_years` | rescore (green-space optimizer) | Reference study period of a whole-life carbon standard (RICS: 60 years for homes); **unverified** |
 | `bus_operating_cost_usd_per_revenue_hour` | transit | National Transit Database |
 | `walk_speed_m_per_s` | walk | Cite |
 | `deal_vacancy_for_acquisition` | land deal | Team choice, labeled |
@@ -129,5 +130,6 @@ Return every intermediate number.
 - `place_tile(stop, parcel)` → add a stop; update coverage, walk, CO₂ (no full re-optimization).
 - `place_tile(convert_residential|convert_hotel, building)` → force that use; recompute that building's units, finance, embodied carbon.
 - `slider(v)` → trade homes for green space across pursued new-build sites: each loses `v × slider_max_open_space_share` of its homes, which lowers transport CO₂ avoided and the funding required and raises embodied carbon saved.
+- `optimize_green_space(plan, edits)` → the slider notch (steps of 0.05) with the most carbon avoided over `carbon_horizon_years`: embodied carbon saved (once) + horizon × transport CO₂ avoided (per year), with the other edits kept and any slider edit ignored; ties go to the lower notch. Both terms are straight lines in the slider, so the answer is 0 or the top notch that still removes a home: green space wins only when `avg_unit_sqft_residential × embodied_co2_kg_per_sqft_new ÷ 1000` per home exceeds the horizon × the home's yearly transport CO₂ (break-even ≈ 35 years in Houston and LA, ≈ 75 in Brevard).
 
 Precompute walk distances, envelopes, readiness and PVWatts when the plan is built.
