@@ -65,6 +65,21 @@ def test_tile_before_suggestions_is_not_duplicated():
     assert [s["id"] for s in r.plan_patch["transit"]["stops"]] == ["gtfs-1", "fdr-0-abc-s0", "tile-stop-p30"]
 
 
+def test_slider_counts_unbuilt_new_build_carbon_as_saved():
+    plan, f = plan_with_network()   # five new builds of 120 homes; the slider at 1.0 leaves floor(120 x 0.7) = 84
+    apply = [Edit(kind="apply_suggestions")]
+    per_home = f["avg_unit_sqft_residential"] * f["embodied_co2_kg_per_sqft_new"] / 1000
+    base = rescore(plan, apply, f, from_existing=True).scoreboard
+    full = rescore(plan, [*apply, Edit(kind="slider", value=1.0)], f, from_existing=True).scoreboard
+    assert base.homes - full.homes == 5 * 36
+    assert abs(full.embodied_co2_saved_tonnes - base.embodied_co2_saved_tonnes - 5 * 36 * per_home) < 0.06
+    assert rescore(plan, [*apply, Edit(kind="slider", value=0.0)], f, from_existing=True).scoreboard == base
+    # a park on p1 removes site s0: its unbuilt homes stop counting
+    parked = rescore(plan, [*apply, Edit(kind="slider", value=1.0), Edit(kind="place_tile", tile="park", target_id="p1")],
+                     f, from_existing=True).scoreboard
+    assert abs(parked.embodied_co2_saved_tonnes - base.embodied_co2_saved_tonnes - 4 * 36 * per_home) < 0.06
+
+
 def test_steps_match_prefix_replays():
     plan, f = plan_with_network()
     edits = [Edit(kind="apply_suggestions"), *EDITS[:4],

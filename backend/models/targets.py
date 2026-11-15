@@ -16,6 +16,13 @@ def embodied_co2_saved(area_sqft: float, f: dict) -> float:
     return area_sqft * (f["embodied_co2_kg_per_sqft_new"] - f["embodied_co2_kg_per_sqft_reuse"]) / 1000
 
 
+def embodied_co2_not_built(homes: int, f: dict) -> float:
+    """Tonnes CO2e of new construction left unbuilt = homes x avg unit sqft x new kg/sqft / 1000.
+
+    zoning.homes_for sizes a new build at floor area / avg unit size, so one home stands for that much floor area."""
+    return homes * f["avg_unit_sqft_residential"] * f["embodied_co2_kg_per_sqft_new"] / 1000
+
+
 def rooftop_solar(roof_sqft_list: list[float], kwh_per_kw_year: float, f: dict) -> float:
     """MWh/yr = area_m2 x usable share x kW/m2 x kWh/kW/yr / 1000."""
     area_m2 = sum(roof_sqft_list) * M2_PER_SQFT
@@ -62,15 +69,18 @@ def households_near_frequent(homes_by_target: dict[str, int], walk_m: dict[str, 
 
 def build_targets(homes_by_target: dict[str, int], walk_m: dict[str, dict], in_flood: dict[str, bool],
                   conversion_area_sqft: list[float], roof_sqft: list[float], kwh_per_kw_year: Optional[float],
-                  f: dict) -> list[TargetScore]:
+                  f: dict, homes_not_built: int = 0) -> list[TargetScore]:
+    """homes_not_built: new-build homes the green-space slider gave up; their construction carbon counts as saved."""
+    embodied = sum(embodied_co2_saved(a, f) for a in conversion_area_sqft) + embodied_co2_not_built(homes_not_built, f)
     walk_keys = ["walk_speed_m_per_s", "walk_minutes_target"]
     out = [
         TargetScore(key="transport_co2", value=round(transport_co2(households_near_frequent(homes_by_target, walk_m, f), f), 2),
                     unit="t CO2/yr avoided", target=None,
                     factor_keys=["vmt_reduction_per_household_near_transit", "co2_g_per_vehicle_mile", *walk_keys]),
-        TargetScore(key="embodied_co2_saved", value=round(sum(embodied_co2_saved(a, f) for a in conversion_area_sqft), 1),
+        TargetScore(key="embodied_co2_saved", value=round(embodied, 1),
                     unit="t CO2e", target=None,
-                    factor_keys=["embodied_co2_kg_per_sqft_new", "embodied_co2_kg_per_sqft_reuse"]),
+                    factor_keys=["embodied_co2_kg_per_sqft_new", "embodied_co2_kg_per_sqft_reuse",
+                                 "avg_unit_sqft_residential"]),
         TargetScore(key="walk_access", value=round(100 * walk_access(homes_by_target, walk_m, f), 1),
                     unit="% of new homes", target=None, factor_keys=walk_keys),
         TargetScore(key="flood_exposure", value=round(100 * flood_exposure(homes_by_target, in_flood), 1),

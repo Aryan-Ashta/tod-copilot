@@ -39,7 +39,7 @@ export const STAT_META: StatMeta[] = [
     short: 't embodied CO₂ saved',
     unit: 't',
     digits: 0,
-    factors: ['embodied_co2_kg_per_sqft_new', 'embodied_co2_kg_per_sqft_reuse'],
+    factors: ['embodied_co2_kg_per_sqft_new', 'embodied_co2_kg_per_sqft_reuse', 'avg_unit_sqft_residential'],
   },
   {
     key: 'funding_required_usd',

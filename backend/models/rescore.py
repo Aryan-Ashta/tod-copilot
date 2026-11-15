@@ -85,7 +85,9 @@ def in_plan(site: Site) -> bool:
 def score_plan(sites: list[Site], stacks: list[CapitalStack], conversions: dict[str, ConversionCandidate],
                rentable_by_building: dict[str, Optional[float]], roof_by_building: dict[str, Optional[float]],
                parcel_acres: dict[str, Optional[float]], walk_m: dict[str, dict], in_flood: dict[str, bool],
-               kwh_per_kw_year: Optional[float], f: dict) -> tuple[list[TargetScore], Scoreboard]:
+               kwh_per_kw_year: Optional[float], f: dict,
+               homes_not_built: Optional[dict[str, int]] = None) -> tuple[list[TargetScore], Scoreboard]:
+    """homes_not_built: per site id, the new-build homes the green-space slider gave up (in-plan sites count)."""
     pursued = [s for s in sites if in_plan(s)]
     homes_by_target: dict[str, int] = {}
     for s in pursued:
@@ -102,7 +104,8 @@ def score_plan(sites: list[Site], stacks: list[CapitalStack], conversions: dict[
         else:
             acres = sum(parcel_acres.get(p) or 0 for p in s.parcel_ids)
             roofs.append(acres * SQFT_PER_ACRE * f["site_lot_coverage_ratio"])
-    targets = build_targets(homes_by_target, walk_m, in_flood, conv_area, roofs, kwh_per_kw_year, f)
+    not_built = sum((homes_not_built or {}).get(s.id, 0) for s in pursued)
+    targets = build_targets(homes_by_target, walk_m, in_flood, conv_area, roofs, kwh_per_kw_year, f, not_built)
     tv = {t.key: t.value for t in targets}
     funded = {s.id for s in sites if s.status == "pursue"}
     fs = [x for x in stacks if x.site_id in funded]   # matches the goals report's funded sites
@@ -166,6 +169,7 @@ class _State:
         # frequent stops before the transit agent runs: it is the existing condition and also what the agents'
         # plan is scored with, so neither from_existing nor apply_suggestions changes it.
         self.walk_m = dict(base.precomputed.walk_m)  # inner dicts replaced, never mutated
+        self.homes_not_built: dict[str, int] = {}   # site id -> new-build homes the slider turned into green space
         self.infra_added: list[InfraFeature] = []
         self.changed_conversions: set[str] = set()
         self.transit_changed = from_existing
@@ -241,6 +245,8 @@ def _remove_sites_on(st: _State, pid: str) -> None:
     st.sites = [s for s in st.sites if s.id not in gone]
     st.stacks = [x for x in st.stacks if x.site_id not in gone]
     st.deals = [d for d in st.deals if d.site_id not in gone]
+    for sid in gone:
+        st.homes_not_built.pop(sid, None)
 
 
 def _deal_for(site: Site, parcel: Optional[Parcel], f: dict, vacancy: Optional[float] = None) -> DealStrategy:
@@ -263,7 +269,9 @@ def _apply(st: _State, e: Edit) -> None:
         new_sites = []
         for s in st.sites:
             if s.kind == "new_build" and in_plan(s):
-                s = s.model_copy(update={"homes": math.floor(s.homes * (1 - v * f["slider_max_open_space_share"]))})
+                homes = math.floor(s.homes * (1 - v * f["slider_max_open_space_share"]))
+                st.homes_not_built[s.id] = st.homes_not_built.get(s.id, 0) + s.homes - homes
+                s = s.model_copy(update={"homes": homes})
                 if v > 0:
                     tid = site_target(s)
                     st.walk_m[tid] = {**st.walk_m.get(tid, {}), "park": 0.0}
@@ -420,7 +428,8 @@ def _run(base: Plan, edits: list[Edit], f: dict, from_existing: bool = False) ->
 def _score(st: _State) -> tuple[list[TargetScore], Scoreboard]:
     L = _lookups(st.base)
     return score_plan(st.sites, st.stacks, st.conversions, L["rentable"], L["roof"], L["acres"], st.walk_m,
-                      st.base.precomputed.in_flood, st.base.precomputed.solar_kwh_per_kw_year, st.f)
+                      st.base.precomputed.in_flood, st.base.precomputed.solar_kwh_per_kw_year, st.f,
+                      st.homes_not_built)
 
 
 def _snapshot(st: _State) -> ScoreSnapshot:

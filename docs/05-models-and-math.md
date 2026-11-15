@@ -114,7 +114,7 @@ Return every intermediate number.
 ## Targets (`models/targets.py`)
 
 - **Transport CO₂ avoided:** households near frequent transit × VMT reduction × g/mile ÷ 1e6.
-- **Embodied carbon saved:** for each conversion, `area × (new − reuse)` kg CO₂e per sqft ÷ 1000.
+- **Embodied carbon saved:** for each conversion, `area × (new − reuse)` kg CO₂e per sqft ÷ 1000; plus, for new-build homes the green-space slider gives up, `homes × avg_unit_sqft_residential × new` ÷ 1000 (the construction that does not happen; `homes_for` sizes a new build at floor area ÷ average unit size, so a home stands for that much floor area).
 - **Rooftop solar:** usable roof area → kW → annual MWh via PVWatts (cached).
 - **Walk access:** share of new homes within 10 minutes of a park, clinic and grocery (precomputed distances).
 - **Flood exposure:** share of new homes in FEMA high-risk zones; target 0.
@@ -128,6 +128,6 @@ Return every intermediate number.
 - `place_tile(park, parcel)` → open space; update homes, finance, walk access, CO₂.
 - `place_tile(stop, parcel)` → add a stop; update coverage, walk, CO₂ (no full re-optimization).
 - `place_tile(convert_residential|convert_hotel, building)` → force that use; recompute that building's units, finance, embodied carbon.
-- `slider(v)` → trade homes for green space across pursued sites.
+- `slider(v)` → trade homes for green space across pursued new-build sites: each loses `v × slider_max_open_space_share` of its homes, which lowers transport CO₂ avoided and the funding required and raises embodied carbon saved.
 
 Precompute walk distances, envelopes, readiness and PVWatts when the plan is built.
