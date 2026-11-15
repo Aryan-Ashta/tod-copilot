@@ -5,8 +5,8 @@ Judging is Sunday 9:30 am–2:30 pm. Pitch is 2 minutes live plus an optional 2-
 ## 2-minute script
 
 1. **Hook (15 s):** about a quarter of downtown Houston's office space sits empty, and car-dependent places barely have transit. Deciding what to convert, what to build and how to connect it is the hard part.
-2. **Houston, CoStar data (50 s):** prompt → agent checklist (replay) → infrastructure layer → conversion candidates light up by best use → click the top tower: five fit scores, blockers, sources → it becomes site A with a capital stack that pencils → embodied carbon saved.
-3. **Meeting mode (25 s):** hand a judge the laptop; they drag "Park" onto a parking lot and "Convert to housing" onto a tower; the scoreboard updates.
+2. **Houston, CoStar data (50 s):** pick the stock prompts → agent checklist (replay) → "Apply agent suggestions" builds the plan → infrastructure layer → conversion candidates light up by best use → click the top tower: five fit scores, blockers, sources → it becomes site A with a capital stack that pencils → embodied carbon saved.
+3. **Meeting mode (25 s):** hand a judge the laptop; they click "Park", then a parking lot, and "Convert to housing", then a tower; the plan history and scoreboard update.
 4. **LA law (optional, 15 s):** one parcel where SB 79 new construction and the Adaptive Reuse Ordinance compete; the app shows both with citations and picks one.
 5. **Brevard (15 s):** same prompt, public data only: medium/low badges, "lease status unknown," flood zones avoided, frequency upgrade on an existing bus route.
 6. **Close (5 s):** "Works anywhere, sharper with CoStar."

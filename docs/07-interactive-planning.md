@@ -5,11 +5,15 @@ This replaces the hardware table and sensor node from earlier drafts. The goal i
 ## Meeting mode
 
 - Route: `/meeting/:planId`. Full screen, large type, high contrast, works on a projector or a touchscreen laptop/tablet.
-- **Tile tray:** Homes, Park, Stop, Convert to housing, Convert to hotel. Drag a tile onto a parcel (new build, park, stop) or a building (conversions).
-- **Validity check on drop:** if the target isn't eligible (for example, Convert on a building the legal check rules out, or Homes inside a flood zone), the tile snaps back and a short reason appears with its citation or factor.
+- **Starting point:** the map and stats show existing conditions plus the session's edits. The agents' plan is a suggestion: the "Apply agent suggestions" button at the top of the left panel (shown until applied) adds an `apply_suggestions` edit, which builds the suggested sites and transit.
+- **Tile tray:** Homes, Park, Stop, Convert to housing, Convert to hotel. Tiles are click-to-place: click a tile to arm it and the valid targets on the map highlight (parcels for new build, park and stop; buildings for conversions); click one to place the tile. Esc or clicking the tile again cancels.
+- **Validity check:** the highlighted targets mirror the backend checks (`src/tools.ts` `validTargets`). If the backend still refuses a placement (for example, Convert on a building the legal check rules out, or Homes inside a flood zone), nothing is placed and a short reason appears with its citation or factor.
 - **Scoreboard:** homes, affordable homes, walk access %, transport CO₂ avoided, embodied carbon saved, and the funding required; affordable homes and the funding required (sum of each site's positive funding required) count funded sites only, matching the Funding card's goals table. Each change animates a +/− delta. Meeting mode never reselects sites.
-- **History:** undo, reset, and a list of changes made in the session, so a facilitator can recap ("We added a park on lot C, which cost 48 homes and raised walk access by 15 points").
-- Each drop sends an `Edit` to `/api/plan/{id}/rescore`; no LLM is involved, so it stays under 1 s even offline.
+- **Plan history:** numbered entries with an icon per change, where it was placed and a delta chip for each stat it moved; hovering an entry shows a remove button that removes that entry (any entry, not only the last). Undo and Reset sit under the list. A facilitator can recap from it ("We added a park on lot C, which cost 48 homes and raised walk access by 15 points").
+- **Statistics:** animated values with a contribution bar per stat split by history entry (keyed by entry number) and markers for existing conditions, your plan and the agents' plan. The homes ↔ green-space slider sits below.
+- **Pencil hints:** a hand-drawn intro (pick a tile → click a highlighted spot) until the first change; after each change, pencil circles on the new history row and the stats it affected, a faint "=" beside each unchanged stat, and "no effect" on the row when the change moved nothing.
+- Edits persist per plan in `sessionStorage` (`transitor.edits.<planId>`), so the plan screen and meeting mode share them.
+- Each placement sends the edit list to `/api/plan/{id}/rescore` with `from_existing: true`; no LLM is involved, so it stays under 1 s even offline.
 
 ## Uncertainty queue
 
@@ -19,7 +23,7 @@ This replaces the hardware table and sensor node from earlier drafts. The goal i
 
 ## Acceptance
 
-- [ ] Dragging a tile updates the scoreboard in under 1 s with Wi-Fi off.
-- [ ] Invalid drops are refused with a reason that cites a rule or factor.
+- [ ] Placing a tile (click the tile, then a highlighted target) updates the scoreboard in under 1 s with Wi-Fi off.
+- [ ] Invalid targets are not highlighted, and a placement the backend refuses shows a reason that cites a rule or factor.
 - [ ] Undo and reset restore the exact previous numbers.
 - [ ] The uncertainty queue shows at least one item per locale, and the simulated count is labeled as simulated.

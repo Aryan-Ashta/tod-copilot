@@ -1,5 +1,5 @@
 """County parcel layers as config: a field-expression DSL (registry `parcels.fields`) that turns one raw ArcGIS
-feature's properties into TOD Copilot's parcel properties.
+feature's properties into Transitor's parcel properties.
 
 FieldExpr: exactly one operator (field | number | sum | join | epoch_ms_year | year | first) plus modifiers
 (strip, zero_is_null, null_values, append, append_separator, min_exclusive, require). docs/12 §14.

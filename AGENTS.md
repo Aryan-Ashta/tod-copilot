@@ -1,6 +1,6 @@
-# AGENTS.md: TOD Copilot (software-only)
+# AGENTS.md: Transitor (software-only)
 
-You are helping a 3-person team build **TOD Copilot** at HackPrinceton (Fri Nov 13, 8 pm → Sun Nov 15, 8 am submission). It plans transit and transit-oriented development (TOD) for a place from one prompt: where transit and infrastructure already are, which buildings can be converted to other uses, which land can be built on, what the law allows, how to get the land and pay for it, and how the plan scores on carbon and health.
+You are helping a 3-person team build **Transitor** at HackPrinceton (Fri Nov 13, 8 pm → Sun Nov 15, 8 am submission). It plans transit and transit-oriented development (TOD) for a place from one prompt: where transit and infrastructure already are, which buildings can be converted to other uses, which land can be built on, what the law allows, how to get the land and pay for it, and how the plan scores on carbon and health.
 
 This is a **software-only** build. There is no hardware. Read `docs/01-product-spec.md`, `docs/02-architecture.md` and `docs/11-test-locales.md` before your first task.
 

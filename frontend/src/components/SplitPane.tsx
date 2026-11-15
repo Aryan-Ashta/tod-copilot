@@ -42,7 +42,7 @@ export default function SplitPane({
     <div ref={boxRef} className={`relative flex min-h-0 flex-1 ${dragging ? 'cursor-col-resize select-none' : ''}`}>
       <aside
         aria-label={leftLabel}
-        className="flex shrink-0 flex-col overflow-y-auto"
+        className="relative flex shrink-0 flex-col overflow-y-auto"
         style={{ width: `${frac * 100}%`, minWidth: MIN_LEFT_PX, maxWidth: `${MAX_FRAC * 100}%` }}
       >
         {left}

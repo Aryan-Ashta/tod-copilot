@@ -21,7 +21,7 @@ flowchart LR
 ## Two paths through the system
 
 - **Full plan (slow, minutes):** the coordinator runs the agents in the order above. LLM calls are allowed. The result is a `Plan` saved to `cache/plans/{id}.json`, plus the SSE event log for replay.
-- **Re-score (fast, under 1 s):** meeting-mode tiles and the slider call `rescore(plan, edits)`, which uses only pure functions in `backend/models/`: no LLM, no network. Everything expensive is precomputed when the plan is built.
+- **Re-score (fast, under 1 s):** applying the agents' suggestions, meeting-mode tiles and the slider call `rescore(plan, edits, from_existing)`, which uses only pure functions in `backend/models/`: no LLM, no network. Everything expensive is precomputed when the plan is built.
 
 ## Shared schemas (`backend/schemas.py`)
 
@@ -216,8 +216,8 @@ class Plan(BaseModel):
     targets: list[TargetScore]
     created_at: datetime
 
-class Edit(BaseModel):          # from meeting mode or the slider
-    kind: Literal["place_tile", "remove_tile", "slider"]
+class Edit(BaseModel):          # from the plan screen, meeting mode or the slider
+    kind: Literal["place_tile", "remove_tile", "slider", "apply_suggestions"]
     tile: Optional[Literal["homes", "park", "stop", "convert_residential", "convert_hotel"]] = None
     target_id: Optional[str] = None   # parcel or building id
     value: Optional[float] = None
@@ -231,7 +231,7 @@ class Edit(BaseModel):          # from meeting mode or the slider
 | POST | `/api/plan` | `{locale_id?, boundary?, area_name?, prompt, options?}` → `{plan_id}`; starts the run. No boundary: whole recorded locale. Boundary inside a recorded bbox: sub-area plan on recorded data (parcels, buildings and demand clipped). Elsewhere in any US county: the county is onboarded if needed (docs/12 §15), then the area is recorded live into `cache/areas/<id>/` (409 when `DEMO_OFFLINE=1`); legal rules follow the city the area mostly lies in, else the county. 422 for invalid, too large (`area_max_km2`) or unsupported boundaries. `options` default to `parse_prompt(prompt)` |
 | GET | `/api/plan/{id}/stream` | SSE events; `?replay=1` replays a recorded run |
 | GET | `/api/plan/{id}` | Full `Plan` |
-| POST | `/api/plan/{id}/rescore` | `{edits: Edit[]}` → `{plan, deltas}` in under 1 s |
+| POST | `/api/plan/{id}/rescore` | `{edits: Edit[], from_existing?: bool = false}` → `{plan_patch, scoreboard, deltas, rejected, steps, existing, suggested}` in under 1 s. `from_existing: true` (what the UI always sends) starts from existing conditions: no agent sites, stacks or deals, only `rail_existing`/`bus_existing` routes, the GTFS feed stops kept and `coverage_pct = coverage_baseline_pct`; an `apply_suggestions` edit restores the agents' sites, stacks, deals, routes and stops (skipping targets an earlier edit took) and is a no-op without `from_existing`. `steps[i]` is a `ScoreSnapshot {scoreboard, targets}` after `edits[0..i]` (a rejected edit repeats the previous one); `existing` and `suggested` are snapshots of existing conditions and of the agents' plan with no edits. `deltas` stay relative to the agents' plan. `precomputed.walk_m` already describes existing conditions, so neither changes it |
 | GET | `/api/buildings/{id}` | Building with conversion detail and sources |
 | GET | `/api/corpus/{doc_id}#{section}` | Source text for a citation |
 | GET | `/api/factors` | All factors with `verified` flags |

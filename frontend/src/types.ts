@@ -423,7 +423,7 @@ export interface MetroOutlines {
 export type TileKind = 'homes' | 'park' | 'stop' | 'convert_residential' | 'convert_hotel'
 
 export interface Edit {
-  kind: 'place_tile' | 'remove_tile' | 'slider'
+  kind: 'place_tile' | 'remove_tile' | 'slider' | 'apply_suggestions'
   tile?: TileKind | null
   target_id?: string | null
   value?: number | null
@@ -478,11 +478,24 @@ export interface PlanPatch {
   goals_report?: GoalReport | null
 }
 
+/** Scores after a prefix of the edit list (or existing conditions / the agents' plan). */
+export interface ScoreSnapshot {
+  scoreboard: Scoreboard
+  targets: TargetScore[]
+}
+
 export interface RescoreResponse {
   plan_patch: PlanPatch
   scoreboard: Scoreboard
+  /** vs the agents' plan */
   deltas: Record<string, number>
   rejected: Rejection | null
+  /** len == len(edits); steps[i] = after edits[0..i]; a rejected/invalid edit repeats the previous snapshot */
+  steps: ScoreSnapshot[]
+  /** existing conditions, no edits */
+  existing: ScoreSnapshot
+  /** the agents' plan as built, no edits */
+  suggested: ScoreSnapshot
 }
 
 export interface SimulatedCount {

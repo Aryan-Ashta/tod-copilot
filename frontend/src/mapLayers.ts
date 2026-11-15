@@ -1,8 +1,8 @@
 // deck.gl layer builders, in docs/06 order (bottom → top). Each builder is pure; MapView memoizes
 // each one on the identity of its data so thousands of extrusions are not rebuilt on every render.
-import { GeoJsonLayer, PolygonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers'
+import { GeoJsonLayer, PathLayer, PolygonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers'
 import { DataFilterExtension, PathStyleExtension, type DataFilterExtensionProps } from '@deck.gl/extensions'
-import type { Color, PickingInfo } from '@deck.gl/core'
+import type { Color, Layer, PickingInfo } from '@deck.gl/core'
 import type { Feature, Geometry as GJGeometry } from 'geojson'
 import type {
   Building,
@@ -17,10 +17,11 @@ import type {
   Site,
   Station,
   Stop,
+  TileKind,
   UseType,
 } from './types'
 import { geometryCentroid } from './format'
-import { separateFootprints } from './footprints'
+import { cornerIndices, separateFootprints, simplifyRing } from './footprints'
 import { REDUCED_MOTION, standingShare, type Build } from './construction'
 
 export type LayerKey =
@@ -84,9 +85,9 @@ export const STRATEGY_COLORS: Record<DealKind, Color> = {
   pass: [154, 160, 154],
 }
 
-const INK: Color = [28, 34, 48]
-const TEAL: Color = [19, 128, 138]
-const INFRA_COLORS: Partial<Record<InfraKind, Color>> = {
+export const INK: Color = [28, 34, 48]
+export const TEAL: Color = [19, 128, 138]
+export const INFRA_COLORS: Partial<Record<InfraKind, Color>> = {
   sidewalk: [154, 160, 154],
   bike_lane: [46, 125, 91],
   water_main: [47, 91, 211],
@@ -105,13 +106,13 @@ export const FT_TO_M = 0.3048 // unit conversion, not a planning factor
 // Ground-plane layers draw in layer order without depth testing or writing: the iso camera's narrow field of view
 // puts the eye far away, and coplanar polygons (flood zones, parcels) z-fight at that depth precision. Extruded
 // buildings still depth-test, and draw after these, so they correctly hide what is behind them.
-const FLAT = { depthWriteEnabled: false, depthCompare: 'always' } as const
+export const FLAT = { depthWriteEnabled: false, depthCompare: 'always' } as const
 
-type Feat<P> = Feature<GJGeometry, P>
-const feature = <P>(geometry: Geometry, properties: P) =>
+export type Feat<P> = Feature<GJGeometry, P>
+export const feature = <P>(geometry: Geometry, properties: P) =>
   ({ type: 'Feature', geometry, properties }) as unknown as Feat<P>
 
-const withAlpha = (c: Color, a: number): Color => [c[0], c[1], c[2], a]
+export const withAlpha = (c: Color, a: number): Color => [c[0], c[1], c[2], a]
 
 /** OSM sidewalk tag values that mean "no sidewalk on this frontage". */
 const NO_SIDEWALK: Record<string, true> = { no: true, none: true }
@@ -425,6 +426,7 @@ export function walkBikeLayer(infra: InfraFeature[], visible: boolean) {
     parameters: FLAT,
     data: feats,
     visible,
+    ...ROUNDED,
     lineWidthUnits: 'pixels',
     getLineWidth: 1,
     getLineColor: (f) => {
@@ -446,6 +448,7 @@ export function utilitiesLayer(infra: InfraFeature[], visible: boolean) {
     parameters: FLAT,
     data: feats,
     visible,
+    ...ROUNDED,
     lineWidthUnits: 'pixels',
     getLineWidth: 1,
     getLineColor: (f) => withAlpha(INFRA_COLORS[f.properties.kind] ?? [150, 150, 150], 200),
@@ -480,6 +483,7 @@ export function amenitiesLayer(infra: InfraFeature[], added: InfraFeature[], vis
     stroked: true,
     filled: true,
     pickable: true,
+    ...ROUNDED,
     lineWidthUnits: 'pixels',
     getLineWidth: (f) => (f.properties.attrs.proposed ? 3 : 1),
     getLineColor: (f) => (f.properties.attrs.proposed ? INK : INFRA_COLORS[f.properties.kind] ?? [154, 160, 154]),
@@ -502,6 +506,7 @@ export function floodLayer(infra: InfraFeature[], visible: boolean) {
     stroked: true,
     getFillColor: [47, 91, 211, 28],
     getLineColor: [47, 91, 211, 120],
+    ...ROUNDED,
     lineWidthUnits: 'pixels',
     getLineWidth: 1,
   })
@@ -524,9 +529,11 @@ export function parcelsLayer(parcels: Parcel[], visible: boolean, selectedId?: s
     pickable: true,
     filled: true,
     stroked: true,
+    ...ROUNDED,
     lineWidthUnits: 'pixels',
-    getLineWidth: (f) => (f.properties.parcel.id === selectedId ? 3 : 0.5),
-    getLineColor: (f) => (f.properties.parcel.id === selectedId ? INK : [28, 34, 48, 50]),
+    // a 1 px hairline faded right back: a half-pixel stroke shimmered as the camera moved
+    getLineWidth: (f) => (f.properties.parcel.id === selectedId ? 3 : 1),
+    getLineColor: (f) => (f.properties.parcel.id === selectedId ? INK : [28, 34, 48, 34]),
     getFillColor: (f) => (f.properties.underused ? withAlpha(AMBER, 120) : [28, 34, 48, 6]),
     updateTriggers: { getLineWidth: selectedId, getLineColor: selectedId },
   })
@@ -542,6 +549,7 @@ export function selectedParcelLayer(parcels: Parcel[], selectedId?: string) {
     pickable: false,
     filled: true,
     stroked: true,
+    ...ROUNDED,
     lineWidthUnits: 'pixels',
     getLineWidth: 3,
     getLineColor: INK,
@@ -555,13 +563,18 @@ export interface BuildingDatum {
   polygon: number[][][]
 }
 
-/** One datum per drawn polygon, with overlapping footprints resolved (footprints.ts) so extrusions never z-fight. */
+/**
+ * One datum per drawn polygon, with overlapping footprints resolved (footprints.ts) so extrusions never z-fight and
+ * outlines simplified (simplifyRing) so near-collinear nodes add no facets.
+ */
 export function flattenBuildings(buildings: Building[], conversions: ConversionCandidate[]): BuildingDatum[] {
   const conv = new Map(conversions.map((c) => [c.building_id, c]))
   const shapes = separateFootprints(buildings, conversions)
   const out: BuildingDatum[] = []
   for (const b of buildings) {
-    for (const polygon of shapes.get(b.id) ?? []) out.push({ building: b, conversion: conv.get(b.id), polygon })
+    for (const p of shapes.get(b.id) ?? []) {
+      out.push({ building: b, conversion: conv.get(b.id), polygon: p.map((r) => simplifyRing(r, OUTLINE_TOL_M)) })
+    }
   }
   return out
 }
@@ -583,87 +596,252 @@ const SELECTED_LIFT_M = 0.6
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3
 const RECOLOUR = { duration: REDUCED_MOTION ? 0 : 1600, easing: easeOutCubic }
 
-const storeyElevation = (b: Building, storyHeightFt: number | null) =>
+export const storeyElevation = (b: Building, storyHeightFt: number | null) =>
   storyHeightFt !== null ? (b.stories.value ?? 0) * storyHeightFt * FT_TO_M : 0
+
+/** A footprint's outer ring scaled about its vertex mean: shells that sit proud of a building, halos around it. */
+export function grownRing(polygon: number[][][], factor: number): number[][] {
+  const outer = polygon[0]
+  const [cx, cy] = outer.reduce((a, p) => [a[0] + p[0] / outer.length, a[1] + p[1] / outer.length], [0, 0])
+  return outer.map(([x, y]) => [cx + (x - cx) * factor, cy + (y - cy) * factor])
+}
 
 // Hides buildings without reordering the data, so indices (and the colour transitions keyed on them) stay put.
 const HIDE = new DataFilterExtension({ filterSize: 1 })
 
+// ---------------------------------------------------------------- ink edges
+// Building edges draw as screen-facing ink strokes (a set width in CSS pixels at any pixel ratio) instead of deck's
+// wireframe, which ran a one-device-pixel line up every footprint vertex: a curved tower's dozens of vertices striped
+// its facade. A footprint gets its roof and base outlines, and verticals only at its real corners (cornerIndices), so
+// a round tower reads by its rims and a box by its edges.
+/** Footprint vertices this close to the simplified outline are dropped (near-collinear nodes, traced-curve jitter). */
+const OUTLINE_TOL_M = 0.35
+/** A vertex where the outline turns at least this much is a corner and gets a vertical edge. */
+const CORNER_TURN_DEG = 40
+/** Sides shorter than this (jogs, notches, chamfers) end in no vertical edge: close verticals read as stripes. */
+const MIN_SIDE_M = 2.5
+/** A footprint with more corners than this (a sawtooth) keeps only its roof and base outlines. */
+const MAX_CORNERS = 20
+const EDGE_PX = 1
+/** The iso camera's vertical field of view: narrow, so verticals stay close to parallel (MapView). */
+export const ISO_FOV_DEG = 10
+// deck draws a billboard path's pixel width at the viewport's focal distance in clip space, which with the narrow
+// iso field of view (altitude 1 / (2 tan(fov / 2)) ≈ 5.7) came out that many times too wide; widths are divided back.
+const BILLBOARD_PX = 2 * Math.tan((ISO_FOV_DEG / 2) * (Math.PI / 180))
+// An edge straddles the faces it bounds, so their depth would hide its inner half. Every edge point moves this far
+// along the view ray toward the iso camera (bearing −45°, pitch 60°: south-east and up), which leaves it where it
+// was on screen but in front of the faces it outlines.
+const EDGE_TOWARD_CAMERA_M = 2
+const CAM_E = EDGE_TOWARD_CAMERA_M * Math.sin(Math.PI / 3) * Math.SQRT1_2
+const CAM_UP = EDGE_TOWARD_CAMERA_M * Math.cos(Math.PI / 3)
+
+/** One stroke of a building's edges, with the datum it belongs to (for filtering). */
+export interface EdgePath<T> {
+  path: [number, number, number][]
+  of: T
+}
+
+const cornerCache = new WeakMap<number[][], number[]>()
+function cornersOf(ring: number[][]): number[] {
+  let c = cornerCache.get(ring)
+  if (!c) {
+    c = ring.length > 3 ? cornerIndices(ring, CORNER_TURN_DEG, MIN_SIDE_M) : []
+    if (c.length > MAX_CORNERS) c = []
+    cornerCache.set(ring, c)
+  }
+  return c
+}
+
+/** Edges of `polygon` extruded from `base` to `top` metres: roof outlines (holes too), base outline, corner verticals. */
+export function pushEdges<T>(out: EdgePath<T>[], of: T, polygon: number[][][], top: number, base = 0) {
+  const outer = polygon[0]
+  if (!outer?.length) return
+  const dLon = CAM_E / (M_PER_DEG * Math.cos((outer[0][1] * Math.PI) / 180))
+  const dLat = -CAM_E / M_PER_DEG
+  const at = (p: number[], z: number): [number, number, number] => [p[0] + dLon, p[1] + dLat, z + CAM_UP]
+  for (const ring of polygon) out.push({ of, path: ring.map((p) => at(p, top)) })
+  if (top - base < 0.05) return
+  out.push({ of, path: outer.map((p) => at(p, base)) })
+  for (const i of cornersOf(outer)) out.push({ of, path: [at(outer[i], base), at(outer[i], top)] })
+}
+
+/** Ink strokes for `pushEdges` output; `hide(of)` filters strokes out without rebuilding them. */
+export function edgesLayer<T>(
+  id: string,
+  data: EdgePath<T>[],
+  color: Color | ((of: T) => Color),
+  opts: { visible?: boolean; width?: number; hide?: (of: T) => boolean; hideTrigger?: unknown } = {},
+) {
+  const { visible = true, width = EDGE_PX, hide, hideTrigger } = opts
+  return new PathLayer<EdgePath<T>, DataFilterExtensionProps<EdgePath<T>>>({
+    id,
+    data,
+    visible,
+    pickable: false,
+    billboard: true,
+    widthUnits: 'pixels',
+    getWidth: width * BILLBOARD_PX,
+    antialiasing: true,
+    jointRounded: true,
+    capRounded: true,
+    getPath: (e) => e.path,
+    getColor: typeof color === 'function' ? (e) => color(e.of) : color,
+    extensions: [HIDE],
+    getFilterValue: (e) => (hide?.(e.of) ? 0 : 1),
+    filterRange: [0.5, 1],
+    updateTriggers: { getFilterValue: hideTrigger },
+  })
+}
+
+const BUILDING_EDGE: Color = [28, 34, 48, 200]
+const buildingEdgeCache = new WeakMap<BuildingDatum[], { sh: number | null; paths: EdgePath<BuildingDatum>[] }>()
+function buildingEdges(data: BuildingDatum[], storyHeightFt: number | null): EdgePath<BuildingDatum>[] {
+  const hit = buildingEdgeCache.get(data)
+  if (hit && hit.sh === storyHeightFt) return hit.paths
+  const paths: EdgePath<BuildingDatum>[] = []
+  for (const d of data) pushEdges(paths, d, d.polygon, storeyElevation(d.building, storyHeightFt))
+  buildingEdgeCache.set(data, { sh: storyHeightFt, paths })
+  return paths
+}
+
 /**
  * Existing buildings: light grey blocks; conversion candidates in their best-use colour, washed toward the block grey
- * as the overall score falls. Ink wireframe edges. Extrusion height = stories × story_height_ft (factor); without
- * the factor, buildings stay flat. `hidden` buildings are being (or have been) demolished: demolitionLayer draws them.
+ * as the overall score falls. Ink edges. Extrusion height = stories × story_height_ft (factor); without the factor,
+ * buildings stay flat. `hidden` buildings are being (or have been) demolished: demolitionLayer draws them.
  */
-export function buildingsLayer(data: BuildingDatum[], storyHeightFt: number | null, visible: boolean, hidden: ReadonlySet<string>) {
-  return new PolygonLayer<BuildingDatum, DataFilterExtensionProps<BuildingDatum>>({
-    id: 'buildings',
-    // PolygonLayer does not pass an extension accessor's update trigger to its sublayers, so a changed `hidden` set
-    // never reached the filter values; a fresh array (same order) makes every attribute recompute instead.
-    data: hidden.size ? data.slice() : data,
-    visible,
-    pickable: true,
-    extruded: storyHeightFt !== null,
-    wireframe: true,
-    filled: true,
-    stroked: true,
-    lineWidthUnits: 'pixels',
-    material: MATTE,
-    getPolygon: (d) => d.polygon,
-    getElevation: (d) => storeyElevation(d.building, storyHeightFt),
-    getFillColor: (d) => {
-      if (!d.conversion) return BLOCK
-      return mix(BLOCK, USE_COLORS[d.conversion.best_use], Math.max(0.15, d.conversion.overall))
-    },
-    getLineColor: [28, 34, 48, 150],
-    getLineWidth: 0.5,
-    extensions: [HIDE],
-    getFilterValue: (d) => (hidden.has(d.building.id) ? 0 : 1),
-    filterRange: [0.5, 1],
-    updateTriggers: { getElevation: storyHeightFt, getFilterValue: hidden },
-    // conversions arriving from the agent, a Convert tile or an undo all show as a fade, not a jump
-    transitions: { getFillColor: RECOLOUR },
-  })
+export function buildingsLayer(data: BuildingDatum[], storyHeightFt: number | null, visible: boolean, hidden: ReadonlySet<string>): Layer[] {
+  return [
+    new PolygonLayer<BuildingDatum, DataFilterExtensionProps<BuildingDatum>>({
+      id: 'buildings',
+      // PolygonLayer does not pass an extension accessor's update trigger to its sublayers, so a changed `hidden` set
+      // never reached the filter values; a fresh array (same order) makes every attribute recompute instead.
+      data: hidden.size ? data.slice() : data,
+      visible,
+      pickable: true,
+      extruded: storyHeightFt !== null,
+      filled: true,
+      stroked: false,
+      material: MATTE,
+      getPolygon: (d) => d.polygon,
+      getElevation: (d) => storeyElevation(d.building, storyHeightFt),
+      getFillColor: (d) => {
+        if (!d.conversion) return BLOCK
+        return mix(BLOCK, USE_COLORS[d.conversion.best_use], Math.max(0.15, d.conversion.overall))
+      },
+      extensions: [HIDE],
+      getFilterValue: (d) => (hidden.has(d.building.id) ? 0 : 1),
+      filterRange: [0.5, 1],
+      updateTriggers: { getElevation: storyHeightFt, getFilterValue: hidden },
+      // conversions arriving from the agent, a Convert tile or an undo all show as a fade, not a jump
+      transitions: { getFillColor: RECOLOUR },
+    }),
+    edgesLayer('building-edges', buildingEdges(data, storyHeightFt), BUILDING_EDGE, {
+      visible,
+      hide: (d) => hidden.has(d.building.id),
+      hideTrigger: hidden,
+    }),
+  ]
 }
 
 /** Buildings coming down for a new build or a park, at their standing share of height; gone once demolished. */
-export function demolitionLayer(data: BuildingDatum[], storyHeightFt: number | null, demolitions: ReadonlyMap<string, Build>, clock: number) {
-  const falling = data.filter((d) => {
+export function demolitionLayer(data: BuildingDatum[], storyHeightFt: number | null, demolitions: ReadonlyMap<string, Build>, clock: number): Layer[] {
+  const falling: { d: BuildingDatum; h: number }[] = []
+  for (const d of data) {
     const b = demolitions.get(d.building.id)
-    return b !== undefined && standingShare(b, clock) > 0
-  })
-  return new PolygonLayer<BuildingDatum>({
-    id: 'demolition',
-    data: falling,
-    extruded: storyHeightFt !== null,
-    wireframe: true,
-    material: MATTE,
-    getPolygon: (d) => d.polygon,
-    getElevation: (d) => storeyElevation(d.building, storyHeightFt) * standingShare(demolitions.get(d.building.id)!, clock),
-    getFillColor: BLOCK,
-    getLineColor: [28, 34, 48, 150],
-    updateTriggers: { getElevation: clock },
-  })
+    const share = b ? standingShare(b, clock) : 0
+    if (share > 0) falling.push({ d, h: storeyElevation(d.building, storyHeightFt) * share })
+  }
+  const edges: EdgePath<BuildingDatum>[] = []
+  for (const f of falling) pushEdges(edges, f.d, f.d.polygon, f.h)
+  return [
+    new PolygonLayer<(typeof falling)[number]>({
+      id: 'demolition',
+      data: falling,
+      extruded: storyHeightFt !== null,
+      material: MATTE,
+      getPolygon: (f) => f.d.polygon,
+      getElevation: (f) => f.h,
+      getFillColor: BLOCK,
+      updateTriggers: { getElevation: clock },
+    }),
+    edgesLayer('demolition-edges', edges, BUILDING_EDGE),
+  ]
 }
 
 /** The selected building as a slightly larger ink shell over it: instant, unlike the faded use colours. */
-export function selectedBuildingLayer(data: BuildingDatum[], storyHeightFt: number | null, selectedId?: string) {
+export function selectedBuildingLayer(data: BuildingDatum[], storyHeightFt: number | null, selectedId?: string): Layer[] {
   const sel = selectedId ? data.filter((d) => d.building.id === selectedId) : []
-  const grown = sel.map((d) => {
-    const outer = d.polygon[0]
-    const [cx, cy] = outer.reduce((a, p) => [a[0] + p[0] / outer.length, a[1] + p[1] / outer.length], [0, 0])
-    return { d, ring: outer.map(([x, y]) => [cx + (x - cx) * SELECTED_GROW, cy + (y - cy) * SELECTED_GROW]) }
+  const grown = sel.map((d) => ({ d, ring: grownRing(d.polygon, SELECTED_GROW) }))
+  const top = (g: (typeof grown)[number]) => storeyElevation(g.d.building, storyHeightFt) + SELECTED_LIFT_M
+  const edges: EdgePath<null>[] = []
+  for (const g of grown) pushEdges(edges, null, [g.ring], top(g))
+  return [
+    new PolygonLayer<(typeof grown)[number]>({
+      id: 'selected-building',
+      data: grown,
+      extruded: storyHeightFt !== null,
+      material: MATTE,
+      getPolygon: (g) => g.ring,
+      getElevation: top,
+      getFillColor: SELECTED_BLOCK,
+    }),
+    edgesLayer('selected-building-edges', edges, [28, 34, 48, 220], { width: 1.25 }),
+  ]
+}
+
+// ---------------------------------------------------------------- click-twice tiles (meeting mode)
+// An armed tile highlights the targets it can land on (tools.ts) in the tile's colour; MapView pulses the layer's
+// opacity and dims the rest. Both layers decode as parcels / buildings, so a click picks them like the originals.
+
+export const TILE_COLORS: Record<TileKind, Color> = {
+  homes: USE_COLORS.residential,
+  park: [46, 125, 91],
+  stop: TEAL,
+  convert_residential: USE_COLORS.residential,
+  convert_hotel: USE_COLORS.hotel,
+}
+
+/** Parcels an armed Homes / Park / Stop tile can land on: tinted fill and an ink outline. Pickable even with the
+ *  parcels layer off. */
+export function toolParcelsLayer(parcels: Parcel[], valid: ReadonlySet<string>, color: Color) {
+  return new GeoJsonLayer<ParcelDatum>({
+    id: 'tool_parcels',
+    parameters: FLAT,
+    data: parcels.filter((p) => valid.has(p.id)).map((p) => feature<ParcelDatum>(p.geometry, { parcel: p, underused: false })),
+    pickable: true,
+    filled: true,
+    stroked: true,
+    ...ROUNDED,
+    lineWidthUnits: 'pixels',
+    getLineWidth: 1.6,
+    getLineColor: withAlpha(INK, 230),
+    getFillColor: withAlpha(color, 130),
   })
-  return new PolygonLayer<(typeof grown)[number]>({
-    id: 'selected-building',
-    data: grown,
-    extruded: storyHeightFt !== null,
-    wireframe: true,
-    material: MATTE,
-    getPolygon: (g) => g.ring,
-    getElevation: (g) => storeyElevation(g.d.building, storyHeightFt) + SELECTED_LIFT_M,
-    getFillColor: SELECTED_BLOCK,
-    getLineColor: [28, 34, 48, 200],
-  })
+}
+
+const TOOL_GROW = 1.035
+const TOOL_LIFT_M = 0.8
+
+/** Buildings an armed Convert tile can land on: a shell in the tile's colour, a little proud of each building. */
+export function toolBuildingsLayer(data: BuildingDatum[], storyHeightFt: number | null, valid: ReadonlySet<string>, color: Color): Layer[] {
+  const shells = data.filter((d) => valid.has(d.building.id)).map((d): BuildingDatum => ({ ...d, polygon: [grownRing(d.polygon, TOOL_GROW)] }))
+  const top = (d: BuildingDatum) => storeyElevation(d.building, storyHeightFt) + TOOL_LIFT_M
+  const edges: EdgePath<null>[] = []
+  for (const d of shells) pushEdges(edges, null, d.polygon, top(d))
+  return [
+    new PolygonLayer<BuildingDatum>({
+      id: 'tool_buildings',
+      data: shells,
+      pickable: true,
+      extruded: storyHeightFt !== null,
+      filled: true,
+      material: MATTE,
+      getPolygon: (d) => d.polygon,
+      getElevation: top,
+      getFillColor: withAlpha(color, 200),
+    }),
+    edgesLayer('tool_building_edges', edges, withAlpha(INK, 230), { width: 1.5 }),
+  ]
 }
 
 export interface SiteDatum {
@@ -705,6 +883,7 @@ export function sitesLayer(data: SiteDatum[], visible: boolean) {
       pickable: true,
       filled: false,
       stroked: true,
+      ...ROUNDED,
       lineWidthUnits: 'pixels',
       getLineWidth: 3,
       getLineColor: (f) => (f.properties.strategy ? STRATEGY_COLORS[f.properties.strategy] : INK),
@@ -731,28 +910,162 @@ const NEW_BUILD: Color = [169, 191, 231]
 // On-watch sites (the plan counts them; they don't pencil yet) stand as translucent massing, pursued ones solid.
 const NEW_BUILD_WATCH_ALPHA = 110
 
+// ---------------------------------------------------------------- green-space slider
+// The slider moves a share of every in-plan new build's homes into open space (rescore.py: homes × (1 − share)). On
+// the map each such plot is cut across its long axis: the building keeps (1 − share) of the plot's area and a lawn
+// takes the rest, at the plot's near end (toward the iso camera) so it reads in front of the building.
+const M_PER_DEG = 111_320 // unit conversion, not a planning factor
+/** Toward the iso camera, which looks north-west, in local east/north metres. */
+const NEAR_SIDE = [Math.SQRT1_2, -Math.SQRT1_2]
+const SPLIT_STEPS = 24 // bisection steps for the cut: far below a centimetre on any plot
+/** A plot whose long axis is less than this times its short one counts as near square. */
+const SQUARISH = 1.4
+const LAWN: Color = withAlpha(INFRA_COLORS.park!, 200) // the proposed-park fill of amenitiesLayer
+
+/** A new build's plot piece: the building's footprint and, with green space, the lawn beside it. */
+export interface GreenPlot {
+  site: Site
+  /** Site id (with the piece index for a multi-part plot): stable across slider moves, so plantings keep their seed. */
+  key: string
+  building: number[][][]
+  lawn: number[][][] | null
+}
+
+/** The part of `pts` (local metres) on one side of the line p·a = c: Sutherland–Hodgman against one half-plane. */
+function clipHalf(pts: number[][], ax: number, ay: number, c: number, above: boolean): number[][] {
+  const out: number[][] = []
+  const s = above ? 1 : -1
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i]
+    const q = pts[(i + 1) % pts.length]
+    const fp = s * (p[0] * ax + p[1] * ay - c)
+    const fq = s * (q[0] * ax + q[1] * ay - c)
+    if (fp >= 0) out.push(p)
+    if (fp * fq < 0) {
+      const t = fp / (fp - fq)
+      out.push([p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])])
+    }
+  }
+  return out
+}
+
+function shoelace(pts: number[][]): number {
+  let a = 0
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) a += (pts[j][0] + pts[i][0]) * (pts[j][1] - pts[i][1])
+  return Math.abs(a) / 2
+}
+
+/** Lowest and highest projection of `pts` on (ax, ay). */
+function span(pts: number[][], ax: number, ay: number): [number, number] {
+  let lo = Infinity
+  let hi = -Infinity
+  for (const p of pts) {
+    const v = p[0] * ax + p[1] * ay
+    lo = Math.min(lo, v)
+    hi = Math.max(hi, v)
+  }
+  return [lo, hi]
+}
+
+/** Cut a plot (closed lon/lat ring) so the lawn covers `share` of it; a degenerate plot keeps its building whole. */
+function splitPlot(ring: number[][], share: number): { building: number[][][]; lawn: number[][][] | null } {
+  const [lon0, lat0] = ring[0]
+  const kx = M_PER_DEG * Math.cos((lat0 * Math.PI) / 180)
+  const pts = ring.slice(0, -1).map(([x, y]) => [(x - lon0) * kx, (y - lat0) * M_PER_DEG])
+  // cut across one of the plot's axes (its longest side's direction and that side's normal): the long one, so the
+  // building keeps a usable shape, unless the plot is near square, then the one facing the camera most, so the
+  // lawn lies in front of the building rather than beside it
+  let [ex, ey, longest] = [1, 0, 0]
+  for (let i = 0; i < pts.length; i++) {
+    const q = pts[(i + 1) % pts.length]
+    const l = Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1])
+    if (l > longest) [ex, ey, longest] = [(q[0] - pts[i][0]) / l, (q[1] - pts[i][1]) / l, l]
+  }
+  const [l1, h1] = span(pts, ex, ey)
+  const [l2, h2] = span(pts, -ey, ex)
+  const facing = (x: number, y: number) => Math.abs(x * NEAR_SIDE[0] + y * NEAR_SIDE[1])
+  const squarish = Math.max(h1 - l1, h2 - l2) < SQUARISH * Math.min(h1 - l1, h2 - l2)
+  const across = squarish ? facing(-ey, ex) > facing(ex, ey) : h2 - l2 > h1 - l1
+  let [ax, ay] = across ? [-ey, ex] : [ex, ey]
+  if (ax * NEAR_SIDE[0] + ay * NEAR_SIDE[1] < 0) [ax, ay] = [-ax, -ay]
+  // the lawn is the part beyond the cut; its area falls as the cut moves along the axis
+  const want = share * shoelace(pts)
+  let [lo, hi] = span(pts, ax, ay)
+  for (let k = 0; k < SPLIT_STEPS; k++) {
+    const c = (lo + hi) / 2
+    if (shoelace(clipHalf(pts, ax, ay, c, true)) > want) lo = c
+    else hi = c
+  }
+  const cut = (lo + hi) / 2
+  const building = clipHalf(pts, ax, ay, cut, false)
+  const lawn = clipHalf(pts, ax, ay, cut, true)
+  if (building.length < 3 || lawn.length < 3) return { building: [ring], lawn: null }
+  const toLonLat = (q: number[][]) => [...q, q[0]].map(([x, y]) => [lon0 + x / kx, lat0 + y / M_PER_DEG])
+  return { building: [toLonLat(building)], lawn: [toLonLat(lawn)] }
+}
+
 /**
- * Proposed new buildings for every site still in the plan, at `rise(siteId)` (0..1) of their height while they are
+ * Every new build still drawn (not passed), split for the green-space slider: `share` (0..1 of the plot) applies to
+ * in-plan sites (pursue, watch), as in rescore.py; 0 leaves every plot whole.
+ */
+export function greenPlots(sites: Site[], share: number): GreenPlot[] {
+  const out: GreenPlot[] = []
+  for (const site of sites) {
+    if (site.kind !== 'new_build' || site.status === 'pass') continue
+    const g = site.status === 'pursue' || site.status === 'watch' ? share : 0
+    const geom = site.geometry
+    const polys = (geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : []) as number[][][][]
+    polys.forEach((p, i) => {
+      const key = polys.length > 1 ? `${site.id}:${i}` : site.id
+      out.push(g > 0 ? { site, key, ...splitPlot(p[0], g) } : { site, key, building: p, lawn: null })
+    })
+  }
+  return out
+}
+
+/** The slider's lawns: flat park green with an ink rim. */
+export function lawnLayer(plots: GreenPlot[], visible: boolean) {
+  return new PolygonLayer<GreenPlot>({
+    id: 'green_lawns',
+    parameters: FLAT,
+    data: plots.filter((p) => p.lawn),
+    visible,
+    filled: true,
+    stroked: true,
+    ...ROUNDED,
+    lineWidthUnits: 'pixels',
+    getLineWidth: 1.5,
+    getPolygon: (p) => p.lawn!,
+    getFillColor: LAWN,
+    getLineColor: withAlpha(INK, 190),
+  })
+}
+
+/**
+ * Proposed new buildings on their plots (`greenPlots`), at `rise(siteId)` (0..1) of their height while they are
  * being built (construction.ts); `clock` changes only while something is going up. A site moving between watch and
  * pursue fades between ghost and solid.
  */
-export function newBuildingsLayer(sites: Site[], visible: boolean, rise: (siteId: string) => number, clock: number) {
-  const data = sites.filter((s) => s.kind === 'new_build' && s.status !== 'pass').map((s) => feature(s.geometry, s))
-  return new GeoJsonLayer<Site>({
-    id: 'new_buildings',
-    data,
-    visible,
-    pickable: true,
-    extruded: true,
-    wireframe: true,
-    filled: true,
-    material: MATTE,
-    getElevation: (f) => f.properties.height_ft * FT_TO_M * rise(f.properties.id),
-    getFillColor: (f) => (f.properties.status === 'pursue' ? NEW_BUILD : withAlpha(NEW_BUILD, NEW_BUILD_WATCH_ALPHA)),
-    getLineColor: [28, 34, 48, 170],
-    updateTriggers: { getElevation: clock },
-    transitions: { getFillColor: RECOLOUR },
-  })
+export function newBuildingsLayer(plots: GreenPlot[], visible: boolean, rise: (siteId: string) => number, clock: number): Layer[] {
+  const height = (s: Site) => s.height_ft * FT_TO_M * rise(s.id)
+  const edges: EdgePath<Site>[] = []
+  for (const p of plots) pushEdges(edges, p.site, p.building, height(p.site))
+  return [
+    new GeoJsonLayer<Site>({
+      id: 'new_buildings',
+      data: plots.map((p) => feature({ type: 'Polygon', coordinates: p.building }, p.site)),
+      visible,
+      pickable: true,
+      extruded: true,
+      filled: true,
+      material: MATTE,
+      getElevation: (f) => height(f.properties),
+      getFillColor: (f) => (f.properties.status === 'pursue' ? NEW_BUILD : withAlpha(NEW_BUILD, NEW_BUILD_WATCH_ALPHA)),
+      updateTriggers: { getElevation: clock },
+      transitions: { getFillColor: RECOLOUR },
+    }),
+    edgesLayer('new_building_edges', edges, (s) => withAlpha(INK, s.status === 'pursue' ? 180 : 110), { visible }),
+  ]
 }
 
 export type Picked =
@@ -774,11 +1087,13 @@ export function decodePick(info: PickingInfo | null | undefined): Picked | null 
   const obj: unknown = info?.object
   if (!obj || !info?.layer) return null
   switch (info.layer.id) {
-    case 'parcels': {
+    case 'parcels':
+    case 'tool_parcels': {
       const f = obj as Feat<ParcelDatum> // parcelsLayer data
       return { layer: 'parcels', parcel: f.properties.parcel }
     }
-    case 'buildings': {
+    case 'buildings':
+    case 'tool_buildings': {
       const d = obj as BuildingDatum // buildingsLayer data
       return { layer: 'buildings', building: d.building, conversion: d.conversion }
     }

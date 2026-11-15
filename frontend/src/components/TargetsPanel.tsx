@@ -1,5 +1,6 @@
 import { usePlan } from '../state/PlanContext'
 import { fmtNum } from '../format'
+import AnimatedNumber from './AnimatedNumber'
 import TargetBars from './TargetBars'
 import FactorHover from './FactorHover'
 import MapPanel from './MapPanel'
@@ -28,12 +29,16 @@ export function GreenSpaceSlider() {
         color="var(--color-green)"
         label="Homes versus green space"
         valueText={`${Math.round(v * 100)}% toward green space`}
-        onChange={(value) => addEdit({ kind: 'slider', value }, `Green-space slider at ${Math.round(value * 100)}%`)}
+        onChange={(value) => addEdit({ kind: 'slider', value })}
       />
       {sb && (
         <div className="mt-1 flex justify-between text-xs tabular-nums text-slate">
-          <span>{fmtNum(sb.homes)} homes</span>
-          <span>walk access {fmtNum(sb.walk_access_pct, 1)}%</span>
+          <span>
+            <AnimatedNumber value={sb.homes} format={(n) => fmtNum(n)} /> homes
+          </span>
+          <span>
+            walk access <AnimatedNumber value={sb.walk_access_pct} format={(n) => fmtNum(n, 1)} />%
+          </span>
         </div>
       )}
       {state.rescoreError && <div className="mt-1 text-gap">Rescore failed: {state.rescoreError}</div>}
@@ -48,7 +53,25 @@ export default function TargetsPanel() {
     <MapPanel
       title="Targets"
       defaultOpen
-      right={state.rescoring ? <span>updating…</span> : null}
+      right={
+        <>
+          <span className="hidden items-center gap-2.5 text-[11px] sm:flex">
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-4 rounded-full bg-green" /> this plan
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-3 w-[2px] rounded-full bg-slate" /> existing
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-3 border-l-[1.5px] border-dashed border-ink" /> agents
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-3 w-0.5 bg-ink" /> target
+            </span>
+          </span>
+          {state.rescoring && <span className="hint-in">updating…</span>}
+        </>
+      }
       className="absolute right-3 bottom-8 left-14 z-10"
     >
       <TargetBars row />

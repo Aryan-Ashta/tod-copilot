@@ -301,6 +301,41 @@ textarea:focus-visible,
   animation: pop-in 280ms cubic-bezier(0.34, 1.4, 0.5, 1) both;
   transform-origin: 50% 100%;
 }
+/* a picked chip springs once and its check mark draws itself */
+@keyframes chip-pick {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.chip-pick {
+  animation: chip-pick 320ms cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.check-draw path {
+  stroke-dasharray: 1;
+  animation: check-draw 260ms 80ms ease-out both;
+}
+/* home start bar: the prompt chips scroll sideways without a scrollbar and fade out at the clipped edge */
+.chip-scroll {
+  scrollbar-width: none;
+  mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
+}
+.chip-scroll::-webkit-scrollbar {
+  display: none;
+}
 /* the main action: a light sweep crosses it on hover */
 .go {
   position: relative;
@@ -389,4 +424,132 @@ input[type="range"] {
 }
 .maplibregl-ctrl-attrib.maplibregl-compact {
   border-radius: 12px;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Plan history + stats (components/HistoryPanel, StatsPanel, TargetBars, Scoreboard).
+ * Quick springs (150–600 ms); the reduced-motion block above stills all of it.
+ * ------------------------------------------------------------------------------------------------------------ */
+
+/* bar fills and reference ticks glide to new values */
+.bar-fill {
+  transition: width 500ms cubic-bezier(0.34, 1.2, 0.5, 1);
+}
+.bar-move {
+  transition: left 500ms cubic-bezier(0.34, 1.2, 0.5, 1);
+}
+
+/* contribution segments: neighbours slide and resize as an edit lands; a new gain grows from its left edge, a new
+   loss (hatched) from the right end of the stack */
+.seg {
+  transition:
+    left 500ms cubic-bezier(0.34, 1.15, 0.5, 1),
+    width 500ms cubic-bezier(0.34, 1.15, 0.5, 1),
+    opacity 150ms ease,
+    box-shadow 150ms ease,
+    translate 150ms ease;
+}
+@keyframes seg-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+.seg-grow {
+  transform-origin: 0 50%;
+  animation: seg-grow 520ms cubic-bezier(0.34, 1.3, 0.5, 1) both;
+}
+.seg-loss {
+  transform-origin: 100% 50%;
+  animation: seg-grow 520ms cubic-bezier(0.34, 1.3, 0.5, 1) both;
+}
+
+/* history rows: slide in with a small springy settle; a removed row fades right and folds its height away */
+@keyframes hist-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+  }
+}
+.hist-in {
+  animation: hist-in 380ms cubic-bezier(0.34, 1.45, 0.5, 1) both;
+  transform-origin: 0 50%;
+}
+@keyframes hist-out {
+  from {
+    max-height: 8rem;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(14px) scale(0.97);
+    max-height: 0;
+    padding-block: 0;
+  }
+}
+.hist-out {
+  overflow: hidden;
+  animation: hist-out 250ms ease-in forwards;
+}
+
+/* the remove button slides in on row hover or keyboard focus; always shown where there is no hover */
+.hist-x {
+  opacity: 0;
+  translate: 8px 0;
+  transition:
+    opacity 160ms ease,
+    translate 220ms cubic-bezier(0.34, 1.5, 0.5, 1),
+    background-color 140ms ease,
+    color 140ms ease;
+}
+.group:hover .hist-x,
+.group:focus-within .hist-x {
+  opacity: 1;
+  translate: 0 0;
+}
+@media (hover: none) {
+  .hist-x {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* "updating" dot */
+@keyframes hist-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+.hist-pulse {
+  animation: hist-pulse 900ms ease-in-out infinite;
+}
+
+/* a stat's change badge pops in, overshoots a little, settles, then quiets down */
+@keyframes stat-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.12);
+  }
+}
+@keyframes stat-settle {
+  to {
+    opacity: 0.7;
+  }
+}
+.stat-diff {
+  display: inline-block;
+  animation:
+    stat-pop 420ms cubic-bezier(0.34, 1.5, 0.5, 1) both,
+    stat-settle 600ms 2s ease forwards;
 }

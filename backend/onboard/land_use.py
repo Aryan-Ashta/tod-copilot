@@ -1,4 +1,4 @@
-"""Agent 2: use-code mapper. Maps a county's observed parcel use codes (or descriptions) to TOD Copilot's land-use
+"""Agent 2: use-code mapper. Maps a county's observed parcel use codes (or descriptions) to Transitor's land-use
 vocabulary, from the county's own code list page. Code checks that the page was fetched and that the observed codes
 really appear on it (count-weighted), then writes the registry `land_use` section."""
 import re

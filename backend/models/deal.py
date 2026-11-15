@@ -53,4 +53,4 @@ def _letter(owner, address, kind, strategy, homes) -> str:
     return (f"Dear {owner or 'Property Owner'},\n\n"
             f"We are studying the property at {address or 'your parcel'} for {what} near transit "
             f"(about {homes} homes in our preliminary plan). We would like to discuss {ask}.\n\n"
-            f"Sincerely,\nTOD Copilot planning team\n\nDRAFT — not sent.")
+            f"Sincerely,\nTransitor planning team\n\nDRAFT — not sent.")

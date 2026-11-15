@@ -80,3 +80,81 @@ export function separateFootprints(buildings: Building[], conversions: Conversio
   }
   return out
 }
+
+// ---------------------------------------------------------------- outline simplification (display only)
+const M_PER_DEG = 111_320 // unit conversion
+
+/** Squared distance (local metres) from p to segment ab. */
+function segDist2(p: number[], a: number[], b: number[], kx: number): number {
+  const [px, py, ax, ay, bx, by] = [p[0] * kx, p[1] * M_PER_DEG, a[0] * kx, a[1] * M_PER_DEG, b[0] * kx, b[1] * M_PER_DEG]
+  const dx = bx - ax
+  const dy = by - ay
+  const l2 = dx * dx + dy * dy
+  const t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0
+  return (px - ax - t * dx) ** 2 + (py - ay - t * dy) ** 2
+}
+
+function douglasPeucker(pts: number[][], tol2: number, kx: number, out: number[][]) {
+  const stack: [number, number][] = [[0, pts.length - 1]]
+  const keep = new Uint8Array(pts.length)
+  keep[0] = keep[pts.length - 1] = 1
+  while (stack.length) {
+    const [i, j] = stack.pop()!
+    let far = -1
+    let best = tol2
+    for (let k = i + 1; k < j; k++) {
+      const d = segDist2(pts[k], pts[i], pts[j], kx)
+      if (d > best) [far, best] = [k, d]
+    }
+    if (far < 0) continue
+    keep[far] = 1
+    stack.push([i, far], [far, j])
+  }
+  for (let k = 0; k < pts.length; k++) if (keep[k]) out.push(pts[k])
+}
+
+/**
+ * A lon/lat ring (closed) with vertices within `tolM` metres of the simplified outline dropped (Douglas–Peucker):
+ * near-collinear nodes on a straight facade and the jitter of traced curves go, corners stay. Too small a result keeps
+ * the ring as it was.
+ */
+export function simplifyRing(ring: number[][], tolM: number): number[][] {
+  const n = ring.length - 1 // closing vertex repeats the first
+  if (n < 5) return ring
+  const kx = M_PER_DEG * Math.cos((ring[0][1] * Math.PI) / 180)
+  // split at the vertex farthest from the first, so both halves are open chains
+  let far = 0
+  let best = -1
+  for (let k = 1; k < n; k++) {
+    const d = ((ring[k][0] - ring[0][0]) * kx) ** 2 + ((ring[k][1] - ring[0][1]) * M_PER_DEG) ** 2
+    if (d > best) [far, best] = [k, d]
+  }
+  const out: number[][] = []
+  douglasPeucker(ring.slice(0, far + 1), tolM * tolM, kx, out)
+  out.pop()
+  douglasPeucker(ring.slice(far, n + 1), tolM * tolM, kx, out)
+  return out.length >= 4 ? out : ring
+}
+
+/**
+ * Indices of a closed ring's vertices where the outline turns by at least `minTurnDeg` between two sides at least
+ * `minSideM` long: the corners whose verticals read as a building's edges. A curved facade (many small turns) and the
+ * jogs and notches of a detailed outline (short sides) have none.
+ */
+export function cornerIndices(ring: number[][], minTurnDeg: number, minSideM: number): number[] {
+  const n = ring.length - 1
+  const kx = Math.cos((ring[0][1] * Math.PI) / 180)
+  const cosMin = Math.cos((minTurnDeg * Math.PI) / 180)
+  const minSide = minSideM / M_PER_DEG
+  const out: number[] = []
+  for (let i = 0; i < n; i++) {
+    const a = ring[(i + n - 1) % n]
+    const b = ring[i]
+    const c = ring[i + 1]
+    const [ux, uy, vx, vy] = [(b[0] - a[0]) * kx, b[1] - a[1], (c[0] - b[0]) * kx, c[1] - b[1]]
+    const lu = Math.hypot(ux, uy)
+    const lv = Math.hypot(vx, vy)
+    if (lu >= minSide && lv >= minSide && (ux * vx + uy * vy) / (lu * lv) <= cosMin) out.push(i)
+  }
+  return out
+}
