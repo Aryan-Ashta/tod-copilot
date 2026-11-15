@@ -203,6 +203,15 @@ const nextEditId = (s: PlanState) => Math.max(0, ...s.edits.map((e) => e.id), ..
 
 const storageKey = (planId: string) => `transitor.edits.${planId}`
 
+/**
+ * The green-space slider is a plan-wide setting, not a step: it always comes last in the edit list, so it applies to
+ * every new build (the agents' and tiles placed after it) and its history entry shows its whole effect.
+ */
+const sliderLast = (edits: EditEntry[]): EditEntry[] => [
+  ...edits.filter((e) => e.edit.kind !== 'slider'),
+  ...edits.filter((e) => e.edit.kind === 'slider'),
+]
+
 /** Edits saved for this plan (plan screen ↔ edit mode share them); [] on missing or bad data. */
 function loadEdits(planId: string): EditEntry[] {
   try {
@@ -213,7 +222,7 @@ function loadEdits(planId: string): EditEntry[] {
         !!e && typeof e === 'object' && typeof e.id === 'number' && !!e.edit && typeof e.edit.kind === 'string',
     )
     // numbered afresh: ids only need to be unique within this session's list (older saves could repeat one)
-    return edits.map((e, i) => ({ id: i + 1, edit: e.edit, where: typeof e.where === 'string' ? e.where : null }))
+    return sliderLast(edits.map((e, i) => ({ id: i + 1, edit: e.edit, where: typeof e.where === 'string' ? e.where : null })))
   } catch {
     return []
   }
@@ -381,20 +390,22 @@ function reducer(s: PlanState, a: PlanAction): PlanState {
       return { ...s, tool: a.tool }
     case 'add_edit': {
       const entry: EditEntry = { id: nextEditId(s), edit: a.edit, where: a.where }
-      // The slider is one control: its latest value replaces the earlier slider edit in place (history indices stay).
-      const at = a.edit.kind === 'slider' ? s.edits.findIndex((e) => e.edit.kind === 'slider') : -1
-      const edits = at >= 0 ? s.edits.map((e, i) => (i === at ? entry : e)) : [...s.edits, entry]
-      return { ...s, edits, rejection: null }
+      // the slider is one control: its latest value replaces the earlier slider edit
+      const edits = a.edit.kind === 'slider' ? [...s.edits.filter((e) => e.edit.kind !== 'slider'), entry] : [...s.edits, entry]
+      return { ...s, edits: sliderLast(edits), rejection: null }
     }
     case 'apply_suggestions': {
       if (suggestionsApplied(s)) return s
       const entry: EditEntry = { id: nextEditId(s), edit: { kind: 'apply_suggestions' }, where: null }
-      return { ...s, edits: [...s.edits, entry], rejection: null }
+      return { ...s, edits: sliderLast([...s.edits, entry]), rejection: null }
     }
     case 'remove_edit':
       return withEdits(s, s.edits.filter((e) => e.id !== a.id))
-    case 'undo':
-      return withEdits(s, s.edits.slice(0, -1))
+    case 'undo': {
+      // the most recent edit (highest id), which is not always the last in the list: the slider stays last
+      const latest = Math.max(...s.edits.map((e) => e.id))
+      return withEdits(s, s.edits.filter((e) => e.id !== latest))
+    }
     case 'reset':
       return { ...s, edits: [], history: [], lastChangeId: null, rejection: null }
     case 'rescoring':

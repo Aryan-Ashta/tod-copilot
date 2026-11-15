@@ -73,9 +73,14 @@ function scoreBefore(state: PlanState, h: HistoryItem): Scoreboard | null {
   return (prev ? state.scoreSteps[prev.id]?.scoreboard : state.existing?.scoreboard) ?? null
 }
 
-/** Why a placed tile moved no number, from the score it was placed on (walk access counts new homes only). */
+/** Why an entry moved no number, from the score it was applied to (walk access counts new homes only). */
 function noChangeReason(h: HistoryItem, before: Scoreboard | null): string {
-  if (h.kind !== 'tile' || !before) return 'no change in the numbers'
+  if (!before) return 'no change in the numbers'
+  if (h.kind === 'slider')
+    return before.homes === 0
+      ? 'no change yet: green space applies to new buildings, and the plan has none'
+      : 'no change: at this setting no new building gives up a home'
+  if (h.kind !== 'tile') return 'no change in the numbers'
   if ((h.tile === 'park' || h.tile === 'stop') && before.homes === 0)
     return 'no change: walk access counts new homes, and the plan has none yet'
   if (h.tile === 'park' && (before.walk_by_amenity_pct?.park ?? 0) >= 100)
