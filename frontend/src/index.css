@@ -286,6 +286,12 @@ textarea:focus-visible,
     translate 380ms cubic-bezier(0.32, 0.72, 0, 1),
     opacity 240ms ease;
 }
+/* uncertainty queue: a range bar glides to its new span when a count is simulated */
+.uq-bar {
+  transition:
+    left 500ms cubic-bezier(0.34, 1.2, 0.5, 1),
+    width 500ms cubic-bezier(0.34, 1.2, 0.5, 1);
+}
 /* status text and hints swap with a short drop-in when their content changes (keyed in React) */
 @keyframes hint-in {
   from {

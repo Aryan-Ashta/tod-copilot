@@ -14,7 +14,7 @@ This replaces the hardware table and sensor node from earlier drafts. The goal i
 ## Uncertainty queue
 
 - The transit agent's `measurements` (for example, "manual weekday count at stop S4, 7–9 am") appear in a panel titled "What would make this plan more certain."
-- Each item shows the current range, the expected narrowed range, and which decisions depend on it.
+- What every item shares (the count method, the narrowing %) is said once at the top; then one card per stop, widest range first: the stop's name, its lines in feed colours and its stop id; its range now against the expected range after a count, as bars on one riders/day scale for all cards; and the sites in its catchment that depend on it. Clicking a card's stop flies the map there.
 - In the demo, a "Simulate count" button applies a sample count from the fixture to show the range narrowing. Label it clearly as simulated.
 
 ## Acceptance
