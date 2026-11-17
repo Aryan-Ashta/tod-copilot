@@ -126,7 +126,7 @@ docs/             Spec, architecture, data layer, agents, math, frontend, demo p
 
 ## Team
 
-Built at HackPrinceton 2026 by Aryan Ashta, Samuel Shuster and MatthewC141.
+Built at HackPrinceton 2026 by Aryan Ashta, Samuel Shuster and Matthew Chang.
 
 ## License
 
